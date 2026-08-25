@@ -6,7 +6,8 @@ import {
   Calculator, 
   Calendar, 
   LineChart, 
-  Sparkles
+  Sparkles,
+  ShoppingBag
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
@@ -20,6 +21,7 @@ interface HeaderProps {
   onOpenCalendar: () => void;
   onOpenChart: () => void;
   onOpenNewsletter: () => void;
+  onOpenECommerce: () => void;
 }
 
 const CATEGORIES: ArticleCategory[] = [
@@ -41,7 +43,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCalculator,
   onOpenCalendar,
   onOpenChart,
-  onOpenNewsletter
+  onOpenNewsletter,
+  onOpenECommerce
 }) => {
   return (
     <header className="relative bg-[#0B0F17] border-b border-slate-800">
@@ -86,11 +89,21 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Action Controls & Utilities */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* E-Commerce Store Navigation Button */}
+            <button
+              onClick={onOpenECommerce}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-950/80 via-[#0C1524] to-[#0E1B2E] hover:from-emerald-900 hover:to-[#13233D] text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 hover:border-emerald-400/80 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all shadow-sm shadow-emerald-500/10 cursor-pointer shrink-0 whitespace-nowrap group"
+              title="E-Commerce Institutional Store"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+              <span>E-Commerce</span>
+            </button>
+
             {/* Quick Search Button */}
             <button
               onClick={onOpenSearchModal}
-              className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-slate-200 px-3 py-2 rounded-lg border border-slate-800 transition-all text-xs font-medium cursor-pointer"
+              className="flex items-center gap-2 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-slate-200 px-2.5 sm:px-3 py-2 rounded-lg border border-slate-800 transition-all text-xs font-medium cursor-pointer"
               title="Search Articles & Strategy Models"
             >
               <Search className="w-4 h-4 text-slate-400" />
@@ -100,8 +113,8 @@ export const Header: React.FC<HeaderProps> = ({
               </kbd>
             </button>
 
-            {/* Institutional Tools Dropdown / Buttons */}
-            <div className="hidden md:flex items-center gap-1.5 border-l border-slate-800 pl-3">
+            {/* Institutional Tools Buttons */}
+            <div className="hidden md:flex items-center gap-1.5 border-l border-slate-800 pl-2.5">
               <button
                 onClick={onOpenCalculator}
                 className="flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-amber-300 bg-slate-900/80 hover:bg-slate-800 px-2.5 py-1.5 rounded-md border border-slate-800 transition-colors cursor-pointer"
@@ -133,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Bookmarks Drawer Trigger */}
             <button
               onClick={onOpenSavedModal}
-              className="relative p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 transition-colors cursor-pointer"
+              className="relative p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 transition-colors cursor-pointer shrink-0"
               title="Saved Reading List"
             >
               <Bookmark className="w-4 h-4" />
@@ -147,10 +160,12 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Newsletter Subscribe CTA */}
             <button
               onClick={onOpenNewsletter}
-              className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-3.5 py-2 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer shrink-0 whitespace-nowrap"
+              title="Subscribe to VIP Alpha Dispatch"
             >
-              <Sparkles className="w-3.5 h-3.5 text-slate-950" />
-              <span>VIP Alpha Dispatch</span>
+              <Sparkles className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+              <span className="inline sm:hidden">VIP Alpha</span>
+              <span className="hidden sm:inline">VIP Alpha Dispatch</span>
             </button>
           </div>
         </div>

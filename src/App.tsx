@@ -30,6 +30,7 @@ import { ChartSimulatorModal } from './components/ChartSimulatorModal';
 import { SavedArticlesModal } from './components/SavedArticlesModal';
 import { SearchModal } from './components/SearchModal';
 import { NewsletterModal } from './components/NewsletterModal';
+import { ECommerceModal } from './components/ECommerceModal';
 import { FearGreedGauge } from './components/FearGreedGauge';
 import { Footer } from './components/Footer';
 import { 
@@ -66,6 +67,7 @@ export default function App() {
   const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
+  const [isECommerceOpen, setIsECommerceOpen] = useState(false);
 
   // Bookmark persistence
   const [savedArticleIds, setSavedArticleIds] = useState<string[]>(() => {
@@ -145,6 +147,7 @@ export default function App() {
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenChart={() => setIsChartOpen(true)}
         onOpenNewsletter={() => setIsNewsletterOpen(true)}
+        onOpenECommerce={() => setIsECommerceOpen(true)}
       />
 
       {/* 3. Main Body Container */}
@@ -490,6 +493,11 @@ export default function App() {
       <NewsletterModal
         isOpen={isNewsletterOpen}
         onClose={() => setIsNewsletterOpen(false)}
+      />
+
+      <ECommerceModal
+        isOpen={isECommerceOpen}
+        onClose={() => setIsECommerceOpen(false)}
       />
     </div>
   );

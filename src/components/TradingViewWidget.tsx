@@ -67,8 +67,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         style={{ width: '100%', height: 'calc(100% - 24px)', border: 'none' }}
         onLoad={() => setIsLoading(false)}
         loading="lazy"
-        allowTransparency={true}
-        scrolling="no"
       />
 
       {/* TradingView Compliance & Attribution Bar */}
