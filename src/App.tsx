@@ -19,6 +19,7 @@ import {
 import { MarketTicker } from './components/MarketTicker';
 import { Header } from './components/Header';
 import { FeaturedArticlesSection } from './components/FeaturedArticlesSection';
+import { LiveTradingSection } from './components/LiveTradingSection';
 import { ArticleCard } from './components/ArticleCard';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { BlueVerifiedBadge } from './components/BlueVerifiedBadge';
@@ -158,6 +159,9 @@ export default function App() {
             onOpenCalculatorWithSetup={handleOpenCalculatorWithSetup}
           />
         )}
+
+        {/* Live Market TradingView Terminal Section */}
+        <LiveTradingSection onOpenChartModal={() => setIsChartOpen(true)} />
 
         {/* Category Header Title when filtering */}
         {activeCategory !== 'All' && (

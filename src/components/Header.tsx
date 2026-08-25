@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ArticleCategory } from '../types';
 import { 
   Search, 
@@ -6,16 +6,9 @@ import {
   Calculator, 
   Calendar, 
   LineChart, 
-  Sparkles,
-  Layers,
-  ChevronDown,
-  ShieldCheck,
-  TrendingUp,
-  Activity,
-  Maximize2
+  Sparkles
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
-import { TradingViewWidget } from './TradingViewWidget';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -28,53 +21,6 @@ interface HeaderProps {
   onOpenChart: () => void;
   onOpenNewsletter: () => void;
 }
-
-interface InstrumentOption {
-  id: string;
-  name: string;
-  ticker: string;
-  symbol: string;
-  description: string;
-}
-
-const INSTRUMENTS: InstrumentOption[] = [
-  {
-    id: 'gold',
-    name: 'Gold / USD (XAUUSD)',
-    ticker: 'XAUUSD',
-    symbol: 'OANDA:XAUUSD',
-    description: 'Spot Gold / US Dollar'
-  },
-  {
-    id: 'nasdaq',
-    name: 'Nasdaq / USD (NAS100)',
-    ticker: 'NAS100',
-    symbol: 'NASDAQ:NDX',
-    description: 'Nasdaq 100 Index'
-  },
-  {
-    id: 'dow',
-    name: 'Dow Jones / USD (US30)',
-    ticker: 'US30',
-    symbol: 'TVC:DJI',
-    description: 'Dow Jones Industrial Average'
-  },
-  {
-    id: 'dax',
-    name: 'DAX / USD (GER40)',
-    ticker: 'GER40',
-    symbol: 'XETR:DAX',
-    description: 'German DAX 40 Index'
-  }
-];
-
-const TIMEFRAMES = [
-  { label: '5m', value: '5' },
-  { label: '15m', value: '15' },
-  { label: '1h', value: '60' },
-  { label: '4h', value: '240' },
-  { label: '1D', value: 'D' },
-];
 
 const CATEGORIES: ArticleCategory[] = [
   'All',
@@ -97,9 +43,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenChart,
   onOpenNewsletter
 }) => {
-  const [selectedInstrument, setSelectedInstrument] = useState<InstrumentOption>(INSTRUMENTS[0]);
-  const [selectedInterval, setSelectedInterval] = useState<string>('15');
-
   return (
     <header className="relative bg-[#0B0F17] border-b border-slate-800">
       {/* 1. Top Branding Bar */}
@@ -213,88 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. Main Header Professional Trading Chart Section */}
-      <div className="bg-gradient-to-b from-[#090D17] to-[#0D121F] border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-3">
-          
-          {/* Chart Header Bar with 4 Instrument Options Selector */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#080C14] p-2.5 sm:p-3 rounded-2xl border border-slate-800 shadow-xl">
-            
-            {/* Left: Instrument Selector (4 Options) */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <span className="text-[11px] font-mono-num font-bold text-amber-400 uppercase tracking-wider px-2 py-1 flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span className="hidden sm:inline">Instrument:</span>
-              </span>
-
-              {INSTRUMENTS.map((inst, index) => {
-                const isSelected = selectedInstrument.id === inst.id;
-                return (
-                  <button
-                    key={inst.id}
-                    onClick={() => setSelectedInstrument(inst)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-mono-num font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 border border-amber-300'
-                        : 'bg-[#0E1526] hover:bg-[#131D33] text-slate-300 hover:text-white border border-slate-700/80'
-                    }`}
-                    title={inst.description}
-                  >
-                    <span className={`text-[10px] px-1 py-0.2 rounded font-mono-num ${
-                      isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-amber-400'
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <span>{inst.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Right: Timeframe & Fullscreen Trigger */}
-            <div className="flex items-center gap-2">
-              {/* Timeframe selector */}
-              <div className="flex items-center bg-[#0E1526] p-0.5 rounded-xl border border-slate-800 text-xs font-mono-num">
-                {TIMEFRAMES.map((tf) => (
-                  <button
-                    key={tf.value}
-                    onClick={() => setSelectedInterval(tf.value)}
-                    className={`px-2 py-1 rounded-lg text-[11px] transition-colors cursor-pointer ${
-                      selectedInterval === tf.value
-                        ? 'bg-amber-400 text-slate-950 font-bold'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {tf.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Fullscreen TradingView Studio Modal */}
-              <button
-                onClick={onOpenChart}
-                className="hidden sm:flex items-center gap-1.5 bg-[#0E1526] hover:bg-[#152038] text-slate-300 hover:text-amber-300 px-2.5 py-1.5 rounded-xl border border-slate-800 text-xs font-medium transition-colors cursor-pointer"
-                title="Expand in TradingView Studio"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span className="hidden md:inline text-[11px]">Expand Studio</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Embedded Professional Trading Chart Display */}
-          <div className="rounded-2xl overflow-hidden border border-slate-800/90 shadow-2xl bg-[#090D17]">
-            <TradingViewWidget
-              symbol={selectedInstrument.symbol}
-              interval={selectedInterval}
-              height="400px"
-              className="min-h-[380px] sm:min-h-[420px]"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Category Navigation Bar */}
+      {/* 2. Category Navigation Bar */}
       <div className="bg-[#090D14] border-t border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar py-2">

@@ -9,6 +9,28 @@
     <meta property="og:description" content="Institutional analysis, order flow microstructure, price action tactics, risk models and quantitative market intelligence by Abu Asad Almansi." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Early suppression of third-party cross-origin iframe / embed script errors
+      window.onerror = function(msg, url, line, col, error) {
+        if (msg === 'Script error.' || (url && url.indexOf('tradingview') !== -1) || !url) {
+          return true; // suppress error reporting to window
+        }
+        return false;
+      };
+      window.addEventListener('error', function(event) {
+        if (event.message === 'Script error.' || (event.filename && event.filename.indexOf('tradingview') !== -1)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          return true;
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && (String(event.reason).indexOf('Script error') !== -1 || String(event.reason).indexOf('tradingview') !== -1)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">

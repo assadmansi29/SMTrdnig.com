@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, memo } from 'react';
-import { ExternalLink, BarChart2 } from 'lucide-react';
+import React, { memo, useState, useId } from 'react';
+import { ExternalLink } from 'lucide-react';
 
 interface TradingViewWidgetProps {
   symbol?: string;
@@ -12,7 +12,7 @@ interface TradingViewWidgetProps {
 }
 
 export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
-  symbol = 'CME_MINI:ES1!',
+  symbol = 'OANDA:XAUUSD',
   theme = 'dark',
   interval = '15',
   timezone = 'Etc/UTC',
@@ -20,81 +20,74 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   height,
   className
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const widgetId = useId().replace(/:/g, '_');
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // Build secure, isolated TradingView Widget embed URL
+  const searchParams = new URLSearchParams({
+    frameElementId: `tradingview_${widgetId}`,
+    symbol: symbol,
+    interval: interval,
+    hidesidetoolbar: hideSideToolbar ? '1' : '0',
+    symboledit: '1',
+    saveimage: '0',
+    toolbarbg: '090D17',
+    studies: '[]',
+    theme: theme,
+    style: '1',
+    timezone: timezone,
+    studies_overrides: '{}',
+    enabled_features: '[]',
+    disabled_features: '[]',
+    locale: 'en',
+    utm_source: 'smtrading.com'
+  });
 
-    // Clear previous widget content
-    containerRef.current.innerHTML = '';
-
-    const widgetContainer = document.createElement('div');
-    widgetContainer.className = 'tradingview-widget-container__widget';
-    widgetContainer.style.height = 'calc(100% - 32px)';
-    widgetContainer.style.width = '100%';
-    containerRef.current.appendChild(widgetContainer);
-
-    const copyrightContainer = document.createElement('div');
-    copyrightContainer.className = 'tradingview-widget-copyright';
-    copyrightContainer.innerHTML = `
-      <div style="font-size: 11px; color: #64748b; padding: 6px 12px; display: flex; align-items: center; justify-content: space-between; background: #080C14; border-top: 1px solid #1E293B;">
-        <span style="display: flex; align-items: center; gap: 6px;">
-          <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
-          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #94a3b8;">TradingView.com Live Market Feed</span>
-        </span>
-        <a href="https://www.tradingview.com/" target="_blank" rel="noopener nofollow noreferrer" style="color: #f59e0b; text-decoration: none; font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-          <span>tradingview.com</span>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        </a>
-      </div>
-    `;
-    containerRef.current.appendChild(copyrightContainer);
-
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-    script.type = 'text/javascript';
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol: symbol,
-      interval: interval,
-      timezone: timezone,
-      theme: theme,
-      style: '1',
-      locale: 'en',
-      enable_publishing: false,
-      allow_symbol_change: true,
-      calendar: false,
-      support_host: 'https://www.tradingview.com',
-      hide_side_toolbar: hideSideToolbar,
-      withdateranges: true,
-      hide_volume: false,
-      backgroundColor: '#090D17',
-      gridColor: '#1E293B',
-      save_image: false,
-      details: true,
-      hotlist: false,
-      show_popup_button: true,
-      popup_width: '1000',
-      popup_height: '650'
-    });
-
-    containerRef.current.appendChild(script);
-
-    return () => {
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
-    };
-  }, [symbol, theme, interval, timezone, hideSideToolbar]);
+  const embedUrl = `https://s.tradingview.com/widgetembed/?${searchParams.toString()}`;
 
   return (
     <div 
-      className={`tradingview-widget-container w-full bg-[#090D17] rounded-xl overflow-hidden border border-slate-800 flex flex-col ${className || 'h-full min-h-[480px]'}`} 
+      className={`tradingview-widget-container w-full bg-[#090D17] rounded-xl overflow-hidden border border-slate-800 flex flex-col relative ${className || 'h-full min-h-[300px]'}`} 
       style={height ? { height } : undefined}
-      ref={containerRef}
     >
-      <div className="tradingview-widget-container__widget flex-1 w-full"></div>
+      {/* Loading Skeleton */}
+      {isLoading && (
+        <div className="absolute inset-0 z-10 bg-[#090D17] flex flex-col items-center justify-center gap-2 pointer-events-none">
+          <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-[11px] font-mono-num text-slate-400">Loading {symbol} stream...</span>
+        </div>
+      )}
+
+      {/* Sandboxed, Isolated TradingView Chart Iframe */}
+      <iframe
+        id={`tv-iframe-${widgetId}`}
+        title={`TradingView Chart - ${symbol}`}
+        src={embedUrl}
+        className="w-full flex-1 border-0"
+        style={{ width: '100%', height: 'calc(100% - 24px)', border: 'none' }}
+        onLoad={() => setIsLoading(false)}
+        loading="lazy"
+        allowTransparency={true}
+        scrolling="no"
+      />
+
+      {/* TradingView Compliance & Attribution Bar */}
+      <div className="h-6 bg-[#070A10] border-t border-[#131B2E] px-3 flex items-center justify-between text-[8.5px] shrink-0 select-none">
+        <span className="flex items-center gap-1.5 text-slate-400 font-mono-num">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>TradingView Feed: <strong className="text-slate-300">{symbol} ({interval}m)</strong></span>
+        </span>
+        <a 
+          href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(symbol)}`} 
+          target="_blank" 
+          rel="noopener nofollow noreferrer" 
+          className="text-amber-400/90 hover:text-amber-300 font-medium flex items-center gap-1 transition-colors"
+        >
+          <span>tradingview.com</span>
+          <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+      </div>
     </div>
   );
 });
+
