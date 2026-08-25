@@ -1,0 +1,6 @@
+{
+  "name": "SMTrading.com",
+  "description": "Institutional-grade insights, quantitative strategies, and market intelligence by SMTrading.com.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

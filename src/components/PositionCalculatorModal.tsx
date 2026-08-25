@@ -1,0 +1,230 @@
+import React, { useState, useEffect } from 'react';
+import { X, Calculator, ShieldAlert, ArrowRight, DollarSign, Percent, TrendingUp } from 'lucide-react';
+import { TradeSetup } from '../types';
+
+interface PositionCalculatorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialSetup?: TradeSetup | null;
+}
+
+export const PositionCalculatorModal: React.FC<PositionCalculatorModalProps> = ({
+  isOpen,
+  onClose,
+  initialSetup
+}) => {
+  const [accountBalance, setAccountBalance] = useState<number>(50000);
+  const [riskPercent, setRiskPercent] = useState<number>(1.5);
+  const [entryPrice, setEntryPrice] = useState<number>(5910);
+  const [stopLoss, setStopLoss] = useState<number>(5898);
+  const [takeProfit, setTakeProfit] = useState<number>(5948);
+  const [assetType, setAssetType] = useState<'crypto' | 'futures' | 'forex' | 'stocks'>('futures');
+
+  useEffect(() => {
+    if (initialSetup) {
+      // Parse numbers from strings if available
+      const extractNumber = (str: string) => {
+        const matches = str.match(/[\d,.]+/);
+        if (matches) {
+          return parseFloat(matches[0].replace(/,/g, ''));
+        }
+        return 0;
+      };
+
+      const entry = extractNumber(initialSetup.entryZone);
+      const sl = extractNumber(initialSetup.stopLoss);
+      const tp = extractNumber(initialSetup.takeProfit1);
+
+      if (entry > 0) setEntryPrice(entry);
+      if (sl > 0) setStopLoss(sl);
+      if (tp > 0) setTakeProfit(tp);
+    }
+  }, [initialSetup]);
+
+  if (!isOpen) return null;
+
+  const maxRiskAmount = (accountBalance * riskPercent) / 100;
+  const distanceToStop = Math.abs(entryPrice - stopLoss);
+  const distanceToTarget = Math.abs(takeProfit - entryPrice);
+
+  const unitsOrShares = distanceToStop > 0 ? maxRiskAmount / distanceToStop : 0;
+  const positionValue = unitsOrShares * entryPrice;
+  const potentialProfit = unitsOrShares * distanceToTarget;
+  const riskRewardRatio = distanceToStop > 0 ? (distanceToTarget / distanceToStop).toFixed(2) : '0';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-[#0D121F] border border-slate-700/80 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden text-slate-200">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#090D17]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <Calculator className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-white">SMTrading Position & Risk Calculator</h3>
+              <p className="text-xs text-slate-400">Institutional Lot Sizing & Asymmetric R:R Engine</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-6">
+          {/* Quick presets */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { label: 'Futures / ES', type: 'futures' as const },
+              { label: 'Crypto Perp', type: 'crypto' as const },
+              { label: 'FX / Metals', type: 'forex' as const },
+              { label: 'Equities', type: 'stocks' as const },
+            ].map((p) => (
+              <button
+                key={p.type}
+                onClick={() => setAssetType(p.type)}
+                className={`py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                  assetType === p.type
+                    ? 'bg-amber-400/20 text-amber-300 border-amber-400/40'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Account Balance */}
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>Account Capital ($)</span>
+                <span className="text-amber-400 font-mono-num font-bold">${accountBalance.toLocaleString()}</span>
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                <input
+                  type="number"
+                  value={accountBalance}
+                  onChange={(e) => setAccountBalance(Number(e.target.value))}
+                  className="w-full bg-[#070A10] border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white font-mono-num focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Risk Percentage */}
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>Portfolio Risk (%)</span>
+                <span className="text-amber-400 font-mono-num font-bold">{riskPercent}%</span>
+              </label>
+              <div className="relative">
+                <Percent className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                <input
+                  type="number"
+                  step="0.1"
+                  max="5"
+                  min="0.1"
+                  value={riskPercent}
+                  onChange={(e) => setRiskPercent(Number(e.target.value))}
+                  className="w-full bg-[#070A10] border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white font-mono-num focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Trade Parameters */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-400 mb-1">Entry Price</label>
+              <input
+                type="number"
+                step="any"
+                value={entryPrice}
+                onChange={(e) => setEntryPrice(Number(e.target.value))}
+                className="w-full bg-[#070A10] border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-white font-mono-num focus:border-amber-400 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-rose-400 mb-1">Stop Loss Price</label>
+              <input
+                type="number"
+                step="any"
+                value={stopLoss}
+                onChange={(e) => setStopLoss(Number(e.target.value))}
+                className="w-full bg-[#070A10] border border-rose-900/50 rounded-md px-2.5 py-1.5 text-xs text-rose-300 font-mono-num focus:border-rose-400 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-emerald-400 mb-1">Take Profit Target</label>
+              <input
+                type="number"
+                step="any"
+                value={takeProfit}
+                onChange={(e) => setTakeProfit(Number(e.target.value))}
+                className="w-full bg-[#070A10] border border-emerald-900/50 rounded-md px-2.5 py-1.5 text-xs text-emerald-300 font-mono-num focus:border-emerald-400 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Calculated Output Matrix */}
+          <div className="bg-gradient-to-br from-[#0B101D] to-[#12192B] border border-slate-700 p-4 rounded-xl space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span className="text-xs text-slate-400">Total Max Risk Capital:</span>
+              <span className="font-mono-num font-bold text-rose-400 text-sm">
+                -${maxRiskAmount.toFixed(2)} ({riskPercent}% account)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-1">
+              <div>
+                <span className="text-[11px] text-slate-400 block">Position / Unit Size</span>
+                <span className="text-base font-bold text-amber-300 font-mono-num">
+                  {unitsOrShares.toFixed(2)} units
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[11px] text-slate-400 block">Potential Reward</span>
+                <span className="text-base font-bold text-emerald-400 font-mono-num">
+                  +${potentialProfit.toFixed(2)}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[11px] text-slate-400 block">Risk : Reward</span>
+                <span className="text-base font-bold text-white font-mono-num">
+                  1 : {riskRewardRatio}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Risk Advisory Note */}
+          <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-amber-500/5 border border-amber-500/20 p-3 rounded-lg">
+            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <p>
+              Professional risk management mandates capping individual trade risk to ≤2.0% of liquid portfolio equity to withstand standard probabilistic cluster variances.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3.5 bg-[#090D17] border-t border-slate-800 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors"
+          >
+            Apply to Trading Journal
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
