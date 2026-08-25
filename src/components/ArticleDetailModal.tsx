@@ -21,6 +21,7 @@ import {
   ArrowRight,
   BookOpen
 } from 'lucide-react';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
 interface ArticleDetailModalProps {
   article: Article | null;
@@ -208,14 +209,19 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 <img
                   src={article.author.avatar}
                   alt={article.author.name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-amber-400/40"
+                  referrerPolicy="no-referrer"
+                  className="w-12 h-12 rounded-full object-cover object-top border-2 border-amber-400/40"
                 />
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-bold text-white text-sm sm:text-base">
                       {article.author.name}
                     </span>
-                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    {article.author.name.includes('Abu Asad') ? (
+                      <BlueVerifiedBadge size="sm" />
+                    ) : (
+                      <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    )}
                   </div>
                   <p className="text-xs text-slate-400">
                     {article.author.role} • {article.publishedAt}
@@ -401,7 +407,8 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               <img
                 src={article.author.avatar}
                 alt={article.author.name}
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md"
+                referrerPolicy="no-referrer"
+                className="w-16 h-16 rounded-2xl object-cover object-top border-2 border-amber-400 shadow-md"
               />
               <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
                 <ShieldCheck className="w-3 h-3" />
@@ -417,9 +424,14 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                   Verified Desk
                 </span>
               </div>
-              <h4 className="font-extrabold text-base sm:text-lg text-white">
-                {article.author.name}
-              </h4>
+              <div className="flex items-center gap-1.5">
+                <h4 className="font-extrabold text-base sm:text-lg text-white">
+                  {article.author.name}
+                </h4>
+                {article.author.name.includes('Abu Asad') && (
+                  <BlueVerifiedBadge size="md" />
+                )}
+              </div>
               <p className="text-xs text-amber-300/90 font-medium">
                 {article.author.role}
               </p>

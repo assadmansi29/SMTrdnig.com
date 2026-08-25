@@ -21,6 +21,7 @@ import { Header } from './components/Header';
 import { HeroFeaturedArticle } from './components/HeroFeaturedArticle';
 import { ArticleCard } from './components/ArticleCard';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
+import { BlueVerifiedBadge } from './components/BlueVerifiedBadge';
 import { PositionCalculatorModal } from './components/PositionCalculatorModal';
 import { EconomicCalendarModal } from './components/EconomicCalendarModal';
 import { ChartSimulatorModal } from './components/ChartSimulatorModal';
@@ -378,7 +379,8 @@ export default function App() {
                       <img
                         src={AUTHORS.abuAsad.avatar}
                         alt={AUTHORS.abuAsad.name}
-                        className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-sm"
+                        referrerPolicy="no-referrer"
+                        className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
                       />
                       <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
                         <ShieldCheck className="w-2.5 h-2.5" />
@@ -387,6 +389,7 @@ export default function App() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <h5 className="font-extrabold text-xs text-white truncate">{AUTHORS.abuAsad.name}</h5>
+                        <BlueVerifiedBadge size="xs" />
                         <span className="bg-amber-400/20 text-amber-300 text-[9px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/40">
                           FOUNDER
                         </span>

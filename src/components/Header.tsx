@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ShieldCheck
 } from 'lucide-react';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -70,9 +71,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-black text-xl sm:text-2xl tracking-tight text-white group-hover:text-amber-300 transition-colors flex items-center">
                   SMTrading<span className="text-amber-400">.com</span>
                 </span>
-                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/35 shadow-sm backdrop-blur-sm tracking-wide">
-                  <ShieldCheck className="w-3 h-3 text-amber-400" />
+                <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/35 shadow-sm backdrop-blur-sm tracking-wide">
                   <span>by ABU ASAD ALMANSI</span>
+                  <BlueVerifiedBadge size="sm" />
                 </div>
               </div>
               <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">

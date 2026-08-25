@@ -18,6 +18,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
 interface ChartSimulatorModalProps {
   isOpen: boolean;
@@ -112,8 +113,8 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                   <span className="text-slate-200 font-semibold text-sm sm:text-base">Chart Studio</span>
                 </h3>
                 <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/40 shadow-sm backdrop-blur-sm tracking-wide">
-                  <ShieldCheck className="w-3 h-3 text-amber-400 shrink-0" />
                   <span>by ABU ASAD ALMANSI</span>
+                  <BlueVerifiedBadge size="sm" />
                 </div>
                 <span className="text-slate-400 text-xs hidden md:inline font-medium">
                   (Smart Money Trading)
@@ -276,9 +277,12 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                       <span className="font-bold text-white block">
                         Institutional Order Flow Microstructure
                       </span>
-                      <span className="text-[10px] text-amber-300 font-medium">
-                        Smart Money Concepts (SMC) Architecture by Abu Asad Almansi
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-amber-300 font-medium">
+                          Smart Money Concepts (SMC) Architecture by Abu Asad Almansi
+                        </span>
+                        <BlueVerifiedBadge size="xs" />
+                      </div>
                     </div>
                   </div>
                   

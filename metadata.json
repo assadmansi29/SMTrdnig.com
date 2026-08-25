@@ -2,5 +2,7 @@
   "name": "SMTrading.com",
   "description": "Smart Money Trading by Abu Asad Almansi - Institutional-grade insights, quantitative strategies, and market intelligence.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

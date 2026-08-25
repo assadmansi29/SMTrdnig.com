@@ -1,6 +1,7 @@
 import React from 'react';
 import { Article } from '../types';
 import { Clock, Eye, Bookmark, Share2, TrendingUp, Sparkles, User, ArrowUpRight } from 'lucide-react';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
 interface ArticleCardProps {
   article: Article;
@@ -120,12 +121,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
             <img
               src={article.author.avatar}
               alt={article.author.name}
-              className="w-7 h-7 rounded-full object-cover border border-slate-700"
+              referrerPolicy="no-referrer"
+              className="w-7 h-7 rounded-full object-cover object-top border border-slate-700"
             />
             <div className="min-w-0">
-              <span className="text-xs font-semibold text-slate-200 block leading-tight truncate">
-                {article.author.name}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-semibold text-slate-200 block leading-tight truncate">
+                  {article.author.name}
+                </span>
+                {article.author.name.includes('Abu Asad') && (
+                  <BlueVerifiedBadge size="xs" />
+                )}
+              </div>
               <span className="text-[10px] text-amber-400/90 block leading-tight truncate font-mono-num">
                 {article.author.role.includes('Founder') ? 'Founder / SMC Lead' : article.author.role}
               </span>

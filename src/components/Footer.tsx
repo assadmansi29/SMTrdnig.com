@@ -1,6 +1,7 @@
 import React from 'react';
 import { ShieldCheck, TrendingUp, Sparkles, Mail, Globe, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import { ArticleCategory } from '../types';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
 interface FooterProps {
   onSelectCategory: (category: ArticleCategory) => void;
@@ -59,8 +60,9 @@ export const Footer: React.FC<FooterProps> = ({
                 <span className="font-black text-xl sm:text-2xl text-white block tracking-tight">
                   SMTrading<span className="text-amber-400">.com</span>
                 </span>
-                <span className="bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
-                  by ABU ASAD ALMANSI
+                <span className="bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1">
+                  <span>by ABU ASAD ALMANSI</span>
+                  <BlueVerifiedBadge size="xs" />
                 </span>
               </div>
               <div className="text-[11px] text-slate-300 font-semibold uppercase tracking-wider pt-0.5">
@@ -134,7 +136,10 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="space-y-3">
           <h4 className="font-bold text-white uppercase text-xs tracking-wider">Editorial Board</h4>
           <ul className="space-y-1.5 text-slate-400">
-            <li className="text-amber-300 font-semibold">Abu Asad Almansi (Founder & Lead Architect)</li>
+            <li className="text-amber-300 font-semibold flex items-center gap-1">
+              <span>Abu Asad Almansi (Founder & Lead Architect)</span>
+              <BlueVerifiedBadge size="xs" />
+            </li>
             <li>Dr. Alexander Vance (Quant)</li>
             <li>Elena Rostova (Macro & FX)</li>
             <li>Marcus Sterling, CFA (Derivatives)</li>

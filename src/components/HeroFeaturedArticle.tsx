@@ -1,6 +1,7 @@
 import React from 'react';
 import { Article } from '../types';
 import { Clock, Eye, Bookmark, ArrowRight, Sparkles, TrendingUp, ShieldCheck, Flame } from 'lucide-react';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
 interface HeroFeaturedArticleProps {
   article: Article;
@@ -67,15 +68,19 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
                 <img
                   src={article.author.avatar}
                   alt={article.author.name}
-                  className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-sm"
+                  referrerPolicy="no-referrer"
+                  className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
                   <ShieldCheck className="w-2.5 h-2.5" />
                 </span>
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-sm font-extrabold text-white">{article.author.name}</span>
+                  {article.author.name.includes('Abu Asad') && (
+                    <BlueVerifiedBadge size="sm" />
+                  )}
                   <span className="bg-amber-400/20 text-amber-300 text-[10px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/30">
                     AUTHOR
                   </span>
