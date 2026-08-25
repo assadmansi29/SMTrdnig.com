@@ -16,29 +16,16 @@ export const AvatarProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [abuAsadAvatar, setAbuAsadAvatar] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return saved;
+      if (saved && saved.startsWith('data:image/')) return saved;
+      // Clear any obsolete non-data string from previous versions
+      if (saved) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
     } catch {
       // ignore
     }
     return AUTHORS.abuAsad.avatar;
   });
-
-  useEffect(() => {
-    // If not in localStorage, check if /abu_asad_almansi.jpg exists in public
-    const checkPublicImage = async () => {
-      try {
-        if (!localStorage.getItem(STORAGE_KEY)) {
-          const res = await fetch('/abu_asad_almansi.jpg', { method: 'HEAD' });
-          if (res.ok) {
-            setAbuAsadAvatar('/abu_asad_almansi.jpg');
-          }
-        }
-      } catch {
-        // fallback
-      }
-    };
-    checkPublicImage();
-  }, []);
 
   const updateAbuAsadAvatar = (newAvatar: string) => {
     setAbuAsadAvatar(newAvatar);
