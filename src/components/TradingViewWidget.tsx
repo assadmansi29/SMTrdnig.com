@@ -7,6 +7,8 @@ interface TradingViewWidgetProps {
   interval?: string;
   timezone?: string;
   hideSideToolbar?: boolean;
+  height?: string;
+  className?: string;
 }
 
 export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
@@ -14,7 +16,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   theme = 'dark',
   interval = '15',
   timezone = 'Etc/UTC',
-  hideSideToolbar = false
+  hideSideToolbar = false,
+  height,
+  className
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -85,7 +89,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [symbol, theme, interval, timezone, hideSideToolbar]);
 
   return (
-    <div className="tradingview-widget-container w-full h-full min-h-[480px] bg-[#090D17] rounded-xl overflow-hidden border border-slate-800 flex flex-col" ref={containerRef}>
+    <div 
+      className={`tradingview-widget-container w-full bg-[#090D17] rounded-xl overflow-hidden border border-slate-800 flex flex-col ${className || 'h-full min-h-[480px]'}`} 
+      style={height ? { height } : undefined}
+      ref={containerRef}
+    >
       <div className="tradingview-widget-container__widget flex-1 w-full"></div>
     </div>
   );
