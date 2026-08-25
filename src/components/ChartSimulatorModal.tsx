@@ -1,9 +1,28 @@
 import React, { useState } from 'react';
-import { X, LineChart, Layers, Eye, TrendingUp, TrendingDown, RefreshCw, Crosshair, BarChart3 } from 'lucide-react';
+import { 
+  X, 
+  LineChart, 
+  Layers, 
+  Eye, 
+  TrendingUp, 
+  TrendingDown, 
+  RefreshCw, 
+  Crosshair, 
+  BarChart3,
+  ExternalLink,
+  Columns,
+  Maximize2,
+  SlidersHorizontal,
+  Sparkles,
+  Zap,
+  ShieldCheck
+} from 'lucide-react';
+import { TradingViewWidget } from './TradingViewWidget';
 
 interface ChartSimulatorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultSymbol?: string;
 }
 
 interface Candle {
@@ -31,7 +50,26 @@ const SAMPLE_CANDLES: Candle[] = [
   { time: '15:00', open: 5965, high: 5975, low: 5960, close: 5972, volume: 3600, label: 'Target 2 Met' },
 ];
 
-export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ isOpen, onClose }) => {
+const POPULAR_SYMBOLS = [
+  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', category: 'Futures' },
+  { symbol: 'BINANCE:BTCUSDT', name: 'BTC / USDT Perp', category: 'Crypto' },
+  { symbol: 'OANDA:XAUUSD', name: 'Spot Gold / USD', category: 'Metals' },
+  { symbol: 'FX:EURUSD', name: 'EUR / USD', category: 'Forex' },
+  { symbol: 'NASDAQ:NQ1!', name: 'NQ Futures (Nasdaq)', category: 'Futures' },
+  { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', category: 'Equities' },
+  { symbol: 'TVC:DXY', name: 'US Dollar Index (DXY)', category: 'Macro' },
+];
+
+export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ 
+  isOpen, 
+  onClose,
+  defaultSymbol = 'CME_MINI:ES1!'
+}) => {
+  const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
+  const [viewLayout, setViewLayout] = useState<'split' | 'tv-only' | 'smc-only'>('split');
+  const [activeInterval, setActiveInterval] = useState('15');
+  
+  // SMC Simulator states
   const [showSMA, setShowSMA] = useState(true);
   const [showEMA, setShowEMA] = useState(true);
   const [showOrderBlocks, setShowOrderBlocks] = useState(true);
@@ -41,12 +79,12 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ isOpen
 
   if (!isOpen) return null;
 
-  // Chart calculation parameters
+  // Chart calculation parameters for SMC Simulator
   const minPrice = 5875;
   const maxPrice = 5985;
   const priceRange = maxPrice - minPrice;
-  const chartHeight = 280;
-  const chartWidth = 620;
+  const chartHeight = 240;
+  const chartWidth = 520;
 
   const getY = (price: number) => {
     return chartHeight - ((price - minPrice) / priceRange) * chartHeight;
@@ -55,289 +93,444 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ isOpen
   const candleSpacing = chartWidth / SAMPLE_CANDLES.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#0D121F] border border-slate-700/80 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden text-slate-200">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#090D17]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
+      <div className="bg-[#0B0F17] border border-slate-700/80 rounded-2xl w-full max-w-7xl max-h-[96vh] flex flex-col shadow-2xl overflow-hidden text-slate-200">
+        
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-[#080C14]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <LineChart className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 p-[1px] shadow-md shadow-amber-500/10 shrink-0">
+              <div className="w-full h-full bg-[#0E131F] rounded-[11px] flex items-center justify-center text-amber-400">
+                <LineChart className="w-5 h-5" />
+              </div>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-white">SMTrading Institutional Chart Studio</h3>
-                <span className="bg-cyan-500/20 text-cyan-300 text-[10px] font-mono-num font-bold px-1.5 py-0.5 rounded border border-cyan-500/30">
-                  ES FUTURES
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="font-black text-lg sm:text-xl text-white flex items-center gap-2">
+                  <span>SMTrading<span className="text-amber-400">.com</span></span>
+                  <span className="text-slate-600">/</span>
+                  <span className="text-slate-200 font-semibold text-sm sm:text-base">Chart Studio</span>
+                </h3>
+                <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/40 shadow-sm backdrop-blur-sm tracking-wide">
+                  <ShieldCheck className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span>by ABU ASAD ALMANSI</span>
+                </div>
+                <span className="text-slate-400 text-xs hidden md:inline font-medium">
+                  (Smart Money Trading)
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Live TradingView Feed
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Algorithmic Order Flow & Price Action Pattern Simulator</p>
+              <p className="text-xs text-slate-400">
+                Smart Money Trading research combining live <strong className="text-slate-300">tradingview.com</strong> execution with Abu Asad Almansi's SMC order flow engine.
+              </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* Toolbar */}
-        <div className="px-6 py-2.5 bg-[#0B0F19] border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-          {/* Timeframes */}
-          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
-            {(['5M', '15M', '1H', '4H', '1D'] as const).map((tf) => (
-              <button
-                key={tf}
-                onClick={() => setActiveTimeframe(tf)}
-                className={`px-2 py-0.5 rounded text-xs font-semibold font-mono-num transition-all ${
-                  activeTimeframe === tf
-                    ? 'bg-amber-400 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
-
-          {/* Indicator toggles */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSMA(!showSMA)}
-              className={`px-2.5 py-1 rounded text-xs font-mono-num border transition-all ${
-                showSMA
-                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/40'
-                  : 'bg-slate-900 text-slate-500 border-slate-800'
-              }`}
+              onClick={onClose}
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Close Chart Studio"
             >
-              SMA 20
-            </button>
-
-            <button
-              onClick={() => setShowEMA(!showEMA)}
-              className={`px-2.5 py-1 rounded text-xs font-mono-num border transition-all ${
-                showEMA
-                  ? 'bg-cyan-400/20 text-cyan-300 border-cyan-400/40'
-                  : 'bg-slate-900 text-slate-500 border-slate-800'
-              }`}
-            >
-              EMA 50
-            </button>
-
-            <button
-              onClick={() => setShowOrderBlocks(!showOrderBlocks)}
-              className={`px-2.5 py-1 rounded text-xs font-mono-num border transition-all ${
-                showOrderBlocks
-                  ? 'bg-emerald-400/20 text-emerald-300 border-emerald-400/40'
-                  : 'bg-slate-900 text-slate-500 border-slate-800'
-              }`}
-            >
-              Order Blocks
-            </button>
-
-            <button
-              onClick={() => setShowVolume(!showVolume)}
-              className={`px-2.5 py-1 rounded text-xs font-mono-num border transition-all ${
-                showVolume
-                  ? 'bg-purple-400/20 text-purple-300 border-purple-400/40'
-                  : 'bg-slate-900 text-slate-500 border-slate-800'
-              }`}
-            >
-              Volume Profile
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Dynamic Candlestick Info Bar */}
-        {hoveredCandle && (
-          <div className="px-6 py-2 bg-[#080B12] border-b border-slate-800/80 text-[11px] font-mono-num flex flex-wrap items-center gap-4 text-slate-400">
-            <span>Time: <strong className="text-slate-200">{hoveredCandle.time}</strong></span>
-            <span>O: <strong className="text-slate-200">{hoveredCandle.open}</strong></span>
-            <span>H: <strong className="text-emerald-400">{hoveredCandle.high}</strong></span>
-            <span>L: <strong className="text-rose-400">{hoveredCandle.low}</strong></span>
-            <span>C: <strong className="text-amber-300">{hoveredCandle.close}</strong></span>
-            <span>Vol: <strong className="text-slate-200">{hoveredCandle.volume.toLocaleString()}</strong></span>
-            {hoveredCandle.label && (
-              <span className="bg-amber-400/10 text-amber-300 px-1.5 py-0.5 rounded border border-amber-400/30">
-                ⭐ {hoveredCandle.label}
-              </span>
-            )}
+        {/* Global Toolbar & Symbol Bar */}
+        <div className="px-4 sm:px-6 py-2.5 bg-[#090D17] border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          
+          {/* Quick Symbol Switcher */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <span className="text-slate-400 font-mono-num text-[11px] font-semibold uppercase pr-1 hidden sm:inline">
+              Symbol:
+            </span>
+            {POPULAR_SYMBOLS.map((s) => {
+              const isSelected = selectedSymbol === s.symbol;
+              return (
+                <button
+                  key={s.symbol}
+                  onClick={() => setSelectedSymbol(s.symbol)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono-num font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800/80'
+                  }`}
+                >
+                  {s.name}
+                </button>
+              );
+            })}
           </div>
-        )}
 
-        {/* SVG Interactive Candlestick Canvas */}
-        <div className="p-6 bg-[#080C14] relative select-none">
-          <div className="w-full overflow-x-auto">
-            <svg
-              viewBox={`0 0 ${chartWidth} ${chartHeight + (showVolume ? 60 : 0)}`}
-              className="w-full h-[340px] overflow-visible"
-            >
-              {/* Background Grid Lines */}
-              {[5880, 5900, 5920, 5940, 5960].map((level) => {
-                const y = getY(level);
-                return (
-                  <g key={level}>
-                    <line
-                      x1="0"
-                      y1={y}
-                      x2={chartWidth}
-                      y2={y}
-                      stroke="#1e293b"
-                      strokeDasharray="4 4"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x={chartWidth - 5}
-                      y={y - 4}
-                      fill="#64748b"
-                      fontSize="10"
-                      textAnchor="end"
-                      fontFamily="JetBrains Mono"
-                    >
-                      {level}.00
-                    </text>
-                  </g>
-                );
-              })}
+          {/* View Mode Controls (TradingView Left / SMC Right / Full) */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setViewLayout('split')}
+                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewLayout === 'split'
+                    ? 'bg-amber-400 text-slate-950 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Split layout: TradingView.com chart on left + SMC Order Flow on right"
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Split: TV Left + SMC</span>
+                <span className="sm:hidden">Split</span>
+              </button>
 
-              {/* Institutional Order Block Zone */}
-              {showOrderBlocks && (
-                <g>
-                  <rect
-                    x="0"
-                    y={getY(5895)}
-                    width={chartWidth}
-                    height={getY(5880) - getY(5895)}
-                    fill="rgba(16, 185, 129, 0.08)"
-                    stroke="rgba(16, 185, 129, 0.3)"
-                    strokeDasharray="2 2"
+              <button
+                onClick={() => setViewLayout('tv-only')}
+                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewLayout === 'tv-only'
+                    ? 'bg-amber-400 text-slate-950 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="TradingView.com 100% Full Chart"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">TradingView 100%</span>
+                <span className="sm:hidden">TV</span>
+              </button>
+
+              <button
+                onClick={() => setViewLayout('smc-only')}
+                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewLayout === 'smc-only'
+                    ? 'bg-amber-400 text-slate-950 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Smart Money Concepts Simulator Only"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">SMC Engine</span>
+                <span className="sm:hidden">SMC</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Chart Canvas Body */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-[#070A10]">
+          <div className={`grid gap-4 h-full ${
+            viewLayout === 'split' 
+              ? 'grid-cols-1 lg:grid-cols-12 min-h-[580px]' 
+              : 'grid-cols-1 min-h-[580px]'
+          }`}>
+            
+            {/* LEFT PANEL: TradingView.com Live Chart */}
+            {(viewLayout === 'split' || viewLayout === 'tv-only') && (
+              <div className={`${
+                viewLayout === 'split' ? 'lg:col-span-7' : 'w-full'
+              } flex flex-col bg-[#090D17] rounded-xl border border-slate-800 overflow-hidden shadow-lg min-h-[480px]`}>
+                
+                {/* Panel Label Bar */}
+                <div className="px-4 py-2 bg-[#0A0F1A] border-b border-slate-800/80 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span className="font-bold text-white tracking-wide">
+                      tradingview.com Live Interactive Chart
+                    </span>
+                    <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono-num text-[10px] font-bold">
+                      {selectedSymbol}
+                    </span>
+                  </div>
+                  <a
+                    href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(selectedSymbol)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
+                  >
+                    Open on TradingView <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                {/* Actual Real-Time TradingView Widget */}
+                <div className="flex-1 w-full h-[520px]">
+                  <TradingViewWidget
+                    key={selectedSymbol}
+                    symbol={selectedSymbol}
+                    theme="dark"
+                    interval={activeInterval}
+                    timezone="Etc/UTC"
                   />
-                  <text
-                    x="10"
-                    y={getY(5883)}
-                    fill="#34d399"
-                    fontSize="10"
-                    fontWeight="bold"
-                    fontFamily="JetBrains Mono"
+                </div>
+              </div>
+            )}
+
+            {/* RIGHT PANEL: Smart Money Concepts & Order Flow Simulator */}
+            {(viewLayout === 'split' || viewLayout === 'smc-only') && (
+              <div className={`${
+                viewLayout === 'split' ? 'lg:col-span-5' : 'w-full'
+              } flex flex-col bg-[#090D17] rounded-xl border border-slate-800 overflow-hidden shadow-lg`}>
+                
+                {/* Right Panel Subheader */}
+                <div className="px-4 py-2.5 bg-[#0A0F1A] border-b border-slate-800/80 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <div>
+                      <span className="font-bold text-white block">
+                        Institutional Order Flow Microstructure
+                      </span>
+                      <span className="text-[10px] text-amber-300 font-medium">
+                        Smart Money Concepts (SMC) Architecture by Abu Asad Almansi
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Indicators toggle strip */}
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono-num">
+                    <button
+                      onClick={() => setShowOrderBlocks(!showOrderBlocks)}
+                      className={`px-2 py-0.5 rounded border transition-all ${
+                        showOrderBlocks
+                          ? 'bg-emerald-400/20 text-emerald-300 border-emerald-400/40 font-bold'
+                          : 'bg-slate-900 text-slate-500 border-slate-800'
+                      }`}
+                    >
+                      OB Zones
+                    </button>
+                    <button
+                      onClick={() => setShowVolume(!showVolume)}
+                      className={`px-2 py-0.5 rounded border transition-all ${
+                        showVolume
+                          ? 'bg-purple-400/20 text-purple-300 border-purple-400/40 font-bold'
+                          : 'bg-slate-900 text-slate-500 border-slate-800'
+                      }`}
+                    >
+                      Vol Profile
+                    </button>
+                  </div>
+                </div>
+
+                {/* Candlestick Diagnostics Readout */}
+                {hoveredCandle && (
+                  <div className="px-4 py-2 bg-[#06080E] border-b border-slate-800 text-[10px] font-mono-num flex flex-wrap items-center justify-between gap-2 text-slate-400">
+                    <span>T: <strong className="text-slate-200">{hoveredCandle.time}</strong></span>
+                    <span>O: <strong className="text-slate-200">{hoveredCandle.open}</strong></span>
+                    <span>H: <strong className="text-emerald-400">{hoveredCandle.high}</strong></span>
+                    <span>L: <strong className="text-rose-400">{hoveredCandle.low}</strong></span>
+                    <span>C: <strong className="text-amber-300">{hoveredCandle.close}</strong></span>
+                    <span>V: <strong className="text-slate-200">{hoveredCandle.volume}</strong></span>
+                  </div>
+                )}
+
+                {/* SVG Visualizer Canvas */}
+                <div className="p-4 bg-[#070A10] relative flex-1 flex flex-col justify-center select-none overflow-x-auto">
+                  <svg
+                    viewBox={`0 0 ${chartWidth} ${chartHeight + (showVolume ? 50 : 0)}`}
+                    className="w-full h-[260px] overflow-visible"
                   >
-                    Institutional Demand Block (Liquidity Sieve)
-                  </text>
-                </g>
-              )}
+                    {/* Background Grid Lines */}
+                    {[5880, 5900, 5920, 5940, 5960].map((level) => {
+                      const y = getY(level);
+                      return (
+                        <g key={level}>
+                          <line
+                            x1="0"
+                            y1={y}
+                            x2={chartWidth}
+                            y2={y}
+                            stroke="#1e293b"
+                            strokeDasharray="4 4"
+                            strokeWidth="1"
+                          />
+                          <text
+                            x={chartWidth - 5}
+                            y={y - 4}
+                            fill="#64748b"
+                            fontSize="9"
+                            textAnchor="end"
+                            fontFamily="JetBrains Mono"
+                          >
+                            {level}.00
+                          </text>
+                        </g>
+                      );
+                    })}
 
-              {/* Candles */}
-              {SAMPLE_CANDLES.map((c, i) => {
-                const isBullish = c.close >= c.open;
-                const x = i * candleSpacing + candleSpacing / 2;
-                const yOpen = getY(c.open);
-                const yClose = getY(c.close);
-                const yHigh = getY(c.high);
-                const yLow = getY(c.low);
-
-                const topY = Math.min(yOpen, yClose);
-                const bodyHeight = Math.max(Math.abs(yClose - yOpen), 3);
-                const color = isBullish ? '#10b981' : '#f43f5e';
-
-                return (
-                  <g
-                    key={c.time}
-                    onMouseEnter={() => setHoveredCandle(c)}
-                    className="cursor-pointer group"
-                  >
-                    {/* Hover column backdrop */}
-                    <rect
-                      x={x - candleSpacing / 2}
-                      y="0"
-                      width={candleSpacing}
-                      height={chartHeight}
-                      fill="transparent"
-                      className="hover:fill-slate-800/30"
-                    />
-
-                    {/* Wick */}
-                    <line
-                      x1={x}
-                      y1={yHigh}
-                      x2={x}
-                      y2={yLow}
-                      stroke={color}
-                      strokeWidth="1.5"
-                    />
-
-                    {/* Candle Body */}
-                    <rect
-                      x={x - 8}
-                      y={topY}
-                      width={16}
-                      height={bodyHeight}
-                      fill={color}
-                      rx="1"
-                    />
-
-                    {/* Volume Bar */}
-                    {showVolume && (
-                      <rect
-                        x={x - 6}
-                        y={chartHeight + 50 - (c.volume / 4500) * 45}
-                        width={12}
-                        height={(c.volume / 4500) * 45}
-                        fill={isBullish ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)'}
-                        rx="1"
-                      />
-                    )}
-
-                    {/* Annotation Badge */}
-                    {c.label && (
+                    {/* Institutional Order Block Demand Zone */}
+                    {showOrderBlocks && (
                       <g>
-                        <circle cx={x} cy={yHigh - 12} r="3" fill="#f59e0b" />
-                        <line x1={x} y1={yHigh - 9} x2={x} y2={yHigh} stroke="#f59e0b" strokeWidth="1" />
+                        <rect
+                          x="0"
+                          y={getY(5895)}
+                          width={chartWidth}
+                          height={getY(5880) - getY(5895)}
+                          fill="rgba(16, 185, 129, 0.12)"
+                          stroke="rgba(16, 185, 129, 0.4)"
+                          strokeDasharray="2 2"
+                        />
+                        <text
+                          x="8"
+                          y={getY(5883)}
+                          fill="#34d399"
+                          fontSize="9"
+                          fontWeight="bold"
+                          fontFamily="JetBrains Mono"
+                        >
+                          SMC Demand Order Block (Abu Asad Model)
+                        </text>
                       </g>
                     )}
-                  </g>
-                );
-              })}
 
-              {/* Moving average overlays */}
-              {showSMA && (
-                <path
-                  d="M 25 210 Q 150 200, 280 160 T 580 50"
-                  fill="none"
-                  stroke="#fbbf24"
-                  strokeWidth="2"
-                  opacity="0.85"
-                />
-              )}
+                    {/* Candles */}
+                    {SAMPLE_CANDLES.map((c, i) => {
+                      const isBullish = c.close >= c.open;
+                      const x = i * candleSpacing + candleSpacing / 2;
+                      const yOpen = getY(c.open);
+                      const yClose = getY(c.close);
+                      const yHigh = getY(c.high);
+                      const yLow = getY(c.low);
 
-              {showEMA && (
-                <path
-                  d="M 25 220 Q 160 215, 300 175 T 580 75"
-                  fill="none"
-                  stroke="#22d3ee"
-                  strokeWidth="2"
-                  opacity="0.85"
-                />
-              )}
-            </svg>
+                      const topY = Math.min(yOpen, yClose);
+                      const bodyHeight = Math.max(Math.abs(yClose - yOpen), 3);
+                      const color = isBullish ? '#10b981' : '#f43f5e';
+
+                      return (
+                        <g
+                          key={c.time}
+                          onMouseEnter={() => setHoveredCandle(c)}
+                          className="cursor-pointer group"
+                        >
+                          {/* Hover backdrop */}
+                          <rect
+                            x={x - candleSpacing / 2}
+                            y="0"
+                            width={candleSpacing}
+                            height={chartHeight}
+                            fill="transparent"
+                            className="hover:fill-slate-800/40"
+                          />
+
+                          {/* Wick */}
+                          <line
+                            x1={x}
+                            y1={yHigh}
+                            x2={x}
+                            y2={yLow}
+                            stroke={color}
+                            strokeWidth="1.5"
+                          />
+
+                          {/* Candle Body */}
+                          <rect
+                            x={x - 7}
+                            y={topY}
+                            width={14}
+                            height={bodyHeight}
+                            fill={color}
+                            rx="1"
+                          />
+
+                          {/* Volume Bar */}
+                          {showVolume && (
+                            <rect
+                              x={x - 5}
+                              y={chartHeight + 40 - (c.volume / 4500) * 35}
+                              width={10}
+                              height={(c.volume / 4500) * 35}
+                              fill={isBullish ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)'}
+                              rx="1"
+                            />
+                          )}
+
+                          {/* Annotation Flag */}
+                          {c.label && (
+                            <g>
+                              <circle cx={x} cy={yHigh - 10} r="2.5" fill="#f59e0b" />
+                              <line x1={x} y1={yHigh - 7} x2={x} y2={yHigh} stroke="#f59e0b" strokeWidth="1" />
+                            </g>
+                          )}
+                        </g>
+                      );
+                    })}
+
+                    {/* SMA & EMA */}
+                    {showSMA && (
+                      <path
+                        d="M 20 180 Q 130 170, 240 140 T 500 40"
+                        fill="none"
+                        stroke="#fbbf24"
+                        strokeWidth="1.5"
+                        opacity="0.9"
+                      />
+                    )}
+                    {showEMA && (
+                      <path
+                        d="M 20 190 Q 140 185, 260 150 T 500 60"
+                        fill="none"
+                        stroke="#22d3ee"
+                        strokeWidth="1.5"
+                        opacity="0.9"
+                      />
+                    )}
+                  </svg>
+                </div>
+
+                {/* SMC Analytical Insights Box */}
+                <div className="p-3.5 bg-[#0A0E18] border-t border-slate-800 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      Smart Money Concept Checklist
+                    </span>
+                    <span className="text-[10px] font-mono-num text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
+                      High-Probability Edge
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono-num">
+                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
+                      <span className="text-slate-400 block text-[10px]">Market Structure:</span>
+                      <span className="text-emerald-400 font-bold">Bullish BOS Confirmed</span>
+                    </div>
+                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
+                      <span className="text-slate-400 block text-[10px]">FVG Imbalance:</span>
+                      <span className="text-amber-300 font-bold">5,898 - 5,906 Filled</span>
+                    </div>
+                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
+                      <span className="text-slate-400 block text-[10px]">CVD Absorption:</span>
+                      <span className="text-cyan-300 font-bold">+1,420 Delta Inflow</span>
+                    </div>
+                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
+                      <span className="text-slate-400 block text-[10px]">Invalidation Level:</span>
+                      <span className="text-rose-400 font-bold">5,878.50 Swing Low</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-3.5 bg-[#090D17] border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span> SMA 20 (Trend Direction)
+        {/* Footer Summary Bar */}
+        <div className="px-4 sm:px-6 py-3 bg-[#080C14] border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+          <div className="flex items-center gap-3 flex-wrap text-[11px]">
+            <span className="flex items-center gap-1 text-slate-300 font-medium">
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+              <strong>Smart Money Trading</strong> by Abu Asad Almansi
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> EMA 50 (Dynamic Support)
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="text-slate-400 hidden sm:inline">
+              Real-time charts streamed via tradingview.com widgets & proprietary SMC overlays.
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors"
-          >
-            Close Chart View
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+            >
+              Close Studio
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );

@@ -395,6 +395,40 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             ))}
           </div>
 
+          {/* Author Profile Showcase Card */}
+          <div className="bg-gradient-to-br from-[#0A0F1A] via-[#0E1528] to-[#0A0F1A] border border-amber-500/25 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="relative shrink-0">
+              <img
+                src={article.author.avatar}
+                alt={article.author.name}
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md"
+              />
+              <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
+                <ShieldCheck className="w-3 h-3" />
+              </span>
+            </div>
+
+            <div className="flex-1 space-y-1.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-amber-400 font-mono-num font-bold uppercase tracking-wider">
+                  Lead Research Author
+                </span>
+                <span className="bg-amber-400/15 text-amber-300 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
+                  Verified Desk
+                </span>
+              </div>
+              <h4 className="font-extrabold text-base sm:text-lg text-white">
+                {article.author.name}
+              </h4>
+              <p className="text-xs text-amber-300/90 font-medium">
+                {article.author.role}
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed pt-1">
+                {article.author.bio}
+              </p>
+            </div>
+          </div>
+
           {/* Reader Sentiment Voting Box */}
           <div className="bg-[#090D17] border border-slate-800 rounded-xl p-6 space-y-4">
             <h3 className="font-bold text-white text-base flex items-center gap-2">

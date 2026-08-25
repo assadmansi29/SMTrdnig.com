@@ -63,17 +63,24 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
           {/* Bottom Action / Author Row */}
           <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img
-                src={article.author.avatar}
-                alt={article.author.name}
-                className="w-10 h-10 rounded-full object-cover border-2 border-amber-400/40"
-              />
+              <div className="relative shrink-0">
+                <img
+                  src={article.author.avatar}
+                  alt={article.author.name}
+                  className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-sm"
+                />
+                <span className="absolute -bottom-0.5 -right-0.5 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
+                  <ShieldCheck className="w-2.5 h-2.5" />
+                </span>
+              </div>
               <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-white">{article.author.name}</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold text-white">{article.author.name}</span>
+                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/30">
+                    AUTHOR
+                  </span>
                 </div>
-                <span className="text-xs text-slate-400">{article.author.role}</span>
+                <span className="text-xs text-amber-300/90 font-medium">{article.author.role}</span>
               </div>
             </div>
 

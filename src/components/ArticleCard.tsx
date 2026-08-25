@@ -122,12 +122,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
               alt={article.author.name}
               className="w-7 h-7 rounded-full object-cover border border-slate-700"
             />
-            <div>
-              <span className="text-xs font-semibold text-slate-200 block leading-tight">
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-slate-200 block leading-tight truncate">
                 {article.author.name}
               </span>
-              <span className="text-[10px] text-slate-400 block leading-tight">
-                {article.author.role.split(' ')[0]} Analyst
+              <span className="text-[10px] text-amber-400/90 block leading-tight truncate font-mono-num">
+                {article.author.role.includes('Founder') ? 'Founder / SMC Lead' : article.author.role}
               </span>
             </div>
           </div>

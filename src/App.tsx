@@ -343,33 +343,66 @@ export default function App() {
 
                   <button
                     onClick={() => setIsChartOpen(true)}
-                    className="w-full text-left p-3 rounded-xl bg-[#090D17] hover:bg-slate-800/70 border border-slate-800 hover:border-amber-400/30 transition-all flex items-center justify-between group"
+                    className="w-full text-left p-3 rounded-xl bg-gradient-to-r from-[#090D17] to-[#0d1627] hover:bg-slate-800/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-all flex items-center justify-between group"
                   >
                     <div>
-                      <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors block">
-                        Order Flow & Pattern Studio
-                      </span>
-                      <span className="text-[11px] text-slate-400">Candlestick physics & liquidity zones</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors block">
+                          TradingView.com & SMC Studio
+                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      </div>
+                      <span className="text-[11px] text-slate-400">Live tradingview.com charts on left + SMC engine</span>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
+                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                   </button>
                 </div>
               </div>
 
               {/* 4. Editorial Quantitative Analysts */}
               <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-5 space-y-4 shadow-lg">
-                <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-400" />
-                  SMTrading Research Desk
-                </h4>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    Quantitative Research Desk
+                  </h4>
+                  <span className="text-[10px] font-mono-num text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                    SMC Alpha
+                  </span>
+                </div>
 
                 <div className="space-y-3">
-                  {Object.values(AUTHORS).map(author => (
+                  {/* Lead Architect: Abu Asad Almansi */}
+                  <div className="p-3 bg-gradient-to-br from-amber-500/10 via-[#0A0F1A] to-[#0E1528] rounded-xl border border-amber-500/30 flex items-center gap-3 shadow-md">
+                    <div className="relative shrink-0">
+                      <img
+                        src={AUTHORS.abuAsad.avatar}
+                        alt={AUTHORS.abuAsad.name}
+                        className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-sm"
+                      />
+                      <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
+                        <ShieldCheck className="w-2.5 h-2.5" />
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h5 className="font-extrabold text-xs text-white truncate">{AUTHORS.abuAsad.name}</h5>
+                        <span className="bg-amber-400/20 text-amber-300 text-[9px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/40">
+                          FOUNDER
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-amber-400/90 font-medium truncate">{AUTHORS.abuAsad.role}</p>
+                      <p className="text-[9px] text-slate-400 line-clamp-1 mt-0.5">SMC & Institutional Order Flow Lead</p>
+                    </div>
+                  </div>
+
+                  {/* Other Desk Analysts */}
+                  {Object.values(AUTHORS).filter(a => a.id !== 'author-0').map(author => (
                     <div key={author.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800/40 transition-colors">
                       <img
                         src={author.avatar}
                         alt={author.name}
-                        className="w-9 h-9 rounded-full object-cover border border-slate-700 shrink-0"
+                        className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
                         <h5 className="font-bold text-xs text-white truncate">{author.name}</h5>

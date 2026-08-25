@@ -8,7 +8,8 @@ import {
   LineChart, 
   Sparkles,
   Layers,
-  ChevronDown
+  ChevronDown,
+  ShieldCheck
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -65,17 +66,22 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-amber-300 transition-colors">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="font-black text-xl sm:text-2xl tracking-tight text-white group-hover:text-amber-300 transition-colors flex items-center">
                   SMTrading<span className="text-amber-400">.com</span>
                 </span>
-                <span className="bg-amber-400/10 text-amber-300 text-[10px] font-mono-num font-bold px-1.5 py-0.5 rounded border border-amber-400/30 tracking-wider uppercase">
-                  Institutional
-                </span>
+                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/35 shadow-sm backdrop-blur-sm tracking-wide">
+                  <ShieldCheck className="w-3 h-3 text-amber-400" />
+                  <span>by ABU ASAD ALMANSI</span>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium tracking-wide">
-                Quantitative Alpha & Macro Intelligence
-              </p>
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
+                <span className="text-slate-200 font-semibold tracking-wider text-[10px] uppercase bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800">
+                  Smart Money Trading
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="text-slate-400 hidden sm:inline">Institutional Order Flow & Quantitative SMC</span>
+              </div>
             </div>
           </button>
         </div>
@@ -117,11 +123,11 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={onOpenChart}
-              className="flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-amber-300 bg-slate-900/80 hover:bg-slate-800 px-2.5 py-1.5 rounded-md border border-slate-800 transition-colors cursor-pointer"
-              title="Live Pattern Simulator"
+              className="flex items-center gap-1.5 text-xs font-medium text-cyan-300 hover:text-cyan-200 bg-cyan-950/40 hover:bg-cyan-900/50 px-2.5 py-1.5 rounded-md border border-cyan-500/30 transition-colors cursor-pointer shadow-sm"
+              title="Live TradingView Chart & SMC Simulator"
             >
               <LineChart className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Chart Studio</span>
+              <span>TradingView Studio</span>
             </button>
           </div>
 

@@ -7,6 +7,15 @@ import psychologyImg from '../assets/images/trader_psychology_1787615845049.jpg'
 import optionsImg from '../assets/images/options_volatility_1787615858467.jpg';
 
 export const AUTHORS: Record<string, Author> = {
+  abuAsad: {
+    id: 'author-0',
+    name: 'Abu Asad Almansi',
+    role: 'Founder & Chief Quantitative Architect',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+    bio: 'Founder of Smart Money Trading (SMTrading.com). Quantitative market technician specializing in Institutional Order Flow, Smart Money Concepts (SMC), and algorithmic liquidity microstructure.',
+    twitter: '@almansi_smc',
+    linkedin: 'abu-asad-almansi',
+  },
   alex: {
     id: 'author-1',
     name: 'Dr. Alexander Vance',
@@ -57,7 +66,7 @@ export const INITIAL_ARTICLES: Article[] = [
     publishedAt: 'May 24, 2026',
     readTime: '8 min read',
     difficulty: 'Institutional',
-    author: AUTHORS.alex,
+    author: AUTHORS.abuAsad,
     featured: true,
     trending: true,
     editorPick: true,

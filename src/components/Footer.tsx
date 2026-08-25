@@ -48,17 +48,29 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
         {/* Brand Col */}
         <div className="lg:col-span-2 space-y-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#0E131F] border border-amber-500/40 flex items-center justify-center font-bold text-amber-400 font-mono-num">
-              SM
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 p-[1px] shadow-md shadow-amber-500/10">
+              <div className="w-full h-full bg-[#0E131F] rounded-[10px] flex items-center justify-center font-bold text-amber-400 font-mono-num text-sm">
+                SM
+              </div>
             </div>
-            <span className="font-extrabold text-lg text-white">
-              SMTrading<span className="text-amber-400">.com</span>
-            </span>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="font-black text-xl sm:text-2xl text-white block tracking-tight">
+                  SMTrading<span className="text-amber-400">.com</span>
+                </span>
+                <span className="bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
+                  by ABU ASAD ALMANSI
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-300 font-semibold uppercase tracking-wider pt-0.5">
+                Smart Money Trading Intelligence
+              </div>
+            </div>
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed pr-6">
-            SMTrading.com is an independent quantitative research journal and market intelligence platform delivering institutional analysis on global macro liquidity, price action microstructure, and derivatives volatility.
+            Smart Money Trading by Abu Asad Almansi is an institutional market intelligence publication and quantitative research journal delivering algorithmic analysis on macro liquidity, order flow microstructure, and Smart Money Concepts (SMC).
           </p>
 
           <div className="flex items-center gap-3 pt-2 text-slate-300">
@@ -122,6 +134,7 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="space-y-3">
           <h4 className="font-bold text-white uppercase text-xs tracking-wider">Editorial Board</h4>
           <ul className="space-y-1.5 text-slate-400">
+            <li className="text-amber-300 font-semibold">Abu Asad Almansi (Founder & Lead Architect)</li>
             <li>Dr. Alexander Vance (Quant)</li>
             <li>Elena Rostova (Macro & FX)</li>
             <li>Marcus Sterling, CFA (Derivatives)</li>
