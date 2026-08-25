@@ -90,15 +90,29 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Controls & Utilities */}
           <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* E-Commerce Store Navigation Button */}
-            <button
-              onClick={onOpenECommerce}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-950/80 via-[#0C1524] to-[#0E1B2E] hover:from-emerald-900 hover:to-[#13233D] text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 hover:border-emerald-400/80 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs font-bold transition-all shadow-sm shadow-emerald-500/10 cursor-pointer shrink-0 whitespace-nowrap group"
-              title="E-Commerce Institutional Store"
-            >
-              <ShoppingBag className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
-              <span>E-Commerce</span>
-            </button>
+            {/* CTA Group: E-Commerce on top, VIP Alpha Dispatch directly under */}
+            <div className="flex flex-col gap-1 shrink-0">
+              {/* E-Commerce Store Navigation Button */}
+              <button
+                onClick={onOpenECommerce}
+                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-950/80 via-[#0C1524] to-[#0E1B2E] hover:from-emerald-900 hover:to-[#13233D] text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 hover:border-emerald-400/80 px-2.5 sm:px-3 py-1 rounded-md text-[11px] sm:text-xs font-bold transition-all shadow-sm shadow-emerald-500/10 cursor-pointer whitespace-nowrap group"
+                title="E-Commerce Institutional Store"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+                <span>E-Commerce</span>
+              </button>
+
+              {/* Newsletter Subscribe CTA */}
+              <button
+                onClick={onOpenNewsletter}
+                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-2.5 sm:px-3 py-1 rounded-md text-[11px] sm:text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer whitespace-nowrap"
+                title="Subscribe to VIP Alpha Dispatch"
+              >
+                <Sparkles className="w-3 h-3 text-slate-950 shrink-0" />
+                <span className="inline sm:hidden">VIP Alpha</span>
+                <span className="hidden sm:inline">VIP Alpha Dispatch</span>
+              </button>
+            </div>
 
             {/* Quick Search Button */}
             <button
@@ -155,17 +169,6 @@ export const Header: React.FC<HeaderProps> = ({
                   {savedArticlesCount}
                 </span>
               )}
-            </button>
-
-            {/* Newsletter Subscribe CTA */}
-            <button
-              onClick={onOpenNewsletter}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer shrink-0 whitespace-nowrap"
-              title="Subscribe to VIP Alpha Dispatch"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-              <span className="inline sm:hidden">VIP Alpha</span>
-              <span className="hidden sm:inline">VIP Alpha Dispatch</span>
             </button>
           </div>
         </div>
