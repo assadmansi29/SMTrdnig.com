@@ -2,6 +2,7 @@ import React from 'react';
 import { Article } from '../types';
 import { Clock, Eye, Bookmark, ArrowRight, Sparkles, TrendingUp, ShieldCheck, Flame } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useAbuAsadAvatar } from '../context/AvatarContext';
 
 interface HeroFeaturedArticleProps {
   article: Article;
@@ -16,6 +17,8 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
   isBookmarked,
   onToggleBookmark
 }) => {
+  const { abuAsadAvatar } = useAbuAsadAvatar();
+  const avatarSrc = article.author.name.includes('Abu Asad') ? abuAsadAvatar : article.author.avatar;
   return (
     <div className="relative rounded-3xl overflow-hidden border border-amber-500/30 bg-gradient-to-br from-[#0D1322] via-[#0E1528] to-[#0A0E1A] shadow-2xl group">
       {/* Decorative Glow */}
@@ -66,7 +69,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <img
-                  src={article.author.avatar}
+                  src={avatarSrc}
                   alt={article.author.name}
                   referrerPolicy="no-referrer"
                   className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"

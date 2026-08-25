@@ -5,7 +5,7 @@ import algoImg from '../assets/images/algorithmic_trading_1787615766945.jpg';
 import forexGoldImg from '../assets/images/forex_commodities_1787615778214.jpg';
 import psychologyImg from '../assets/images/trader_psychology_1787615845049.jpg';
 import optionsImg from '../assets/images/options_volatility_1787615858467.jpg';
-import abuAsadImg from '../assets/images/abu_asad_almansi_real_1787625428321.jpg';
+import abuAsadImg from '../assets/images/abu_asad_almansi.jpg';
 
 export const AUTHORS: Record<string, Author> = {
   abuAsad: {

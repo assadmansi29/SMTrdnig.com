@@ -18,10 +18,11 @@ import {
 } from './data/blogData';
 import { MarketTicker } from './components/MarketTicker';
 import { Header } from './components/Header';
-import { HeroFeaturedArticle } from './components/HeroFeaturedArticle';
+import { FeaturedArticlesSection } from './components/FeaturedArticlesSection';
 import { ArticleCard } from './components/ArticleCard';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { BlueVerifiedBadge } from './components/BlueVerifiedBadge';
+import { useAbuAsadAvatar } from './context/AvatarContext';
 import { PositionCalculatorModal } from './components/PositionCalculatorModal';
 import { EconomicCalendarModal } from './components/EconomicCalendarModal';
 import { ChartSimulatorModal } from './components/ChartSimulatorModal';
@@ -43,10 +44,13 @@ import {
   BookOpen,
   LineChart,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 export default function App() {
+  const { abuAsadAvatar, handleFileUpload } = useAbuAsadAvatar();
   const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<'All' | 'Beginner' | 'Intermediate' | 'Institutional'>('All');
@@ -112,11 +116,7 @@ export default function App() {
     return true;
   });
 
-  // Featured Lead Article
-  const heroArticle = articles.find(a => a.featured) || articles[0];
-  const gridArticles = activeCategory === 'All' && activeFilterTab === 'All' && selectedDifficulty === 'All'
-    ? filteredArticles.filter(a => a.id !== heroArticle.id)
-    : filteredArticles;
+  const gridArticles = filteredArticles;
 
   const savedArticles = articles.filter(a => savedArticleIds.includes(a.id));
 
@@ -148,16 +148,15 @@ export default function App() {
 
       {/* 3. Main Body Container */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 w-full">
-        {/* Hero Featured Story (Shown when viewing 'All' category) */}
+        {/* Featured Articles Section (Prominently displays top 4-5 engaging trading articles) */}
         {activeCategory === 'All' && activeFilterTab === 'All' && selectedDifficulty === 'All' && (
-          <section aria-label="Lead Story">
-            <HeroFeaturedArticle
-              article={heroArticle}
-              onSelectArticle={(art) => setSelectedArticle(art)}
-              isBookmarked={savedArticleIds.includes(heroArticle.id)}
-              onToggleBookmark={handleToggleBookmark}
-            />
-          </section>
+          <FeaturedArticlesSection
+            articles={articles}
+            onSelectArticle={(art) => setSelectedArticle(art)}
+            savedArticleIds={savedArticleIds}
+            onToggleBookmark={handleToggleBookmark}
+            onOpenCalculatorWithSetup={handleOpenCalculatorWithSetup}
+          />
         )}
 
         {/* Category Header Title when filtering */}
@@ -374,18 +373,27 @@ export default function App() {
 
                 <div className="space-y-3">
                   {/* Lead Architect: Abu Asad Almansi */}
-                  <div className="p-3 bg-gradient-to-br from-amber-500/10 via-[#0A0F1A] to-[#0E1528] rounded-xl border border-amber-500/30 flex items-center gap-3 shadow-md">
-                    <div className="relative shrink-0">
+                  <div className="p-3 bg-gradient-to-br from-amber-500/10 via-[#0A0F1A] to-[#0E1528] rounded-xl border border-amber-500/30 flex items-center gap-3 shadow-md group relative">
+                    <label className="relative shrink-0 cursor-pointer group/avatar" title="Click to upload exact photo file">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleFileUpload} 
+                      />
                       <img
-                        src={AUTHORS.abuAsad.avatar}
+                        src={abuAsadAvatar}
                         alt={AUTHORS.abuAsad.name}
                         referrerPolicy="no-referrer"
-                        className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
+                        className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm transition-opacity group-hover/avatar:opacity-80"
                       />
                       <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
                         <ShieldCheck className="w-2.5 h-2.5" />
                       </span>
-                    </div>
+                      <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
+                        <Camera className="w-4 h-4 text-amber-300" />
+                      </div>
+                    </label>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <h5 className="font-extrabold text-xs text-white truncate">{AUTHORS.abuAsad.name}</h5>

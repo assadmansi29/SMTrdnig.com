@@ -19,9 +19,11 @@ import {
   AlertCircle,
   Copy,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  Camera
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useAbuAsadAvatar } from '../context/AvatarContext';
 
 interface ArticleDetailModalProps {
   article: Article | null;
@@ -42,6 +44,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   onSelectArticle,
   allArticles
 }) => {
+  const { abuAsadAvatar, handleFileUpload } = useAbuAsadAvatar();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCodeIndex, setCopiedCodeIndex] = useState<number | null>(null);
   const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
@@ -207,7 +210,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={article.author.avatar}
+                  src={article.author.name.includes('Abu Asad') ? abuAsadAvatar : article.author.avatar}
                   alt={article.author.name}
                   referrerPolicy="no-referrer"
                   className="w-12 h-12 rounded-full object-cover object-top border-2 border-amber-400/40"
@@ -404,15 +407,40 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           {/* Author Profile Showcase Card */}
           <div className="bg-gradient-to-br from-[#0A0F1A] via-[#0E1528] to-[#0A0F1A] border border-amber-500/25 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-5">
             <div className="relative shrink-0">
-              <img
-                src={article.author.avatar}
-                alt={article.author.name}
-                referrerPolicy="no-referrer"
-                className="w-16 h-16 rounded-2xl object-cover object-top border-2 border-amber-400 shadow-md"
-              />
-              <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
-                <ShieldCheck className="w-3 h-3" />
-              </span>
+              {article.author.name.includes('Abu Asad') ? (
+                <label className="relative block cursor-pointer group/avatar" title="Click to upload exact photo file">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleFileUpload} 
+                  />
+                  <img
+                    src={abuAsadAvatar}
+                    alt={article.author.name}
+                    referrerPolicy="no-referrer"
+                    className="w-16 h-16 rounded-2xl object-cover object-top border-2 border-amber-400 shadow-md transition-opacity group-hover/avatar:opacity-80"
+                  />
+                  <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
+                    <ShieldCheck className="w-3 h-3" />
+                  </span>
+                  <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
+                    <Camera className="w-5 h-5 text-amber-300" />
+                  </div>
+                </label>
+              ) : (
+                <>
+                  <img
+                    src={article.author.avatar}
+                    alt={article.author.name}
+                    referrerPolicy="no-referrer"
+                    className="w-16 h-16 rounded-2xl object-cover object-top border-2 border-amber-400 shadow-md"
+                  />
+                  <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
+                    <ShieldCheck className="w-3 h-3" />
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="flex-1 space-y-1.5 min-w-0">

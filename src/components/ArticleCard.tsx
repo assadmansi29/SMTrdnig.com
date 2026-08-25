@@ -2,6 +2,7 @@ import React from 'react';
 import { Article } from '../types';
 import { Clock, Eye, Bookmark, Share2, TrendingUp, Sparkles, User, ArrowUpRight } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useAbuAsadAvatar } from '../context/AvatarContext';
 
 interface ArticleCardProps {
   article: Article;
@@ -18,6 +19,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   onToggleBookmark,
   onShare
 }) => {
+  const { abuAsadAvatar } = useAbuAsadAvatar();
+  const avatarSrc = article.author.name.includes('Abu Asad') ? abuAsadAvatar : article.author.avatar;
   return (
     <article className="group bg-[#0D1322] border border-slate-800/80 hover:border-amber-400/40 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/5 flex flex-col h-full">
       {/* Image Container */}
@@ -119,7 +122,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img
-              src={article.author.avatar}
+              src={avatarSrc}
               alt={article.author.name}
               referrerPolicy="no-referrer"
               className="w-7 h-7 rounded-full object-cover object-top border border-slate-700"
