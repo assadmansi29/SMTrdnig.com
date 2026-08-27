@@ -629,7 +629,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
             </span>
           </div>
           <div className="flex items-center gap-2 font-mono-num text-[10px] text-amber-400">
-            <span>SMTrading.com {t('brandBy')}</span>
+            <span>SMTrading.pro {t('brandBy')}</span>
             <BlueVerifiedBadge size="xs" />
           </div>
         </div>

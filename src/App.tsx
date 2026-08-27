@@ -19,6 +19,7 @@ import {
 import { MarketTicker } from './components/MarketTicker';
 import { Header } from './components/Header';
 import { FeaturedArticlesSection } from './components/FeaturedArticlesSection';
+import { DeskAlphaPicksSection } from './components/DeskAlphaPicksSection';
 import { LiveTradingSection } from './components/LiveTradingSection';
 import { ArticleCard } from './components/ArticleCard';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
@@ -154,7 +155,7 @@ export default function App() {
 
       {/* 3. Main Body Container */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 w-full">
-        {/* Featured Articles Section (Prominently displays top 4-5 engaging trading articles) */}
+        {/* Featured Articles Section (Prominently displays lead research desk spotlight article) */}
         {activeCategory === 'All' && activeFilterTab === 'All' && selectedDifficulty === 'All' && (
           <FeaturedArticlesSection
             articles={articles}
@@ -167,6 +168,17 @@ export default function App() {
 
         {/* Live Market TradingView Terminal Section */}
         <LiveTradingSection onOpenChartModal={() => setIsChartOpen(true)} />
+
+        {/* Desk Alpha Picks Section (Positioned directly under TradingView chart) */}
+        {activeCategory === 'All' && activeFilterTab === 'All' && selectedDifficulty === 'All' && (
+          <DeskAlphaPicksSection
+            articles={articles}
+            onSelectArticle={(art) => setSelectedArticle(art)}
+            savedArticleIds={savedArticleIds}
+            onToggleBookmark={handleToggleBookmark}
+            onOpenCalculatorWithSetup={handleOpenCalculatorWithSetup}
+          />
+        )}
 
         {/* Category Header Title when filtering */}
         {activeCategory !== 'All' && (

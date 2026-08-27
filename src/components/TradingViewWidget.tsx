@@ -40,7 +40,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     enabled_features: '[]',
     disabled_features: '[]',
     locale: 'en',
-    utm_source: 'smtrading.com'
+    utm_source: 'smtrading.pro'
   });
 
   const embedUrl = `https://s.tradingview.com/widgetembed/?${searchParams.toString()}`;

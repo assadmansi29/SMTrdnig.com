@@ -218,7 +218,7 @@ export const ar: Record<TranslationKey, string> = {
   searchNoResults: 'لم يتم العثور على نماذج كمية تطابق',
 
   // Newsletter Modal
-  newsBadge: 'نشرة ألفا VIP من SMTrading.com',
+  newsBadge: 'نشرة ألفا VIP من SMTrading.pro',
   newsTitle: 'معلومات الاقتصاد الكلي وتدفق الأوامر المؤسسي',
   newsDescription: 'انضم إلى أكثر من 45,000 متداول محترف، محلل صناديق تحوط، وباحث كمي يتلقون أسبوعياً نماذج السيولة السيادية وإعدادات التداول الخوارزمي.',
   newsBenefit1: 'تقرير التزامات المتداولين (COT) الأسبوعي الصادر عن CFTC بتفصيل مؤسسي',
@@ -325,7 +325,7 @@ export const ar: Record<TranslationKey, string> = {
   ecomUsdOneTime: 'دولار أمريكي دفعة واحدة',
 
   // Footer
-  footerBannerTag: 'شبكة SMTrading.com الكمية',
+  footerBannerTag: 'شبكة SMTrading.pro الكمية',
   footerBannerHeading: 'ابقَ متقدماً بخطوة على تحولات سيولة البنوك المركزية واختلالات تدفق الأوامر.',
   footerBannerDesc: 'تحليلات سوقية على المستوى المؤسسي، نمذجة انحراف التقلبات، وأطر عمل خوارزمية دقيقة.',
   footerBannerBtn: 'اشترك في نشرة ألفا VIP الحصرية',
@@ -337,8 +337,8 @@ export const ar: Record<TranslationKey, string> = {
   footerEditorialTitle: 'مجلس التحرير والخبراء',
   footerFounderRole: 'أبو أسد المنسي (المؤسس وقائد التصميم الكمي)',
   footerRiskWarningTitle: 'تحذير المخاطر وإفصاح CFTC:',
-  footerRiskWarningText: 'ينطوي تداول العقود الآجلة، الأسهم، الخيارات، العملات الأجنبية، والأصول الرقمية على مخاطر خسارة كبيرة ولا يناسب جميع المستثمرين. إن درجة الرافعة المالية العالية قد تعمل ضدك تماماً كما تعمل لصالحك. جميع المواد المنشورة على SMTrading.com هي لأغراض تعليمية وإعلامية وبحثية كمية فقط ولا تشكل أي نصيحة مالية أو استثمارية.',
-  footerCopyright: '© 2026 SMTrading.com بإشراف أبو أسد المنسي. جميع الحقوق محفوظة.',
+  footerRiskWarningText: 'ينطوي تداول العقود الآجلة، الأسهم، الخيارات، العملات الأجنبية، والأصول الرقمية على مخاطر خسارة كبيرة ولا يناسب جميع المستثمرين. إن درجة الرافعة المالية العالية قد تعمل ضدك تماماً كما تعمل لصالحك. جميع المواد المنشورة على SMTrading.pro هي لأغراض تعليمية وإعلامية وبحثية كمية فقط ولا تشكل أي نصيحة مالية أو استثمارية.',
+  footerCopyright: '© 2026 SMTrading.pro بإشراف أبو أسد المنسي. جميع الحقوق محفوظة.',
   footerPrivacy: 'سياسة الخصوصية',
   footerTerms: 'شروط الخدمة',
   footerDisclosures: 'إفصاح المخاطر',

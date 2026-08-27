@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <span className="font-black text-xl sm:text-2xl tracking-tight text-white group-hover:text-amber-300 transition-colors flex items-center">
-                    {t('brandTitle')}<span className="text-amber-400">.com</span>
+                    {t('brandTitle')}<span className="text-amber-400">.pro</span>
                   </span>
                   <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/35 shadow-sm backdrop-blur-sm tracking-wide">
                     <span>{t('brandBy')}</span>

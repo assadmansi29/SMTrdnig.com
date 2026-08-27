@@ -71,7 +71,7 @@ export const Footer: React.FC<FooterProps> = ({
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="font-black text-xl sm:text-2xl text-white block tracking-tight">
-                  SMTrading<span className="text-amber-400">.com</span>
+                  SMTrading<span className="text-amber-400">.pro</span>
                 </span>
                 <span className="bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1">
                   <span>by ABU ASAD ALMANSI</span>

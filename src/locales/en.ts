@@ -216,7 +216,7 @@ export const en = {
   searchNoResults: 'No quantitative models found matching',
 
   // Newsletter Modal
-  newsBadge: 'SMTrading.com VIP Alpha Dispatch',
+  newsBadge: 'SMTrading.pro VIP Alpha Dispatch',
   newsTitle: 'Institutional Macro & Order Flow Intelligence',
   newsDescription: 'Join 45,000+ proprietary traders, hedge fund analysts, and quantitative researchers receiving our weekly sovereign liquidity models and algorithmic setups.',
   newsBenefit1: 'Weekly CFTC Commitment of Traders (COT) Institutional Breakdown',
@@ -323,7 +323,7 @@ export const en = {
   ecomUsdOneTime: 'USD one-time',
 
   // Footer
-  footerBannerTag: 'SMTrading.com Quantitative Network',
+  footerBannerTag: 'SMTrading.pro Quantitative Network',
   footerBannerHeading: 'Stay ahead of central bank liquidity shifts and order flow imbalances.',
   footerBannerDesc: 'Institutional-grade market analysis, volatility skew modeling, and algorithmic frameworks.',
   footerBannerBtn: 'Subscribe to VIP Alpha Dispatch',
@@ -335,8 +335,8 @@ export const en = {
   footerEditorialTitle: 'Editorial Board',
   footerFounderRole: 'Abu Asad Almansi (Founder & Lead Architect)',
   footerRiskWarningTitle: 'CFTC & Risk Warning:',
-  footerRiskWarningText: 'Trading futures, equities, options, foreign exchange, and digital assets carries substantial risk of loss and is not suitable for every investor. The high degree of leverage that is often obtainable in commodity trading can work against you as well as for you. Content published on SMTrading.com is strictly for educational, informational, and quantitative research purposes and does not constitute financial, investment, or trading advice.',
-  footerCopyright: '© 2026 SMTrading.com by Abu Asad Almansi. All Rights Reserved.',
+  footerRiskWarningText: 'Trading futures, equities, options, foreign exchange, and digital assets carries substantial risk of loss and is not suitable for every investor. The high degree of leverage that is often obtainable in commodity trading can work against you as well as for you. Content published on SMTrading.pro is strictly for educational, informational, and quantitative research purposes and does not constitute financial, investment, or trading advice.',
+  footerCopyright: '© 2026 SMTrading.pro by Abu Asad Almansi. All Rights Reserved.',
   footerPrivacy: 'Privacy Policy',
   footerTerms: 'Terms of Service',
   footerDisclosures: 'Risk Disclosure',

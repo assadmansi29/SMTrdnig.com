@@ -218,7 +218,7 @@ export const uk: Record<TranslationKey, string> = {
   searchNoResults: 'Кількісні моделі не знайдено за запитом',
 
   // Newsletter Modal
-  newsBadge: 'SMTrading.com VIP Alpha Dispatch',
+  newsBadge: 'SMTrading.pro VIP Alpha Dispatch',
   newsTitle: 'Інституційна макро-аналітика та потік ордерів',
   newsDescription: 'Приєднуйтесь до 45 000+ професійних трейдерів, аналітиків хедж-фондів та квант-дослідників, які отримують щотижневі звіти.',
   newsBenefit1: 'Щотижневий розбір інституційних звітів CFTC COT',
@@ -325,7 +325,7 @@ export const uk: Record<TranslationKey, string> = {
   ecomUsdOneTime: 'USD разово',
 
   // Footer
-  footerBannerTag: 'Кількісна мережа SMTrading.com',
+  footerBannerTag: 'Кількісна мережа SMTrading.pro',
   footerBannerHeading: 'Будьте попереду змін ліквідності центробанків та дисбалансів потоку ордерів.',
   footerBannerDesc: 'Ринковий аналіз інституційного рівня, моделювання волатильності та алгоритмічні структури.',
   footerBannerBtn: 'Підписатися на VIP Alpha Dispatch',
@@ -337,8 +337,8 @@ export const uk: Record<TranslationKey, string> = {
   footerEditorialTitle: 'Редакційна рада',
   footerFounderRole: 'Абу Асад Альмансі (Засновник та головний архітектор)',
   footerRiskWarningTitle: 'Попередження про ризики та повідомлення CFTC:',
-  footerRiskWarningText: 'Торгівля ф\'ючерсами, акціями, опціонами, валютами та цифровими активами пов\'язана з істотним ризиком збитків і підходить не для всіх інвесторів. Високий рівень кредитного плеча може працювати як проти вас, так і на вашу користь. Всі матеріали на SMTrading.com публікуються виключно в освітніх, інформаційних та науково-дослідних цілях і не є фінансовою консультацією.',
-  footerCopyright: '© 2026 SMTrading.com від Абу Асада Альмансі. Всі права захищені.',
+  footerRiskWarningText: 'Торгівля ф\'ючерсами, акціями, опціонами, валютами та цифровими активами пов\'язана з істотним ризиком збитків і підходить не для всіх інвесторів. Високий рівень кредитного плеча може працювати як проти вас, так і на вашу користь. Всі матеріали на SMTrading.pro публікуються виключно в освітніх, інформаційних та науково-дослідних цілях і не є фінансовою консультацією.',
+  footerCopyright: '© 2026 SMTrading.pro від Абу Асада Альмансі. Всі права захищені.',
   footerPrivacy: 'Політика конфіденційності',
   footerTerms: 'Умови використання',
   footerDisclosures: 'Розкриття ризиків',
