@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useTranslation } from '../context/LanguageContext';
 
 interface ChartSimulatorModalProps {
   isOpen: boolean;
@@ -66,6 +67,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
   onClose,
   defaultSymbol = 'CME_MINI:ES1!'
 }) => {
+  const { t, isRTL } = useTranslation();
   const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
   const [viewLayout, setViewLayout] = useState<'split' | 'tv-only' | 'smc-only'>('split');
   const [activeInterval, setActiveInterval] = useState('15');
@@ -110,10 +112,10 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 <h3 className="font-black text-lg sm:text-xl text-white flex items-center gap-2">
                   <span>SMTrading<span className="text-amber-400">.com</span></span>
                   <span className="text-slate-600">/</span>
-                  <span className="text-slate-200 font-semibold text-sm sm:text-base">Chart Studio</span>
+                  <span className="text-slate-200 font-semibold text-sm sm:text-base">{t('chartStudioTitle')}</span>
                 </h3>
                 <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/40 shadow-sm backdrop-blur-sm tracking-wide">
-                  <span>by ABU ASAD ALMANSI</span>
+                  <span>{t('chartStudioBy')}</span>
                   <BlueVerifiedBadge size="sm" />
                 </div>
                 <span className="text-slate-400 text-xs hidden md:inline font-medium">
@@ -121,11 +123,11 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 </span>
                 <span className="hidden sm:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Live TradingView Feed
+                  {t('chartStudioFeed')}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Smart Money Trading research combining live <strong className="text-slate-300">tradingview.com</strong> execution with Abu Asad Almansi's SMC order flow engine.
+                {t('chartStudioDesc')}
               </p>
             </div>
           </div>
@@ -133,7 +135,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               title="Close Chart Studio"
             >
               <X className="w-5 h-5" />
@@ -147,7 +149,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
           {/* Quick Symbol Switcher */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <span className="text-slate-400 font-mono-num text-[11px] font-semibold uppercase pr-1 hidden sm:inline">
-              Symbol:
+              {t('chartSymbol')}:
             </span>
             {POPULAR_SYMBOLS.map((s) => {
               const isSelected = selectedSymbol === s.symbol;
@@ -180,7 +182,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 title="Split layout: TradingView.com chart on left + SMC Order Flow on right"
               >
                 <Columns className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Split: TV Left + SMC</span>
+                <span className="hidden sm:inline">{t('chartSplitLayout')}</span>
                 <span className="sm:hidden">Split</span>
               </button>
 
@@ -194,7 +196,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 title="TradingView.com 100% Full Chart"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">TradingView 100%</span>
+                <span className="hidden sm:inline">{t('chartTvFull')}</span>
                 <span className="sm:hidden">TV</span>
               </button>
 
@@ -208,7 +210,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 title="Smart Money Concepts Simulator Only"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">SMC Engine</span>
+                <span className="hidden sm:inline">{t('chartSmcEngine')}</span>
                 <span className="sm:hidden">SMC</span>
               </button>
             </div>
@@ -234,7 +236,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                     <span className="font-bold text-white tracking-wide">
-                      tradingview.com Live Interactive Chart
+                      {t('chartLiveTvChart')}
                     </span>
                     <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono-num text-[10px] font-bold">
                       {selectedSymbol}
@@ -246,7 +248,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                     rel="noreferrer"
                     className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
                   >
-                    Open on TradingView <ExternalLink className="w-3 h-3" />
+                    {t('chartOpenTv')} <ExternalLink className="w-3 h-3 rtl:rotate-180" />
                   </a>
                 </div>
 
@@ -272,14 +274,14 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 {/* Right Panel Subheader */}
                 <div className="px-4 py-2.5 bg-[#0A0F1A] border-b border-slate-800/80 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-400" />
+                    <Zap className="w-4 h-4 text-amber-400 shrink-0" />
                     <div>
                       <span className="font-bold text-white block">
-                        Institutional Order Flow Microstructure
+                        {t('chartOrderFlowTitle')}
                       </span>
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] text-amber-300 font-medium">
-                          Smart Money Concepts (SMC) Architecture by Abu Asad Almansi
+                          {t('chartSmcArchitecture')}
                         </span>
                         <BlueVerifiedBadge size="xs" />
                       </div>
@@ -290,23 +292,23 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                   <div className="flex items-center gap-1.5 text-[10px] font-mono-num">
                     <button
                       onClick={() => setShowOrderBlocks(!showOrderBlocks)}
-                      className={`px-2 py-0.5 rounded border transition-all ${
+                      className={`px-2 py-0.5 rounded border transition-all cursor-pointer ${
                         showOrderBlocks
                           ? 'bg-emerald-400/20 text-emerald-300 border-emerald-400/40 font-bold'
                           : 'bg-slate-900 text-slate-500 border-slate-800'
                       }`}
                     >
-                      OB Zones
+                      {t('chartObZones')}
                     </button>
                     <button
                       onClick={() => setShowVolume(!showVolume)}
-                      className={`px-2 py-0.5 rounded border transition-all ${
+                      className={`px-2 py-0.5 rounded border transition-all cursor-pointer ${
                         showVolume
                           ? 'bg-purple-400/20 text-purple-300 border-purple-400/40 font-bold'
                           : 'bg-slate-900 text-slate-500 border-slate-800'
                       }`}
                     >
-                      Vol Profile
+                      {t('chartVolProfile')}
                     </button>
                   </div>
                 </div>
@@ -481,28 +483,28 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5">
                       <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                      Smart Money Concept Checklist
+                      {t('chartSmcChecklist')}
                     </span>
                     <span className="text-[10px] font-mono-num text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
-                      High-Probability Edge
+                      {t('chartHighProbEdge')}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-[11px] font-mono-num">
                     <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">Market Structure:</span>
+                      <span className="text-slate-400 block text-[10px]">{t('chartMarketStructure')}:</span>
                       <span className="text-emerald-400 font-bold">Bullish BOS Confirmed</span>
                     </div>
                     <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">FVG Imbalance:</span>
+                      <span className="text-slate-400 block text-[10px]">{t('chartFvgImbalance')}:</span>
                       <span className="text-amber-300 font-bold">5,898 - 5,906 Filled</span>
                     </div>
                     <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">CVD Absorption:</span>
+                      <span className="text-slate-400 block text-[10px]">{t('chartCvdAbsorption')}:</span>
                       <span className="text-cyan-300 font-bold">+1,420 Delta Inflow</span>
                     </div>
                     <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">Invalidation Level:</span>
+                      <span className="text-slate-400 block text-[10px]">{t('chartInvalidation')}:</span>
                       <span className="text-rose-400 font-bold">5,878.50 Swing Low</span>
                     </div>
                   </div>
@@ -521,7 +523,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
             </span>
             <span className="text-slate-600 hidden sm:inline">•</span>
             <span className="text-slate-400 hidden sm:inline">
-              Real-time charts streamed via tradingview.com widgets & proprietary SMC overlays.
+              {t('chartFooterRealtime')}
             </span>
           </div>
 
@@ -530,7 +532,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
               onClick={onClose}
               className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer"
             >
-              Close Studio
+              {t('chartCloseStudio')}
             </button>
           </div>
         </div>
@@ -539,3 +541,4 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
     </div>
   );
 };
+

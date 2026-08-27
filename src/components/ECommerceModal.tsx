@@ -21,6 +21,7 @@ import {
   Tag
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useTranslation } from '../context/LanguageContext';
 
 interface Product {
   id: string;
@@ -115,25 +116,6 @@ const PRODUCTS: Product[] = [
     isDigital: true
   },
   {
-    id: 'prod-deskmat',
-    name: 'SMTrading Signature Desk Mat (Extended 900x400mm SMC Cheat Sheet)',
-    category: 'Hardware & Merch',
-    price: 39,
-    originalPrice: 59,
-    rating: 4.93,
-    reviewsCount: 275,
-    badge: 'LIMITED EDITION',
-    description: 'High-density micro-woven waterproof desk mat featuring institutional market structure diagrams, Wyckoff accumulation schematics, and session timing zones.',
-    features: [
-      'Ultra-smooth micro-woven precision tracking surface',
-      'Anti-fray stitched borders with non-slip rubber base',
-      'Printed high-resolution SMC order block & liquidity schematics',
-      'Worldwide express shipping with tracking'
-    ],
-    image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=600&q=80',
-    isDigital: false
-  },
-  {
     id: 'prod-hardware-key',
     name: 'SMTrading Custom Hardware Crypto & 2FA Security Key',
     category: 'Hardware & Merch',
@@ -160,6 +142,7 @@ interface ECommerceModalProps {
 }
 
 export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose }) => {
+  const { t, isRTL } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartView, setIsCartView] = useState(false);
@@ -168,6 +151,13 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
   const [promoApplied, setPromoApplied] = useState(false);
 
   if (!isOpen) return null;
+
+  const categoryLabels: Record<string, string> = {
+    'All': t('ecomCatAll'),
+    'Software & Indicators': t('ecomCatSoftware'),
+    'Education & Masterclass': t('ecomCatEducation'),
+    'Hardware & Merch': t('ecomCatHardware')
+  };
 
   const filteredProducts = selectedCategory === 'All'
     ? PRODUCTS
@@ -234,7 +224,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
         {/* Top Header Bar */}
         <div className="p-4 sm:p-5 bg-[#0C1220] border-b border-slate-800 flex items-center justify-between gap-4 sticky top-0 z-20 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-amber-500 p-[1px] shadow-md shadow-emerald-500/10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-amber-500 p-[1px] shadow-md shadow-emerald-500/10 shrink-0">
               <div className="w-full h-full bg-[#0E1526] rounded-[11px] flex items-center justify-center">
                 <ShoppingBag className="w-5 h-5 text-emerald-400" />
               </div>
@@ -242,15 +232,15 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  SMTrading <span className="text-emerald-400">E-Commerce</span> Store
+                  SMTrading <span className="text-emerald-400">{t('ecomStore')}</span>
                 </h2>
                 <div className="hidden sm:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
                   <ShieldCheck className="w-3 h-3" />
-                  <span>OFFICIAL DESK</span>
+                  <span>{t('ecomOfficialDesk')}</span>
                 </div>
               </div>
               <p className="text-xs text-slate-400">
-                Institutional Algorithmic Tools, Indicator Suites, Masterclasses & Premium Merch
+                {t('ecomSubtitle')}
               </p>
             </div>
           </div>
@@ -266,7 +256,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               }`}
             >
               <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">{isCartView ? 'Back to Store' : 'View Cart'}</span>
+              <span className="hidden sm:inline">{isCartView ? t('ecomBackToStore') : t('ecomViewCart')}</span>
               {totalItemsCount > 0 && (
                 <span className={`font-mono-num font-extrabold text-[10px] px-1.5 py-0.2 rounded-full ${
                   isCartView ? 'bg-slate-950 text-amber-300' : 'bg-emerald-400 text-slate-950'
@@ -296,24 +286,24 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-extrabold text-2xl text-white">Order Confirmed & Provisioned</h3>
+                <h3 className="font-extrabold text-2xl text-white">{t('ecomOrderConfirmed')}</h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Thank you for securing your institutional tools. Your digital license keys, PineScript repository access, and order receipts have been dispatched to your email.
+                  {t('ecomOrderConfirmedSub')}
                 </p>
               </div>
 
-              <div className="bg-[#070A10] p-4 rounded-xl border border-slate-800 text-left text-xs font-mono-num space-y-1.5">
+              <div className="bg-[#070A10] p-4 rounded-xl border border-slate-800 text-left rtl:text-right text-xs font-mono-num space-y-1.5">
                 <div className="flex justify-between text-slate-400">
-                  <span>Transaction Hash:</span>
+                  <span>{t('ecomTxHash')}:</span>
                   <span className="text-emerald-400 font-bold">#SMT-{Math.floor(100000 + Math.random() * 900000)}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
-                  <span>License Tier:</span>
-                  <span className="text-white">Lifetime Institutional VIP</span>
+                  <span>{t('ecomLicenseTier')}:</span>
+                  <span className="text-white">{t('ecomLicenseTierVal')}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
-                  <span>Delivery Status:</span>
-                  <span className="text-emerald-400">Instant Download Ready</span>
+                  <span>{t('ecomDeliveryStatus')}:</span>
+                  <span className="text-emerald-400">{t('ecomInstantDownload')}</span>
                 </div>
               </div>
 
@@ -322,13 +312,13 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                   onClick={handleReset}
                   className="px-6 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md"
                 >
-                  Continue Shopping
+                  {t('ecomContinueShopping')}
                 </button>
                 <button
                   onClick={onClose}
                   className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
                 >
-                  Return to Terminal
+                  {t('ecomReturnTerminal')}
                 </button>
               </div>
             </div>
@@ -338,13 +328,13 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="font-extrabold text-lg text-white flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-emerald-400" />
-                  Your Institutional Cart ({totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'})
+                  {t('ecomYourCart')} ({totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'})
                 </h3>
                 <button
                   onClick={() => setIsCartView(false)}
-                  className="text-xs text-amber-400 hover:text-amber-300 font-semibold"
+                  className="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer"
                 >
-                  ← Browse More Products
+                  {isRTL ? '← ' : '← '}{t('ecomBrowseMore')}
                 </button>
               </div>
 
@@ -353,15 +343,15 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                   <div className="w-12 h-12 rounded-full bg-slate-800/80 text-slate-500 flex items-center justify-center mx-auto">
                     <ShoppingBag className="w-6 h-6" />
                   </div>
-                  <h4 className="font-bold text-white text-base">Your cart is currently empty</h4>
+                  <h4 className="font-bold text-white text-base">{t('ecomCartEmpty')}</h4>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                    Explore our indicator suites, video masterclasses, and trading desk gear to elevate your SMC edge.
+                    {t('ecomCartEmptySub')}
                   </p>
                   <button
                     onClick={() => setIsCartView(false)}
                     className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md"
                   >
-                    Explore E-Commerce Store
+                    {t('ecomExploreStore')}
                   </button>
                 </div>
               ) : (
@@ -377,15 +367,16 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                           <img
                             src={product.image}
                             alt={product.name}
+                            referrerPolicy="no-referrer"
                             className="w-16 h-16 rounded-lg object-cover border border-slate-700 shrink-0"
                           />
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-mono-num font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.2 rounded border border-emerald-500/20">
-                                {product.category}
+                                {categoryLabels[product.category] || product.category}
                               </span>
                               {product.isDigital && (
-                                <span className="text-[10px] text-cyan-300 font-mono-num">Instant Digital Access</span>
+                                <span className="text-[10px] text-cyan-300 font-mono-num">{t('ecomInstantDigital')}</span>
                               )}
                             </div>
                             <h4 className="font-bold text-xs sm:text-sm text-white line-clamp-1">
@@ -402,7 +393,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                           <div className="flex items-center bg-[#070A10] border border-slate-800 rounded-lg p-1">
                             <button
                               onClick={() => handleUpdateQuantity(product.id, -1)}
-                              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors cursor-pointer"
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
@@ -411,19 +402,19 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                             </span>
                             <button
                               onClick={() => handleUpdateQuantity(product.id, 1)}
-                              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
                             </button>
                           </div>
 
-                          <span className="text-sm font-mono-num font-extrabold text-white min-w-[70px] text-right">
+                          <span className="text-sm font-mono-num font-extrabold text-white min-w-[70px] text-right rtl:text-left">
                             ${product.price * quantity}
                           </span>
 
                           <button
                             onClick={() => handleRemoveFromCart(product.id)}
-                            className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors"
+                            className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                             title="Remove item"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -436,50 +427,50 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                   {/* Order Summary & Checkout (4 cols) */}
                   <div className="lg:col-span-4 bg-[#0C1220] border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
                     <h4 className="font-extrabold text-sm text-white uppercase tracking-wider border-b border-slate-800 pb-3">
-                      Order Breakdown
+                      {t('ecomOrderBreakdown')}
                     </h4>
 
                     {/* Promo Code Form */}
                     <form onSubmit={handleApplyPromo} className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Promo Code (try ALPHA15)"
+                        placeholder={t('ecomPromoPlaceholder')}
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value)}
                         className="flex-1 bg-[#070A10] border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white uppercase placeholder:normal-case focus:border-amber-400 focus:outline-none font-mono-num"
                       />
                       <button
                         type="submit"
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-lg transition-colors"
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-lg transition-colors cursor-pointer"
                       >
-                        Apply
+                        {t('ecomApply')}
                       </button>
                     </form>
 
                     {promoApplied && (
                       <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/30">
                         <Check className="w-3.5 h-3.5" />
-                        <span>15% Institutional Alpha Discount Applied</span>
+                        <span>{t('ecomDiscountApplied')}</span>
                       </div>
                     )}
 
                     <div className="space-y-2 text-xs font-mono-num border-t border-slate-800/80 pt-3">
                       <div className="flex justify-between text-slate-400">
-                        <span>Subtotal:</span>
+                        <span>{t('ecomSubtotal')}:</span>
                         <span className="text-white">${subtotal.toFixed(2)} USD</span>
                       </div>
                       {promoApplied && (
                         <div className="flex justify-between text-emerald-400 font-bold">
-                          <span>Discount (15%):</span>
+                          <span>{t('ecomDiscount')} (15%):</span>
                           <span>-${discount.toFixed(2)} USD</span>
                         </div>
                       )}
                       <div className="flex justify-between text-slate-400">
-                        <span>Tax / Delivery:</span>
-                        <span className="text-emerald-400 font-bold">$0.00 (Free)</span>
+                        <span>{t('ecomTaxDelivery')}:</span>
+                        <span className="text-emerald-400 font-bold">{t('ecomFree')}</span>
                       </div>
                       <div className="flex justify-between text-base font-extrabold text-white border-t border-slate-800 pt-2">
-                        <span>Total:</span>
+                        <span>{t('ecomTotal')}:</span>
                         <span className="text-amber-400">${grandTotal.toFixed(2)} USD</span>
                       </div>
                     </div>
@@ -489,16 +480,16 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                       className="w-full py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-amber-500 hover:from-emerald-400 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2"
                     >
                       <Lock className="w-4 h-4" />
-                      <span>Complete Instant Checkout (${grandTotal.toFixed(2)})</span>
+                      <span>{t('ecomCompleteCheckout')} (${grandTotal.toFixed(2)})</span>
                     </button>
 
                     <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-1">
                       <span className="flex items-center gap-1">
                         <Lock className="w-3 h-3 text-emerald-400" />
-                        256-Bit SSL Encrypted
+                        {t('ecomSslEncrypted')}
                       </span>
                       <span>•</span>
-                      <span>Stripe & Crypto Supported</span>
+                      <span>{t('ecomPaymentMethods')}</span>
                     </div>
                   </div>
                 </div>
@@ -521,14 +512,14 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                       }`}
                     >
-                      {cat}
+                      {categoryLabels[cat] || cat}
                     </button>
                   ))}
                 </div>
 
                 <div className="hidden md:flex items-center gap-2 text-xs font-mono-num text-amber-300 bg-amber-400/10 px-2.5 py-1 rounded-md border border-amber-400/20">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Use Code: <strong>ALPHA15</strong> for 15% off</span>
+                  <span>{t('ecomUseCode')}: <strong>ALPHA15</strong> (15%)</span>
                 </div>
               </div>
 
@@ -546,24 +537,25 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                         <img
                           src={product.image}
                           alt={product.name}
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-[#0C1220] via-transparent to-black/40"></div>
 
                         {/* Top Badges */}
-                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3 flex items-center gap-1.5">
                           {product.badge && (
                             <span className="bg-amber-400 text-slate-950 font-mono-num font-extrabold text-[9px] px-2 py-0.5 rounded shadow-md tracking-wider">
                               {product.badge}
                             </span>
                           )}
                           <span className="bg-[#070A10]/90 backdrop-blur-md text-emerald-300 font-mono-num text-[10px] px-2 py-0.5 rounded border border-emerald-500/30">
-                            {product.category}
+                            {categoryLabels[product.category] || product.category}
                           </span>
                         </div>
 
                         {/* Rating */}
-                        <div className="absolute bottom-2.5 left-3 flex items-center gap-1 text-[11px] font-mono-num font-bold text-amber-300 bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-slate-800">
+                        <div className="absolute bottom-2.5 left-3 rtl:left-auto rtl:right-3 flex items-center gap-1 text-[11px] font-mono-num font-bold text-amber-300 bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-slate-800">
                           <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                           <span>{product.rating}</span>
                           <span className="text-slate-500 font-normal">({product.reviewsCount})</span>
@@ -604,7 +596,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-slate-400 block">USD One-Time</span>
+                            <span className="text-[10px] text-slate-400 block">{t('ecomUsdOneTime')}</span>
                           </div>
 
                           <button
@@ -616,7 +608,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                             }`}
                           >
                             <ShoppingBag className="w-3.5 h-3.5" />
-                            <span>{isInCart ? 'Add More' : 'Add to Cart'}</span>
+                            <span>{isInCart ? t('ecomAddedToCart') : t('ecomAddToCart')}</span>
                           </button>
                         </div>
                       </div>
@@ -633,13 +625,11 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
           <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1 text-slate-300 font-medium">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              100% Institutional Quality Guarantee
+              {t('ecomGuarantees')}
             </span>
-            <span className="hidden sm:inline text-slate-600">•</span>
-            <span className="hidden sm:inline text-slate-400">Instant Digital License Dispatch</span>
           </div>
           <div className="flex items-center gap-2 font-mono-num text-[10px] text-amber-400">
-            <span>Official SMTrading.com Store</span>
+            <span>SMTrading.com {t('brandBy')}</span>
             <BlueVerifiedBadge size="xs" />
           </div>
         </div>

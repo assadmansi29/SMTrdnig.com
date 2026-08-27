@@ -2,6 +2,7 @@ import React, { StrictMode, ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AvatarProvider } from './context/AvatarContext';
+import { LanguageProvider } from './context/LanguageContext';
 import './index.css';
 
 // Guard against third-party cross-origin script errors (e.g., TradingView iframe scripts)
@@ -49,12 +50,15 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <GlobalErrorBoundary>
-      <AvatarProvider>
-        <App />
-      </AvatarProvider>
+      <LanguageProvider>
+        <AvatarProvider>
+          <App />
+        </AvatarProvider>
+      </LanguageProvider>
     </GlobalErrorBoundary>
   </StrictMode>,
 );
+
 
 
 

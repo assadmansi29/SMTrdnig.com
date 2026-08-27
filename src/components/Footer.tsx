@@ -2,6 +2,7 @@ import React from 'react';
 import { ShieldCheck, TrendingUp, Sparkles, Mail, Globe, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import { ArticleCategory } from '../types';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useTranslation } from '../context/LanguageContext';
 
 interface FooterProps {
   onSelectCategory: (category: ArticleCategory) => void;
@@ -18,21 +19,33 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenChart,
   onOpenNewsletter
 }) => {
+  const { t, isRTL } = useTranslation();
+
+  const categoryTranslations: Record<ArticleCategory, string> = {
+    'All': t('catAll'),
+    'Macro & Liquidity': t('catMacro'),
+    'Order Flow & Price Action': t('catOrderFlow'),
+    'Algorithmic & Quant': t('catQuant'),
+    'FX & Commodities': t('catFX'),
+    'Options & Derivatives': t('catOptions'),
+    'Risk & Psychology': t('catRisk')
+  };
+
   return (
     <footer className="bg-[#070A10] border-t border-slate-800 text-slate-400 text-xs">
       {/* Top Pre-Footer Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-800/80">
         <div className="bg-gradient-to-r from-[#0C1220] via-[#101728] to-[#0A0E18] border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="space-y-1.5 text-center md:text-left">
-            <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px] flex items-center justify-center md:justify-start gap-1.5">
+          <div className="space-y-1.5 text-center md:text-left rtl:md:text-right">
+            <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px] flex items-center justify-center md:justify-start rtl:md:justify-start gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              SMTrading.com Quantitative Network
+              {t('footerBannerTag')}
             </span>
             <h3 className="text-lg sm:text-xl font-bold text-white">
-              Stay ahead of central bank liquidity shifts and order flow imbalances.
+              {t('footerBannerHeading')}
             </h3>
             <p className="text-xs text-slate-400">
-              Institutional-grade market analysis, volatility skew modeling, and algorithmic frameworks.
+              {t('footerBannerDesc')}
             </p>
           </div>
 
@@ -40,7 +53,7 @@ export const Footer: React.FC<FooterProps> = ({
             onClick={onOpenNewsletter}
             className="shrink-0 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
           >
-            Subscribe to VIP Alpha Dispatch
+            {t('footerBannerBtn')}
           </button>
         </div>
       </div>
@@ -71,8 +84,8 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
           </div>
 
-          <p className="text-xs text-slate-400 leading-relaxed pr-6">
-            Smart Money Trading by Abu Asad Almansi is an institutional market intelligence publication and quantitative research journal delivering algorithmic analysis on macro liquidity, order flow microstructure, and Smart Money Concepts (SMC).
+          <p className="text-xs text-slate-400 leading-relaxed pr-6 rtl:pr-0 rtl:pl-6">
+            {t('footerBrandDesc')}
           </p>
 
           <div className="flex items-center gap-3 pt-2 text-slate-300">
@@ -87,7 +100,7 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Categories */}
         <div className="space-y-3">
-          <h4 className="font-bold text-white uppercase text-xs tracking-wider">Research Sectors</h4>
+          <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerSectorsTitle')}</h4>
           <ul className="space-y-2">
             {(['Macro & Liquidity', 'Order Flow & Price Action', 'Algorithmic & Quant', 'FX & Commodities', 'Options & Derivatives', 'Risk & Psychology'] as ArticleCategory[]).map(c => (
               <li key={c}>
@@ -96,9 +109,9 @@ export const Footer: React.FC<FooterProps> = ({
                     onSelectCategory(c);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="hover:text-amber-300 transition-colors text-left cursor-pointer"
+                  className="hover:text-amber-300 transition-colors text-left rtl:text-right cursor-pointer"
                 >
-                  {c}
+                  {categoryTranslations[c] || c}
                 </button>
               </li>
             ))}
@@ -107,26 +120,26 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Interactive Tools */}
         <div className="space-y-3">
-          <h4 className="font-bold text-white uppercase text-xs tracking-wider">Institutional Tools</h4>
+          <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerToolsTitle')}</h4>
           <ul className="space-y-2">
             <li>
-              <button onClick={onOpenCalculator} className="hover:text-amber-300 transition-colors text-left flex items-center gap-1">
-                Position Sizing & Risk Calculator
+              <button onClick={onOpenCalculator} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navRiskCalculator')}
               </button>
             </li>
             <li>
-              <button onClick={onOpenCalendar} className="hover:text-amber-300 transition-colors text-left flex items-center gap-1">
-                Macro Economic Calendar
+              <button onClick={onOpenCalendar} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navCalendar')}
               </button>
             </li>
             <li>
-              <button onClick={onOpenChart} className="hover:text-amber-300 transition-colors text-left flex items-center gap-1">
-                Candlestick Pattern Simulator
+              <button onClick={onOpenChart} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navChartStudio')}
               </button>
             </li>
             <li>
-              <button onClick={onOpenNewsletter} className="hover:text-amber-300 transition-colors text-left flex items-center gap-1">
-                VIP Weekly Alpha Dispatch
+              <button onClick={onOpenNewsletter} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navVipAlpha')}
               </button>
             </li>
           </ul>
@@ -134,10 +147,10 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Author Desk & Editorial */}
         <div className="space-y-3">
-          <h4 className="font-bold text-white uppercase text-xs tracking-wider">Editorial Board</h4>
+          <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerEditorialTitle')}</h4>
           <ul className="space-y-1.5 text-slate-400">
             <li className="text-amber-300 font-semibold flex items-center gap-1">
-              <span>Abu Asad Almansi (Founder & Lead Architect)</span>
+              <span>{t('footerFounderRole')}</span>
               <BlueVerifiedBadge size="xs" />
             </li>
             <li>Dr. Alexander Vance (Quant)</li>
@@ -154,16 +167,16 @@ export const Footer: React.FC<FooterProps> = ({
           <div className="flex items-start gap-2.5 text-[11px] text-slate-500 leading-relaxed">
             <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <p>
-              <strong>CFTC & Risk Warning:</strong> Trading futures, equities, options, foreign exchange, and digital assets carries substantial risk of loss and is not suitable for every investor. The high degree of leverage that is often obtainable in commodity trading can work against you as well as for you. Content published on <strong>SMTrading.com</strong> is strictly for educational, informational, and quantitative research purposes and does not constitute financial, investment, or trading advice.
+              <strong>{t('footerRiskWarningTitle')}</strong> {t('footerRiskWarningText')}
             </p>
           </div>
 
           <div className="pt-3 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
-            <span>© 2026 SMTrading.com. All rights reserved.</span>
+            <span>{t('footerCopyright')}</span>
             <div className="flex gap-4">
-              <span className="hover:text-slate-400 cursor-pointer">Privacy Policy</span>
-              <span className="hover:text-slate-400 cursor-pointer">Terms of Service</span>
-              <span className="hover:text-slate-400 cursor-pointer">Editorial Policy</span>
+              <span className="hover:text-slate-400 cursor-pointer">{t('footerPrivacy')}</span>
+              <span className="hover:text-slate-400 cursor-pointer">{t('footerTerms')}</span>
+              <span className="hover:text-slate-400 cursor-pointer">{t('footerDisclosures')}</span>
             </div>
           </div>
         </div>

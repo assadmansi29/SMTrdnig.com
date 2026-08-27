@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
+import { useTranslation } from '../context/LanguageContext';
 
 interface FeaturedArticlesSectionProps {
   articles: Article[];
@@ -36,6 +37,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
   onOpenCalculatorWithSetup
 }) => {
   const { abuAsadAvatar } = useAbuAsadAvatar();
+  const { t, isRTL } = useTranslation();
 
   // Pick top 4-5 high impact featured articles
   const featuredArticles = React.useMemo(() => {
@@ -70,30 +72,30 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-transparent text-amber-300 text-[11px] font-mono-num font-bold px-3 py-1 rounded-full border border-amber-400/30 uppercase tracking-widest shadow-sm">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Featured Research Desk
+              {t('featuredBadge')}
             </span>
             <span className="text-xs text-slate-400 font-mono-num hidden sm:inline">
-              • {featuredArticles.length} Prime Alpha Deep-Dives
+              • {featuredArticles.length} {t('featuredCountSubtitle')}
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Featured Market Intelligence & Quantitative Studies
+            {t('featuredHeading')}
           </h2>
           <p className="text-sm text-slate-400 max-w-2xl">
-            High-conviction market microstructure, global macro liquidity cycles, and algorithmic execution playbooks curated for serious traders.
+            {t('featuredDescription')}
           </p>
         </div>
 
         {/* Quick Spotlight Selector Chips */}
         <div className="flex items-center gap-1.5 bg-[#090D17] p-1 rounded-xl border border-slate-800">
           <span className="text-[10px] font-mono-num text-slate-400 px-2 uppercase font-bold hidden md:inline">
-            Spotlight:
+            {t('featuredSpotlight')}
           </span>
           {featuredArticles.map((art, idx) => (
             <button
               key={art.id}
               onClick={() => setActiveSpotlightId(art.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono-num transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono-num transition-all flex items-center gap-1 cursor-pointer ${
                 leadArticle.id === art.id
                   ? 'bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-400/20'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -134,7 +136,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                 <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
                   <span className="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-400/20">
                     <Flame className="w-3.5 h-3.5 fill-slate-950" />
-                    Lead Quantitative Study
+                    {t('featuredLeadTag')}
                   </span>
                   <span className="bg-[#090D17]/90 backdrop-blur-md text-amber-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-400/30">
                     {leadArticle.category}
@@ -166,7 +168,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                     </span>
                     <div className="min-w-0">
                       <span className="text-emerald-400 font-bold block text-[10px] uppercase tracking-wider">
-                        Active Quant Setup Spec
+                        {t('featuredSetupTitle')}
                       </span>
                       <span className="text-white font-extrabold truncate block">
                         {leadArticle.tradeSetup.asset} ({leadArticle.tradeSetup.direction})
@@ -199,7 +201,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                   <span>•</span>
                   <span className="flex items-center gap-1 text-slate-300">
                     <Eye className="w-3.5 h-3.5 text-slate-500" />
-                    {leadArticle.views.toLocaleString()} reads
+                    {leadArticle.views.toLocaleString()} {t('modalViews')}
                   </span>
                 </div>
 
@@ -221,7 +223,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                   <div className="bg-[#070A11]/95 border border-slate-800 rounded-2xl p-4 space-y-2">
                     <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono-num">
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      Key Quantitative Edge
+                      {t('featuredTakeawaysTitle')}
                     </span>
                     <ul className="space-y-1.5 text-xs text-slate-300">
                       {leadArticle.summary.slice(0, 2).map((point, pIdx) => (
@@ -246,7 +248,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                       referrerPolicy="no-referrer"
                       className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
                     />
-                    <span className="absolute -bottom-0.5 -right-0.5 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
+                    <span className="absolute -bottom-0.5 -right-0.5 rtl:-left-0.5 rtl:right-auto bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
                       <ShieldCheck className="w-2.5 h-2.5" />
                     </span>
                   </div>
@@ -270,12 +272,12 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                       e.stopPropagation();
                       onToggleBookmark(leadArticle.id);
                     }}
-                    className={`p-2.5 rounded-xl border transition-all ${
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
                       isLeadBookmarked
                         ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md shadow-amber-400/20'
                         : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-800'
                     }`}
-                    title={isLeadBookmarked ? 'Remove Bookmark' : 'Save for Later'}
+                    title={isLeadBookmarked ? t('featuredRemoveBookmark') : t('featuredSaveBookmark')}
                   >
                     <Bookmark className="w-4 h-4" fill={isLeadBookmarked ? 'currentColor' : 'none'} />
                   </button>
@@ -284,8 +286,8 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                     onClick={() => onSelectArticle(leadArticle)}
                     className="flex items-center gap-2 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/25 group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <span>Read Full Research</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    <span>{t('featuredReadAnalysis')}</span>
+                    <ArrowRight className={`w-4 h-4 transition-transform ${isRTL ? 'rotate-180 group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5'}`} />
                   </button>
                 </div>
               </div>
@@ -298,10 +300,10 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-mono-num uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-              High-Conviction Alpha Picks
+              {t('featuredSideDesk')}
             </span>
             <span className="text-[11px] text-amber-400 font-medium">
-              Click to Read or Switch
+              {t('featuredEditorChoice')}
             </span>
           </div>
 
@@ -328,12 +330,12 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent sm:hidden"></div>
                     
                     {/* Corner Tag */}
-                    <span className="absolute top-1.5 left-1.5 bg-slate-950/90 text-amber-300 text-[9px] font-mono-num font-bold px-1.5 py-0.5 rounded border border-amber-400/20">
+                    <span className="absolute top-1.5 left-1.5 rtl:left-auto rtl:right-1.5 bg-slate-950/90 text-amber-300 text-[9px] font-mono-num font-bold px-1.5 py-0.5 rounded border border-amber-400/20">
                       #{idx + 2}
                     </span>
 
                     {/* Difficulty */}
-                    <span className="absolute bottom-1.5 left-1.5 bg-slate-950/90 text-slate-300 text-[9px] font-mono-num px-1.5 py-0.5 rounded">
+                    <span className="absolute bottom-1.5 left-1.5 rtl:left-auto rtl:right-1.5 bg-slate-950/90 text-slate-300 text-[9px] font-mono-num px-1.5 py-0.5 rounded">
                       {article.difficulty}
                     </span>
                   </div>
@@ -365,8 +367,8 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                           {article.tradeSetup.asset}: R:R {article.tradeSetup.riskReward}
                         </span>
 
-                        <span className="text-[11px] font-bold text-amber-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 shrink-0">
-                          Read <ArrowRight className="w-3 h-3" />
+                        <span className="text-[11px] font-bold text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform flex items-center gap-0.5 shrink-0">
+                          {t('cardReadAnalysis')} <ArrowRight className={`w-3 h-3 ${isRTL ? 'rotate-180' : ''}`} />
                         </span>
                       </div>
                     )}
@@ -385,8 +387,8 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                           </span>
                         </div>
 
-                        <span className="text-[11px] font-bold text-amber-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5 shrink-0">
-                          Read <ArrowRight className="w-3 h-3" />
+                        <span className="text-[11px] font-bold text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform flex items-center gap-0.5 shrink-0">
+                          {t('cardReadAnalysis')} <ArrowRight className={`w-3 h-3 ${isRTL ? 'rotate-180' : ''}`} />
                         </span>
                       </div>
                     )}
@@ -398,12 +400,12 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                       e.stopPropagation();
                       onToggleBookmark(article.id);
                     }}
-                    className={`absolute top-3 right-3 p-1.5 rounded-lg border transition-opacity sm:opacity-0 group-hover:opacity-100 ${
+                    className={`absolute top-3 right-3 rtl:right-auto rtl:left-3 p-1.5 rounded-lg border transition-opacity sm:opacity-0 group-hover:opacity-100 cursor-pointer ${
                       isBookmarked
                         ? 'opacity-100 bg-amber-400 text-slate-950 border-amber-400'
                         : 'bg-slate-900/90 text-slate-400 hover:text-white border-slate-700'
                     }`}
-                    title={isBookmarked ? 'Remove Bookmark' : 'Save Article'}
+                    title={isLeadBookmarked ? t('featuredRemoveBookmark') : t('featuredSaveBookmark')}
                   >
                     <Bookmark className="w-3.5 h-3.5" fill={isBookmarked ? 'currentColor' : 'none'} />
                   </button>
@@ -438,3 +440,4 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
     </section>
   );
 };
+

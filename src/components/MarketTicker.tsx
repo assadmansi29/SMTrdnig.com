@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MarketTickerItem } from '../types';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
 interface MarketTickerProps {
   tickers: MarketTickerItem[];
@@ -8,6 +9,7 @@ interface MarketTickerProps {
 }
 
 export const MarketTicker: React.FC<MarketTickerProps> = ({ tickers, onSelectTicker }) => {
+  const { t } = useTranslation();
   const [liveTickers, setLiveTickers] = useState<MarketTickerItem[]>(tickers);
   const [flashKey, setFlashKey] = useState<string | null>(null);
 
@@ -44,14 +46,14 @@ export const MarketTicker: React.FC<MarketTickerProps> = ({ tickers, onSelectTic
     <div className="bg-[#070A0F] border-b border-slate-800/80 text-xs py-2 px-4 overflow-hidden relative select-none">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Left Live Badge */}
-        <div className="hidden md:flex items-center gap-2 pr-4 border-r border-slate-800 text-slate-400 font-mono-num shrink-0">
+        <div className="hidden md:flex items-center gap-2 pr-4 rtl:pr-0 rtl:pl-4 border-r rtl:border-r-0 rtl:border-l border-slate-800 text-slate-400 font-mono-num shrink-0">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="text-[11px] font-semibold tracking-wider uppercase text-slate-300 flex items-center gap-1">
             <Activity className="w-3 h-3 text-emerald-400" />
-            Live Alpha Feed
+            {t('tickerLiveFeed')}
           </span>
         </div>
 
@@ -65,7 +67,7 @@ export const MarketTicker: React.FC<MarketTickerProps> = ({ tickers, onSelectTic
               <button
                 key={item.symbol}
                 onClick={() => onSelectTicker?.(item)}
-                className={`flex items-center gap-2.5 py-0.5 px-2 rounded hover:bg-slate-800/50 transition-colors whitespace-nowrap text-left cursor-pointer group ${
+                className={`flex items-center gap-2.5 py-0.5 px-2 rounded hover:bg-slate-800/50 transition-colors whitespace-nowrap text-left rtl:text-right cursor-pointer group ${
                   isFlashing ? (isPositive ? 'bg-emerald-950/40' : 'bg-rose-950/40') : ''
                 }`}
               >
@@ -85,9 +87,9 @@ export const MarketTicker: React.FC<MarketTickerProps> = ({ tickers, onSelectTic
                   }`}
                 >
                   {isPositive ? (
-                    <TrendingUp className="w-3 h-3 mr-0.5" />
+                    <TrendingUp className="w-3 h-3 mr-0.5 rtl:mr-0 rtl:ml-0.5" />
                   ) : (
-                    <TrendingDown className="w-3 h-3 mr-0.5" />
+                    <TrendingDown className="w-3 h-3 mr-0.5 rtl:mr-0 rtl:ml-0.5" />
                   )}
                   {isPositive ? '+' : ''}
                   {item.changePercent.toFixed(2)}%
@@ -98,21 +100,22 @@ export const MarketTicker: React.FC<MarketTickerProps> = ({ tickers, onSelectTic
         </div>
 
         {/* Market Sessions status */}
-        <div className="hidden lg:flex items-center gap-4 pl-4 border-l border-slate-800 text-[11px] text-slate-400 shrink-0 font-mono-num">
+        <div className="hidden lg:flex items-center gap-4 pl-4 rtl:pl-0 rtl:pr-4 border-l rtl:border-l-0 rtl:border-r border-slate-800 text-[11px] text-slate-400 shrink-0 font-mono-num">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>NY <strong className="text-slate-200">OPEN</strong></span>
+            <span>{t('sessionNyOpen')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>LON <strong className="text-slate-200">OPEN</strong></span>
+            <span>{t('sessionLonOpen')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
-            <span className="text-slate-500">TYO CLSD</span>
+            <span className="text-slate-500">{t('sessionTyoClsd')}</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
+

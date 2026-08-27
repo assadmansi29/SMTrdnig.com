@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Bookmark, Trash2, ArrowRight, BookOpen } from 'lucide-react';
 import { Article } from '../types';
+import { useTranslation } from '../context/LanguageContext';
 
 interface SavedArticlesModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
   onSelectArticle,
   onRemoveBookmark
 }) => {
+  const { t, isRTL } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
@@ -29,13 +32,15 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
               <Bookmark className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-white">Saved Reading Desk</h3>
-              <p className="text-xs text-slate-400">{savedArticles.length} Bookmarked Strategy Models</p>
+              <h3 className="font-bold text-base text-white">{t('savedModalTitle')}</h3>
+              <p className="text-xs text-slate-400">
+                {savedArticles.length} {t('savedModalSubtitle')}
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -46,9 +51,9 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
           {savedArticles.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <BookOpen className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-sm text-slate-400">Your saved reading desk is empty.</p>
-              <p className="text-xs text-slate-500">
-                Click the bookmark icon on any research article to store it here for offline reference.
+              <p className="text-sm text-slate-400">{t('savedEmptyTitle')}</p>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {t('savedEmptySubtitle')}
               </p>
             </div>
           ) : (
@@ -67,6 +72,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
                   <img
                     src={art.image}
                     alt={art.title}
+                    referrerPolicy="no-referrer"
                     className="w-14 h-14 rounded-lg object-cover border border-slate-700 shrink-0"
                   />
                   <div className="min-w-0">
@@ -84,15 +90,15 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
                       onSelectArticle(art);
                       onClose();
                     }}
-                    className="p-2 text-xs font-semibold text-amber-400 hover:text-white bg-slate-900 rounded-lg border border-slate-800"
-                    title="Read Now"
+                    className="p-2 text-xs font-semibold text-amber-400 hover:text-white bg-slate-900 rounded-lg border border-slate-800 cursor-pointer"
+                    title={t('savedReadNow')}
                   >
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
                   <button
                     onClick={() => onRemoveBookmark(art.id)}
-                    className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors"
-                    title="Remove from bookmarks"
+                    className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
+                    title={t('savedRemove')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -106,12 +112,13 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
         <div className="px-6 py-3 bg-[#090D17] border-t border-slate-800 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
           >
-            Close
+            {t('savedClose')}
           </button>
         </div>
       </div>
     </div>
   );
 };
+

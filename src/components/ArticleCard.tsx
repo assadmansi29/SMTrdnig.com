@@ -3,6 +3,7 @@ import { Article } from '../types';
 import { Clock, Eye, Bookmark, Share2, TrendingUp, Sparkles, User, ArrowUpRight } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
+import { useTranslation } from '../context/LanguageContext';
 
 interface ArticleCardProps {
   article: Article;
@@ -20,7 +21,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   onShare
 }) => {
   const { abuAsadAvatar } = useAbuAsadAvatar();
+  const { t, isRTL } = useTranslation();
   const avatarSrc = article.author.name.includes('Abu Asad') ? abuAsadAvatar : article.author.avatar;
+
   return (
     <article className="group bg-[#0D1322] border border-slate-800/80 hover:border-amber-400/40 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/5 flex flex-col h-full">
       {/* Image Container */}
@@ -37,7 +40,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         <div className="absolute inset-0 bg-gradient-to-t from-[#0D1322] via-transparent to-transparent opacity-80"></div>
 
         {/* Category & Difficulty Badges */}
-        <div className="absolute top-3 left-3 flex items-center gap-2">
+        <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3 flex items-center gap-2">
           <span className="bg-[#0B0F17]/90 backdrop-blur-md text-amber-300 text-[11px] font-semibold px-2.5 py-1 rounded-md border border-amber-400/30 shadow-sm">
             {article.category}
           </span>
@@ -55,18 +58,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         </div>
 
         {/* Quick Action Buttons on Image */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+        <div className="absolute top-3 right-3 rtl:right-auto rtl:left-3 flex items-center gap-1.5">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onToggleBookmark(article.id);
             }}
-            className={`p-2 rounded-lg backdrop-blur-md border transition-colors ${
+            className={`p-2 rounded-lg backdrop-blur-md border transition-colors cursor-pointer ${
               isBookmarked
                 ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md'
                 : 'bg-black/60 text-slate-300 hover:text-white border-slate-700/60 hover:bg-black/80'
             }`}
-            title={isBookmarked ? 'Remove Bookmark' : 'Save to Reading List'}
+            title={isBookmarked ? t('featuredRemoveBookmark') : t('featuredSaveBookmark')}
           >
             <Bookmark className="w-3.5 h-3.5" fill={isBookmarked ? 'currentColor' : 'none'} />
           </button>
@@ -74,9 +77,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
         {/* Trade Setup Indicator pill if present */}
         {article.tradeSetup && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-[#0B0F17]/90 backdrop-blur-md px-2.5 py-1 rounded-md border border-emerald-500/40 text-[11px] font-mono-num text-emerald-300">
+          <div className="absolute bottom-3 left-3 rtl:left-auto rtl:right-3 flex items-center gap-1.5 bg-[#0B0F17]/90 backdrop-blur-md px-2.5 py-1 rounded-md border border-emerald-500/40 text-[11px] font-mono-num text-emerald-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Setup: {article.tradeSetup.asset} ({article.tradeSetup.direction})</span>
+            <span>{t('featuredSetupTitle')}: {article.tradeSetup.asset} ({article.tradeSetup.direction})</span>
           </div>
         )}
       </div>
@@ -111,7 +114,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
             <div className="bg-[#090D17] border border-slate-800/80 rounded-lg p-2.5 text-[11px] text-slate-300">
               <div className="text-amber-400 font-semibold mb-0.5 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-400" />
-                Key Alpha Takeaway
+                {t('cardKeyAlpha')}
               </div>
               <p className="text-slate-400 line-clamp-1">{article.summary[0]}</p>
             </div>
@@ -144,13 +147,14 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
           <button
             onClick={() => onSelectArticle(article)}
-            className="text-xs font-bold text-amber-400 group-hover:text-amber-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-all cursor-pointer"
+            className="text-xs font-bold text-amber-400 group-hover:text-amber-300 flex items-center gap-1 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-all cursor-pointer"
           >
-            Read Analysis
-            <ArrowUpRight className="w-3.5 h-3.5" />
+            {t('cardReadAnalysis')}
+            <ArrowUpRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-[-90deg]' : ''}`} />
           </button>
         </div>
       </div>
     </article>
   );
 };
+

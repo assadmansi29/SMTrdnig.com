@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
+import { useTranslation } from '../context/LanguageContext';
 
 interface ArticleDetailModalProps {
   article: Article | null;
@@ -45,6 +46,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   allArticles
 }) => {
   const { abuAsadAvatar, handleFileUpload } = useAbuAsadAvatar();
+  const { t, isRTL } = useTranslation();
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCodeIndex, setCopiedCodeIndex] = useState<number | null>(null);
   const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
@@ -151,13 +153,13 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
               <button
                 onClick={() => setFontSize('normal')}
-                className={`px-2 py-1 rounded font-semibold ${fontSize === 'normal' ? 'bg-slate-800 text-white' : 'text-slate-400'}`}
+                className={`px-2 py-1 rounded font-semibold cursor-pointer ${fontSize === 'normal' ? 'bg-slate-800 text-white' : 'text-slate-400'}`}
               >
                 Aa
               </button>
               <button
                 onClick={() => setFontSize('large')}
-                className={`px-2 py-1 rounded font-semibold text-sm ${fontSize === 'large' ? 'bg-slate-800 text-white' : 'text-slate-400'}`}
+                className={`px-2 py-1 rounded font-semibold text-sm cursor-pointer ${fontSize === 'large' ? 'bg-slate-800 text-white' : 'text-slate-400'}`}
               >
                 A+
               </button>
@@ -166,12 +168,12 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             {/* Bookmark */}
             <button
               onClick={() => onToggleBookmark(article.id)}
-              className={`p-2 rounded-lg border transition-colors ${
+              className={`p-2 rounded-lg border transition-colors cursor-pointer ${
                 isBookmarked
                   ? 'bg-amber-400 text-slate-950 border-amber-400'
                   : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
               }`}
-              title="Bookmark Article"
+              title={isBookmarked ? t('featuredRemoveBookmark') : t('featuredSaveBookmark')}
             >
               <Bookmark className="w-4 h-4" fill={isBookmarked ? 'currentColor' : 'none'} />
             </button>
@@ -179,8 +181,8 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             {/* Share */}
             <button
               onClick={handleShare}
-              className="p-2 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition-colors relative"
-              title="Share Link"
+              className="p-2 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition-colors relative cursor-pointer"
+              title={t('modalShare')}
             >
               {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
             </button>
@@ -188,7 +190,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             {/* Close */}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors ml-2"
+              className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors ml-2 rtl:ml-0 rtl:mr-2 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -235,10 +237,10 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               <div className="flex items-center gap-4 text-xs text-slate-400 font-mono-num">
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4 text-slate-500" />
-                  {article.views.toLocaleString()} Reads
+                  {article.views.toLocaleString()} {t('modalViews')}
                 </span>
                 <span className="bg-slate-800/90 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700">
-                  Tier: {article.difficulty}
+                  {t('modalTier')}: {article.difficulty}
                 </span>
               </div>
             </div>
@@ -262,7 +264,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           <div className="bg-gradient-to-r from-amber-950/20 via-[#101726] to-[#101726] border border-amber-500/30 rounded-xl p-5 space-y-3">
             <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
               <Sparkles className="w-4 h-4" />
-              Executive Quantitative Summary
+              {t('modalExecutiveSummary')}
             </div>
             <ul className="space-y-2 text-sm text-slate-300">
               {article.summary.map((sum, idx) => (
@@ -281,7 +283,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 <div className="flex items-center gap-2.5">
                   <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
                   <h3 className="font-bold text-white text-base">
-                    SMTrading Live Strategy Blueprint: {article.tradeSetup.asset}
+                    {t('modalLiveBlueprint')}: {article.tradeSetup.asset}
                   </h3>
                 </div>
 
@@ -300,34 +302,34 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-[#080B12] p-3 rounded-lg border border-slate-800">
-                  <span className="text-[11px] text-slate-400 block">Entry Zone</span>
+                  <span className="text-[11px] text-slate-400 block">{t('modalEntryZone')}</span>
                   <span className="text-sm font-bold text-white font-mono-num">{article.tradeSetup.entryZone}</span>
                 </div>
 
                 <div className="bg-[#080B12] p-3 rounded-lg border border-rose-900/40">
-                  <span className="text-[11px] text-rose-400 block">Stop Loss Invalidation</span>
+                  <span className="text-[11px] text-rose-400 block">{t('modalStopLoss')}</span>
                   <span className="text-sm font-bold text-rose-300 font-mono-num">{article.tradeSetup.stopLoss}</span>
                 </div>
 
                 <div className="bg-[#080B12] p-3 rounded-lg border border-emerald-900/40">
-                  <span className="text-[11px] text-emerald-400 block">Target 1 / Target 2</span>
+                  <span className="text-[11px] text-emerald-400 block">{t('modalTargets')}</span>
                   <span className="text-sm font-bold text-emerald-300 font-mono-num">{article.tradeSetup.takeProfit1}</span>
                 </div>
 
                 <div className="bg-[#080B12] p-3 rounded-lg border border-amber-900/40">
-                  <span className="text-[11px] text-amber-400 block">Risk : Reward</span>
+                  <span className="text-[11px] text-amber-400 block">{t('modalRiskReward')}</span>
                   <span className="text-sm font-bold text-amber-300 font-mono-num">{article.tradeSetup.riskReward}</span>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-slate-400">
-                <span><strong>Catalyst:</strong> {article.tradeSetup.keyCatalyst}</span>
+                <span><strong>{t('modalCatalyst')}:</strong> {article.tradeSetup.keyCatalyst}</span>
                 <button
                   onClick={() => onOpenCalculatorWithSetup(article.tradeSetup!)}
                   className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <Calculator className="w-3.5 h-3.5" />
-                  Load into Risk Calculator
+                  {t('modalLoadCalculator')}
                 </button>
               </div>
             </div>
@@ -366,22 +368,22 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 )}
 
                 {sec.codeBlock && (
-                  <div className="bg-[#06080E] border border-slate-800 rounded-xl overflow-hidden my-4 font-mono-num text-xs">
+                  <div className="bg-[#06080E] border border-slate-800 rounded-xl overflow-hidden my-4 font-mono-num text-xs" dir="ltr">
                     <div className="bg-[#090D17] px-4 py-2 flex items-center justify-between border-b border-slate-800 text-slate-400">
                       <span>{sec.codeBlock.language.toUpperCase()} ALGORITHM</span>
                       <button
                         onClick={() => handleCopyCode(sec.codeBlock!.code, idx)}
-                        className="flex items-center gap-1 text-slate-400 hover:text-white text-[11px]"
+                        className="flex items-center gap-1 text-slate-400 hover:text-white text-[11px] cursor-pointer"
                       >
                         {copiedCodeIndex === idx ? (
                           <>
                             <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            Copied
+                            {t('modalCopied')}
                           </>
                         ) : (
                           <>
                             <Copy className="w-3.5 h-3.5" />
-                            Copy Code
+                            {t('modalCopyCode')}
                           </>
                         )}
                       </button>
@@ -421,7 +423,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                     referrerPolicy="no-referrer"
                     className="w-16 h-16 rounded-2xl object-cover object-top border-2 border-amber-400 shadow-md transition-opacity group-hover/avatar:opacity-80"
                   />
-                  <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
+                  <span className="absolute -bottom-1.5 -right-1.5 rtl:-left-1.5 rtl:right-auto bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
                     <ShieldCheck className="w-3 h-3" />
                   </span>
                   <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
@@ -436,7 +438,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                     referrerPolicy="no-referrer"
                     className="w-16 h-16 rounded-2xl object-cover object-top border-2 border-amber-400 shadow-md"
                   />
-                  <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
+                  <span className="absolute -bottom-1.5 -right-1.5 rtl:-left-1.5 rtl:right-auto bg-amber-400 text-slate-950 p-1 rounded-full ring-4 ring-[#0B0F19]">
                     <ShieldCheck className="w-3 h-3" />
                   </span>
                 </>
@@ -446,10 +448,10 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             <div className="flex-1 space-y-1.5 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-amber-400 font-mono-num font-bold uppercase tracking-wider">
-                  Lead Research Author
+                  {t('modalLeadAuthor')}
                 </span>
                 <span className="bg-amber-400/15 text-amber-300 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
-                  Verified Desk
+                  {t('modalVerifiedDesk')}
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -473,16 +475,16 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           <div className="bg-[#090D17] border border-slate-800 rounded-xl p-6 space-y-4">
             <h3 className="font-bold text-white text-base flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-amber-400" />
-              Community Strategy Sentiment: What's your bias on this setup?
+              {t('modalSentimentTitle')}
             </h3>
 
             {/* Voting Bar */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-mono-num font-semibold">
-                <span className="text-emerald-400">{bullishPercent}% Bullish ({bullishCount})</span>
-                <span className="text-rose-400">{100 - bullishPercent}% Bearish ({bearishCount})</span>
+                <span className="text-emerald-400">{bullishPercent}% {t('modalBullish')} ({bullishCount})</span>
+                <span className="text-rose-400">{100 - bullishPercent}% {t('modalBearish')} ({bearishCount})</span>
               </div>
-              <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden flex">
+              <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden flex" dir="ltr">
                 <div style={{ width: `${bullishPercent}%` }} className="bg-emerald-500 transition-all duration-500"></div>
                 <div style={{ width: `${100 - bullishPercent}%` }} className="bg-rose-500 transition-all duration-500"></div>
               </div>
@@ -499,7 +501,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 }`}
               >
                 <ThumbsUp className="w-3.5 h-3.5" />
-                Vote Bullish
+                {t('modalVoteBullish')}
               </button>
 
               <button
@@ -511,7 +513,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 }`}
               >
                 <ThumbsDown className="w-3.5 h-3.5" />
-                Vote Bearish
+                {t('modalVoteBearish')}
               </button>
             </div>
           </div>
@@ -520,7 +522,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           <div className="space-y-6 pt-4 border-t border-slate-800">
             <h3 className="font-bold text-lg text-white flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-amber-400" />
-              Trader Discussion ({comments.length})
+              {t('modalDiscussionTitle')} ({comments.length})
             </h3>
 
             {/* Post comment form */}
@@ -528,20 +530,20 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   type="text"
-                  placeholder="Your Name & Prop Firm / Desk (e.g. Alex M., Futures Trader)"
+                  placeholder={t('modalCommentNamePlaceholder')}
                   value={newCommentName}
                   onChange={(e) => setNewCommentName(e.target.value)}
                   className="bg-[#070A10] border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
                 />
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">Position Bias:</span>
+                  <span className="text-xs text-slate-400">{t('modalPositionBias')}:</span>
                   {(['BULLISH', 'NEUTRAL', 'BEARISH'] as const).map(b => (
                     <button
                       type="button"
                       key={b}
                       onClick={() => setNewCommentSentiment(b)}
-                      className={`text-xs px-2.5 py-1 rounded-md font-mono-num font-semibold transition-all ${
+                      className={`text-xs px-2.5 py-1 rounded-md font-mono-num font-semibold transition-all cursor-pointer ${
                         newCommentSentiment === b
                           ? b === 'BULLISH'
                             ? 'bg-emerald-500 text-slate-950'
@@ -551,7 +553,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                           : 'bg-slate-800 text-slate-400'
                       }`}
                     >
-                      {b}
+                      {b === 'BULLISH' ? t('modalBullish') : b === 'BEARISH' ? t('modalBearish') : t('modalNeutral')}
                     </button>
                   ))}
                 </div>
@@ -559,7 +561,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
               <textarea
                 rows={3}
-                placeholder="Share your quantitative perspective, order book observations, or risk questions..."
+                placeholder={t('modalCommentPlaceholder')}
                 value={newCommentText}
                 onChange={(e) => setNewCommentText(e.target.value)}
                 className="w-full bg-[#070A10] border border-slate-700 rounded-lg p-3 text-xs text-white placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
@@ -571,7 +573,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                   className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-lg text-xs transition-colors cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  Post Discussion Note
+                  {t('modalPostNote')}
                 </button>
               </div>
             </form>
@@ -613,7 +615,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             <div className="pt-8 border-t border-slate-800 space-y-4">
               <h3 className="font-bold text-base text-white flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-amber-400" />
-                Related Research Papers & Setups
+                {t('modalRelatedPapers')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {relatedArticles.map((rel) => (
@@ -639,3 +641,4 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
     </div>
   );
 };
+

@@ -1,43 +1,45 @@
 import React, { useState } from 'react';
 import { Activity, Maximize2, Sparkles, TrendingUp, BarChart2 } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
+import { useTranslation } from '../context/LanguageContext';
+import { TranslationKey } from '../locales';
 
 interface InstrumentOption {
   id: string;
-  name: string;
+  nameKey: TranslationKey;
   ticker: string;
   symbol: string;
-  description: string;
+  descKey: TranslationKey;
 }
 
 const INSTRUMENTS: InstrumentOption[] = [
   {
     id: 'gold',
-    name: 'Gold / USD (XAUUSD)',
+    nameKey: 'instGoldName',
     ticker: 'XAUUSD',
     symbol: 'OANDA:XAUUSD',
-    description: 'Spot Gold / US Dollar'
+    descKey: 'instGoldDesc'
   },
   {
     id: 'nasdaq',
-    name: 'Nasdaq / USD (NAS100)',
+    nameKey: 'instNasdaqName',
     ticker: 'NAS100',
     symbol: 'NASDAQ:NDX',
-    description: 'Nasdaq 100 Index'
+    descKey: 'instNasdaqDesc'
   },
   {
     id: 'dow',
-    name: 'Dow Jones / USD (US30)',
+    nameKey: 'instDowName',
     ticker: 'US30',
     symbol: 'TVC:DJI',
-    description: 'Dow Jones Industrial Average'
+    descKey: 'instDowDesc'
   },
   {
     id: 'dax',
-    name: 'DAX / USD (GER40)',
+    nameKey: 'instDaxName',
     ticker: 'GER40',
     symbol: 'XETR:DAX',
-    description: 'German DAX 40 Index'
+    descKey: 'instDaxDesc'
   }
 ];
 
@@ -54,6 +56,7 @@ interface LiveTradingSectionProps {
 }
 
 export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenChartModal }) => {
+  const { t } = useTranslation();
   const [selectedInstrument, setSelectedInstrument] = useState<InstrumentOption>(INSTRUMENTS[0]);
   const [selectedInterval, setSelectedInterval] = useState<string>('15');
 
@@ -64,10 +67,10 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenCh
         
         {/* Left: Section Badge & Instrument Selector (4 Options) */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl mr-1">
+          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-xl mr-1 rtl:mr-0 rtl:ml-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="text-[11px] font-mono-num font-bold text-amber-300 uppercase tracking-wider">
-              Live Terminal:
+              {t('terminalLiveBadge')}
             </span>
           </div>
 
@@ -82,14 +85,14 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenCh
                     ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 border border-amber-300'
                     : 'bg-[#0E1526] hover:bg-[#131D33] text-slate-300 hover:text-white border border-slate-700/80'
                 }`}
-                title={inst.description}
+                title={t(inst.descKey)}
               >
                 <span className={`text-[10px] px-1 py-0.2 rounded font-mono-num ${
                   isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-amber-400'
                 }`}>
                   {index + 1}
                 </span>
-                <span>{inst.name}</span>
+                <span>{t(inst.nameKey)}</span>
               </button>
             );
           })}
@@ -98,7 +101,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenCh
         {/* Right: Timeframe & Fullscreen Trigger */}
         <div className="flex items-center gap-2">
           {/* Timeframe selector */}
-          <div className="flex items-center bg-[#0E1526] p-0.5 rounded-xl border border-slate-800 text-xs font-mono-num">
+          <div className="flex items-center bg-[#0E1526] p-0.5 rounded-xl border border-slate-800 text-xs font-mono-num" dir="ltr">
             {TIMEFRAMES.map((tf) => (
               <button
                 key={tf.value}
@@ -118,16 +121,16 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenCh
           <button
             onClick={onOpenChartModal}
             className="flex items-center gap-1.5 bg-[#0E1526] hover:bg-[#152038] text-cyan-300 hover:text-cyan-200 px-3 py-1.5 rounded-xl border border-cyan-500/30 text-xs font-medium transition-colors cursor-pointer shadow-sm"
-            title="Expand in Fullscreen TradingView Studio"
+            title={t('terminalStudioTitle')}
           >
             <Maximize2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px] font-semibold">Studio Mode</span>
+            <span className="hidden sm:inline text-[11px] font-semibold">{t('terminalStudioMode')}</span>
           </button>
         </div>
       </div>
 
       {/* Embedded Professional Trading Chart Display */}
-      <div className="rounded-2xl overflow-hidden border border-slate-800/90 shadow-2xl bg-[#090D17] max-w-[800px] mx-auto w-full">
+      <div className="rounded-2xl overflow-hidden border border-slate-800/90 shadow-2xl bg-[#090D17] max-w-[800px] mx-auto w-full" dir="ltr">
         <TradingViewWidget
           symbol={selectedInstrument.symbol}
           interval={selectedInterval}
@@ -138,3 +141,4 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenCh
     </section>
   );
 };
+

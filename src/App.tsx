@@ -33,6 +33,7 @@ import { NewsletterModal } from './components/NewsletterModal';
 import { ECommerceModal } from './components/ECommerceModal';
 import { FearGreedGauge } from './components/FearGreedGauge';
 import { Footer } from './components/Footer';
+import { useTranslation } from './context/LanguageContext';
 import { 
   TrendingUp, 
   Sparkles, 
@@ -52,6 +53,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const { t, isRTL } = useTranslation();
   const { abuAsadAvatar, handleFileUpload } = useAbuAsadAvatar();
   const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
@@ -171,7 +173,7 @@ export default function App() {
           <div className="border-b border-slate-800 pb-4 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="text-xs font-mono-num text-amber-400 font-bold uppercase tracking-wider">
-                Research Archive
+                {t('filterArchive')}
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
                 {activeCategory}
@@ -179,9 +181,9 @@ export default function App() {
             </div>
             <button
               onClick={() => setActiveCategory('All')}
-              className="text-xs text-slate-400 hover:text-amber-300 underline font-medium"
+              className="text-xs text-slate-400 hover:text-amber-300 underline font-medium cursor-pointer"
             >
-              Reset to All Sectors
+              {t('filterResetAll')}
             </button>
           </div>
         )}
@@ -194,54 +196,62 @@ export default function App() {
             <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
               <button
                 onClick={() => setActiveFilterTab('All')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeFilterTab === 'All'
                     ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Latest Intelligence ({articles.length})
+                {t('explorerLatest')} ({articles.length})
               </button>
               <button
                 onClick={() => setActiveFilterTab('Trending')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                   activeFilterTab === 'Trending'
                     ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Flame className="w-3.5 h-3.5" />
-                Trending Alpha
+                {t('explorerTrending')}
               </button>
               <button
                 onClick={() => setActiveFilterTab('EditorPick')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                   activeFilterTab === 'EditorPick'
                     ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Editor's Choice
+                {t('explorerEditor')}
               </button>
             </div>
 
             {/* Difficulty Tier Selector */}
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-400 hidden sm:inline">Execution Tier:</span>
-              {(['All', 'Beginner', 'Intermediate', 'Institutional'] as const).map(tier => (
-                <button
-                  key={tier}
-                  onClick={() => setSelectedDifficulty(tier)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-mono-num transition-all ${
-                    selectedDifficulty === tier
-                      ? 'bg-slate-800 text-amber-300 font-bold border border-amber-400/40'
-                      : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'
-                  }`}
-                >
-                  {tier}
-                </button>
-              ))}
+              <span className="text-slate-400 hidden sm:inline">{t('explorerExecutionTier')}</span>
+              {(['All', 'Beginner', 'Intermediate', 'Institutional'] as const).map(tier => {
+                const tierKeys: Record<string, string> = {
+                  'All': 'tierAll',
+                  'Beginner': 'tierBeginner',
+                  'Intermediate': 'tierIntermediate',
+                  'Institutional': 'tierInstitutional'
+                };
+                return (
+                  <button
+                    key={tier}
+                    onClick={() => setSelectedDifficulty(tier)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-mono-num transition-all cursor-pointer ${
+                      selectedDifficulty === tier
+                        ? 'bg-slate-800 text-amber-300 font-bold border border-amber-400/40'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'
+                    }`}
+                  >
+                    {t(tierKeys[tier] as any) || tier}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -251,16 +261,16 @@ export default function App() {
             <div className="lg:col-span-8 space-y-6">
               {gridArticles.length === 0 ? (
                 <div className="bg-[#0D1322] border border-slate-800 rounded-2xl p-12 text-center space-y-3">
-                  <p className="text-slate-400 text-sm">No strategy articles matched your filter criteria.</p>
+                  <p className="text-slate-400 text-sm">{t('filterNoResults')}</p>
                   <button
                     onClick={() => {
                       setActiveCategory('All');
                       setSelectedDifficulty('All');
                       setActiveFilterTab('All');
                     }}
-                    className="px-4 py-2 bg-amber-500 text-slate-950 font-bold text-xs rounded-lg"
+                    className="px-4 py-2 bg-amber-500 text-slate-950 font-bold text-xs rounded-lg cursor-pointer"
                   >
-                    Clear All Filters
+                    {t('filterClearAll')}
                   </button>
                 </div>
               ) : (
@@ -292,14 +302,14 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-emerald-400" />
                     <h4 className="font-bold text-xs text-white uppercase tracking-wider">
-                      Upcoming High-Impact Catalysts
+                      {t('widgetCatalystsTitle')}
                     </h4>
                   </div>
                   <button
                     onClick={() => setIsCalendarOpen(true)}
-                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center"
+                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center cursor-pointer"
                   >
-                    View All <ChevronRight className="w-3 h-3 ml-0.5" />
+                    {t('widgetViewAll')} <ChevronRight className="w-3 h-3 ml-0.5 rtl:rotate-180" />
                   </button>
                 </div>
 
@@ -328,7 +338,7 @@ export default function App() {
               <div className="bg-gradient-to-br from-[#0D1322] to-[#121A2E] border border-slate-800 rounded-2xl p-5 space-y-4 shadow-lg">
                 <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
                   <Calculator className="w-4 h-4 text-amber-400" />
-                  Proprietary Trading Tools
+                  {t('widgetToolsTitle')}
                 </h4>
 
                 <div className="space-y-2">
@@ -337,31 +347,31 @@ export default function App() {
                       setCalculatorSetup(null);
                       setIsCalculatorOpen(true);
                     }}
-                    className="w-full text-left p-3 rounded-xl bg-[#090D17] hover:bg-slate-800/70 border border-slate-800 hover:border-amber-400/30 transition-all flex items-center justify-between group"
+                    className="w-full text-left rtl:text-right p-3 rounded-xl bg-[#090D17] hover:bg-slate-800/70 border border-slate-800 hover:border-amber-400/30 transition-all flex items-center justify-between group cursor-pointer"
                   >
                     <div>
                       <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors block">
-                        Position Size & Risk Engine
+                        {t('widgetPosToolTitle')}
                       </span>
-                      <span className="text-[11px] text-slate-400">Compute Lot Sizes & R:R Ratios</span>
+                      <span className="text-[11px] text-slate-400">{t('widgetPosToolSubtitle')}</span>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
+                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 ml-2 rtl:mr-2 rtl:ml-0" />
                   </button>
 
                   <button
                     onClick={() => setIsChartOpen(true)}
-                    className="w-full text-left p-3 rounded-xl bg-gradient-to-r from-[#090D17] to-[#0d1627] hover:bg-slate-800/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-all flex items-center justify-between group"
+                    className="w-full text-left rtl:text-right p-3 rounded-xl bg-gradient-to-r from-[#090D17] to-[#0d1627] hover:bg-slate-800/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-all flex items-center justify-between group cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors block">
-                          TradingView.com & SMC Studio
+                          {t('widgetChartToolTitle')}
                         </span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                       </div>
-                      <span className="text-[11px] text-slate-400">Live tradingview.com charts on left + SMC engine</span>
+                      <span className="text-[11px] text-slate-400">{t('widgetChartToolSubtitle')}</span>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 ml-2 rtl:mr-2 rtl:ml-0" />
                   </button>
                 </div>
               </div>
@@ -371,10 +381,10 @@ export default function App() {
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    Quantitative Research Desk
+                    {t('widgetDeskTitle')}
                   </h4>
                   <span className="text-[10px] font-mono-num text-amber-400 font-bold bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                    SMC Alpha
+                    {t('widgetDeskAlpha')}
                   </span>
                 </div>
 
@@ -394,7 +404,7 @@ export default function App() {
                         referrerPolicy="no-referrer"
                         className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm transition-opacity group-hover/avatar:opacity-80"
                       />
-                      <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
+                      <span className="absolute -bottom-1 -right-1 rtl:-left-1 rtl:right-auto bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
                         <ShieldCheck className="w-2.5 h-2.5" />
                       </span>
                       <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
@@ -406,11 +416,11 @@ export default function App() {
                         <h5 className="font-extrabold text-xs text-white truncate">{AUTHORS.abuAsad.name}</h5>
                         <BlueVerifiedBadge size="xs" />
                         <span className="bg-amber-400/20 text-amber-300 text-[9px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/40">
-                          FOUNDER
+                          {t('widgetFounderBadge')}
                         </span>
                       </div>
                       <p className="text-[10px] text-amber-400/90 font-medium truncate">{AUTHORS.abuAsad.role}</p>
-                      <p className="text-[9px] text-slate-400 line-clamp-1 mt-0.5">SMC & Institutional Order Flow Lead</p>
+                      <p className="text-[9px] text-slate-400 line-clamp-1 mt-0.5">{t('widgetAbuAsadLead')}</p>
                     </div>
                   </div>
 
@@ -420,6 +430,7 @@ export default function App() {
                       <img
                         src={author.avatar}
                         alt={author.name}
+                        referrerPolicy="no-referrer"
                         className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0"
                       />
                       <div className="min-w-0 flex-1">
