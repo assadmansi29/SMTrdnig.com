@@ -19,7 +19,11 @@ export default defineConfig(() => {
     },
 
     preview: {
-      allowedHosts: ['smtrdnig-com.onrender.com'],
+      allowedHosts: [
+        'smtrdnig-com.onrender.com',
+        'smtrading.pro',
+        'www.smtrading.pro',
+      ],
       host: '0.0.0.0',
       port: 4173,
     },
