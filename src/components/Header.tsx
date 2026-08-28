@@ -153,20 +153,22 @@ export const Header: React.FC<HeaderProps> = ({
                 </kbd>
               </button>
 
-              {/* Saved Reading List for Mobile (Under Search Alpha) */}
-              <button
-                onClick={onOpenSavedModal}
-                className="md:hidden w-full flex items-center justify-center gap-1 sm:gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-amber-300 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md border border-slate-800 transition-all text-[10px] sm:text-[11px] font-medium cursor-pointer whitespace-nowrap"
-                title={t('navSavedArticlesTitle')}
-              >
-                <Bookmark className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
-                <span className="truncate">{t('navSavedArticlesTitle')}</span>
-                {savedArticlesCount > 0 && (
-                  <span className="bg-amber-500 text-slate-950 font-mono-num font-bold text-[8px] sm:text-[9px] px-1 sm:px-1.5 py-0.2 rounded-full leading-none shrink-0">
-                    {savedArticlesCount}
-                  </span>
-                )}
-              </button>
+              {/* Saved Reading List for Mobile (Beautiful small button under Search Alpha) */}
+              <div className="md:hidden flex justify-center w-full">
+                <button
+                  onClick={onOpenSavedModal}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-0.5 sm:py-1 bg-gradient-to-r from-[#0E1526] to-[#141F36] hover:from-[#131E36] hover:to-[#1B2A4A] text-amber-400 hover:text-amber-300 rounded-md border border-slate-700/80 hover:border-amber-400/50 shadow-sm transition-all duration-150 cursor-pointer group"
+                  title={t('navSavedArticlesTitle')}
+                  aria-label={t('navSavedArticlesTitle')}
+                >
+                  <Bookmark className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+                  {savedArticlesCount > 0 && (
+                    <span className="bg-amber-400 text-slate-950 font-mono-num font-bold text-[8px] sm:text-[9px] px-1.5 py-0.2 rounded-full leading-none shadow-xs">
+                      {savedArticlesCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* 3. Desktop Consolidated Trading Tools Button */}
