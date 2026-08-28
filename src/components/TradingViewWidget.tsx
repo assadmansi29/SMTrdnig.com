@@ -1,4 +1,4 @@
-import React, { memo, useState, useId } from 'react';
+import React, { memo, useState, useEffect, useId } from 'react';
 import { ExternalLink } from 'lucide-react';
 
 interface TradingViewWidgetProps {
@@ -22,6 +22,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const widgetId = useId().replace(/:/g, '_');
+
+  // Reset loading state when symbol or interval changes
+  useEffect(() => {
+    setIsLoading(true);
+  }, [symbol, interval]);
 
   // Build secure, isolated TradingView Widget embed URL
   const searchParams = new URLSearchParams({
@@ -60,13 +65,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       {/* Sandboxed, Isolated TradingView Chart Iframe */}
       <iframe
+        key={`${symbol}_${interval}`}
         id={`tv-iframe-${widgetId}`}
         title={`TradingView Chart - ${symbol}`}
         src={embedUrl}
         className="w-full flex-1 border-0"
         style={{ width: '100%', height: 'calc(100% - 24px)', border: 'none' }}
         onLoad={() => setIsLoading(false)}
-        loading="lazy"
       />
 
       {/* TradingView Compliance & Attribution Bar */}

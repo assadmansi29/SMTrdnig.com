@@ -67,6 +67,7 @@ export default function App() {
   const [calculatorSetup, setCalculatorSetup] = useState<TradeSetup | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isChartOpen, setIsChartOpen] = useState(false);
+  const [chartDefaultSymbol, setChartDefaultSymbol] = useState('OANDA:XAUUSD');
   const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
@@ -113,6 +114,24 @@ export default function App() {
     setIsCalculatorOpen(true);
   };
 
+  const handleSelectTicker = (ticker: MarketTickerItem) => {
+    const symbolMap: Record<string, string> = {
+      'BTC/USD': 'BINANCE:BTCUSDT',
+      'ETH/USD': 'BINANCE:ETHUSDT',
+      'ES (S&P 500)': 'CME_MINI:ES1!',
+      'NQ (Nasdaq)': 'OANDA:NAS100USD',
+      'US30 (Dow)': 'OANDA:US30USD',
+      'GER40 (DAX)': 'OANDA:DE30EUR',
+      'XAU/USD': 'OANDA:XAUUSD',
+      'EUR/USD': 'FX:EURUSD',
+      'US10Y': 'TVC:US10Y',
+      'VIX': 'TVC:VIX'
+    };
+    const targetSymbol = symbolMap[ticker.symbol] || 'OANDA:XAUUSD';
+    setChartDefaultSymbol(targetSymbol);
+    setIsChartOpen(true);
+  };
+
   // Filter logic
   const filteredArticles = articles.filter(art => {
     if (activeCategory !== 'All' && art.category !== activeCategory) return false;
@@ -131,9 +150,7 @@ export default function App() {
       {/* 1. Live Market Ticker Strip */}
       <MarketTicker
         tickers={INITIAL_MARKET_TICKERS}
-        onSelectTicker={(ticker) => {
-          setIsChartOpen(true);
-        }}
+        onSelectTicker={handleSelectTicker}
       />
 
       {/* 2. Top Navigation & Brand Header */}
@@ -167,7 +184,12 @@ export default function App() {
         )}
 
         {/* Live Market TradingView Terminal Section */}
-        <LiveTradingSection onOpenChartModal={() => setIsChartOpen(true)} />
+        <LiveTradingSection 
+          onOpenChartModal={(symbol) => {
+            if (symbol) setChartDefaultSymbol(symbol);
+            setIsChartOpen(true);
+          }} 
+        />
 
         {/* Desk Alpha Picks Section (Positioned directly under TradingView chart) */}
         {activeCategory === 'All' && activeFilterTab === 'All' && selectedDifficulty === 'All' && (
@@ -496,6 +518,7 @@ export default function App() {
       <ChartSimulatorModal
         isOpen={isChartOpen}
         onClose={() => setIsChartOpen(false)}
+        defaultSymbol={chartDefaultSymbol}
       />
 
       <SavedArticlesModal

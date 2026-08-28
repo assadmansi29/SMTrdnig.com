@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   LineChart, 
@@ -53,11 +53,14 @@ const SAMPLE_CANDLES: Candle[] = [
 ];
 
 const POPULAR_SYMBOLS = [
-  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', category: 'Futures' },
-  { symbol: 'BINANCE:BTCUSDT', name: 'BTC / USDT Perp', category: 'Crypto' },
   { symbol: 'OANDA:XAUUSD', name: 'Spot Gold / USD', category: 'Metals' },
+  { symbol: 'OANDA:NAS100USD', name: 'Nasdaq 100 (NAS100)', category: 'Indices' },
+  { symbol: 'OANDA:US30USD', name: 'Dow Jones (US30)', category: 'Indices' },
+  { symbol: 'OANDA:DE30EUR', name: 'DAX 40 (GER40)', category: 'Indices' },
+  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', category: 'Futures' },
+  { symbol: 'CME_MINI:NQ1!', name: 'NQ Futures (Nasdaq)', category: 'Futures' },
+  { symbol: 'BINANCE:BTCUSDT', name: 'BTC / USDT Perp', category: 'Crypto' },
   { symbol: 'FX:EURUSD', name: 'EUR / USD', category: 'Forex' },
-  { symbol: 'NASDAQ:NQ1!', name: 'NQ Futures (Nasdaq)', category: 'Futures' },
   { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', category: 'Equities' },
   { symbol: 'TVC:DXY', name: 'US Dollar Index (DXY)', category: 'Macro' },
 ];
@@ -65,12 +68,19 @@ const POPULAR_SYMBOLS = [
 export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ 
   isOpen, 
   onClose,
-  defaultSymbol = 'CME_MINI:ES1!'
+  defaultSymbol = 'OANDA:XAUUSD'
 }) => {
   const { t, isRTL } = useTranslation();
   const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
   const [viewLayout, setViewLayout] = useState<'split' | 'tv-only' | 'smc-only'>('split');
   const [activeInterval, setActiveInterval] = useState('15');
+  
+  // Sync selected symbol when defaultSymbol changes or modal opens
+  useEffect(() => {
+    if (defaultSymbol) {
+      setSelectedSymbol(defaultSymbol);
+    }
+  }, [defaultSymbol, isOpen]);
   
   // SMC Simulator states
   const [showSMA, setShowSMA] = useState(true);
@@ -110,7 +120,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="font-black text-lg sm:text-xl text-white flex items-center gap-2">
-                  <span>SMTrading<span className="text-amber-400">.com</span></span>
+                  <span>SMTrading<span className="text-amber-400">.pro</span></span>
                   <span className="text-slate-600">/</span>
                   <span className="text-slate-200 font-semibold text-sm sm:text-base">{t('chartStudioTitle')}</span>
                 </h3>

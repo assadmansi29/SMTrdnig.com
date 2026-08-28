@@ -471,6 +471,30 @@ export const INITIAL_MARKET_TICKERS: MarketTickerItem[] = [
     sparkline: [20960, 21020, 21090, 21050, 21120, 21160, 21180]
   },
   {
+    symbol: 'US30 (Dow)',
+    name: 'Dow Jones Industrial Average',
+    price: 43910.50,
+    change: 260.40,
+    changePercent: 0.60,
+    category: 'Indices',
+    high24h: 44120.00,
+    low24h: 43650.00,
+    volume24h: '410K Contracts',
+    sparkline: [43650, 43720, 43810, 43780, 43860, 43890, 43910]
+  },
+  {
+    symbol: 'GER40 (DAX)',
+    name: 'DAX 40 Germany Benchmark',
+    price: 22480.20,
+    change: 145.80,
+    changePercent: 0.65,
+    category: 'Indices',
+    high24h: 22560.00,
+    low24h: 22310.00,
+    volume24h: '320K Contracts',
+    sparkline: [22320, 22380, 22410, 22390, 22440, 22460, 22480]
+  },
+  {
     symbol: 'XAU/USD',
     name: 'Spot Gold Ounce',
     price: 2942.10,

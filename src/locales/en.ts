@@ -44,7 +44,7 @@ export const en = {
   instNasdaqDesc: 'Nasdaq 100 Index',
   instDowName: 'Dow Jones / USD (US30)',
   instDowDesc: 'Dow Jones Industrial Average',
-  instDaxName: 'DAX / USD (GER40)',
+  instDaxName: 'DAX / EUR (GER40)',
   instDaxDesc: 'German DAX 40 Index',
 
   // Featured Section

@@ -24,21 +24,21 @@ const INSTRUMENTS: InstrumentOption[] = [
     id: 'nasdaq',
     nameKey: 'instNasdaqName',
     ticker: 'NAS100',
-    symbol: 'NASDAQ:NDX',
+    symbol: 'OANDA:NAS100USD',
     descKey: 'instNasdaqDesc'
   },
   {
     id: 'dow',
     nameKey: 'instDowName',
     ticker: 'US30',
-    symbol: 'TVC:DJI',
+    symbol: 'OANDA:US30USD',
     descKey: 'instDowDesc'
   },
   {
     id: 'dax',
     nameKey: 'instDaxName',
     ticker: 'GER40',
-    symbol: 'XETR:DAX',
+    symbol: 'OANDA:DE30EUR',
     descKey: 'instDaxDesc'
   }
 ];
@@ -52,7 +52,7 @@ const TIMEFRAMES = [
 ];
 
 interface LiveTradingSectionProps {
-  onOpenChartModal: () => void;
+  onOpenChartModal: (symbol?: string) => void;
 }
 
 export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenChartModal }) => {
@@ -119,7 +119,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({ onOpenCh
 
           {/* Fullscreen TradingView Studio Modal */}
           <button
-            onClick={onOpenChartModal}
+            onClick={() => onOpenChartModal(selectedInstrument.symbol)}
             className="flex items-center gap-1.5 bg-[#0E1526] hover:bg-[#152038] text-cyan-300 hover:text-cyan-200 px-3 py-1.5 rounded-xl border border-cyan-500/30 text-xs font-medium transition-colors cursor-pointer shadow-sm"
             title={t('terminalStudioTitle')}
           >
