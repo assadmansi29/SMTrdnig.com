@@ -1,6 +1,7 @@
 import { Article, Author, EconomicEvent } from '../types';
 import { LanguageCode } from '../locales';
 import { AUTHORS, INITIAL_ARTICLES, INITIAL_ECONOMIC_EVENTS } from './blogData';
+import tradeSmcImg from '../assets/images/trade_smc_chart_1787936051770.jpg';
 
 // Localized Author details
 export const getAuthorsByLanguage = (lang: LanguageCode): Record<string, Author> => {
@@ -286,103 +287,143 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
     return formatProducts([
       {
         id: 'prod-1',
-        name: 'مجموعة مؤشرات تدفق السيولة المؤسسية لـ TradingView (SMT Suite v4.2)',
-        category: 'Software & Indicators',
-        price: 289,
-        originalPrice: 499,
-        rating: 4.96,
+        name: 'دورة تداول المفاهيم المؤسسية SMC — من المبتدئ إلى الاحتراف',
+        category: 'Education & Masterclass',
+        price: 350,
+        originalPrice: 500,
+        rating: 4.97,
         reviewsCount: 342,
-        image: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=600&auto=format&fit=crop&q=80',
+        image: tradeSmcImg,
         badge: 'الأكثر مبيعاً',
         badgeColor: 'bg-amber-500 text-slate-950',
-        description: 'حزمة نصوص برمجية حصرية متوافقة مع Pine Script v5 تكشف تلقائياً أوامر الآيسبيرغ، كتل الأوامر المؤسسية (Order Blocks)، وفجوات القيمة العادلة (FVG) في الوقت الفعلي.',
+        description: 'دورة شاملة في مفاهيم الأموال الذكية (SMC) تأخذ المتدربين من الأساسيات إلى المستوى الاحترافي المتقدم. تغطي هيكل السوق، السيولة، كتل الأوامر (Order Blocks)، فجوات القيمة العادلة (FVG)، كتل الكسر (Breaker Blocks)، سحب السيولة، مناطق الخصم والعلاوة، BOS، CHoCH، نقاط الدخول، التأكيدات، إدارة المخاطر والتحليل البياني العملي.',
         features: [
-          'كشف فوري ودقيق لتجمعات أوامر الآيسبيرغ في دفتر الأوامر',
-          'رسم ديناميكي لمناطق فجوات القيمة العادلة المتوافقة مع الإطار الزمني العالي',
-          'تنبيهات صوتية ورسائل Telegram/Webhook فورية عند حدوث كسر هيكلي (BOS)',
-          'تحديثات مدى الحياة وترخيص تجاري كامل'
+          'هيكلية السوق الشاملة وتحديد BOS و CHoCH عبر الأطر الزمنية',
+          'تحديد كتل الأوامر المؤسسية وفجوات القيمة العادلة (FVG) وكتل الكسر',
+          'اصطياد سحوبات السيولة ومناطق الخصم والعلاوة (Premium & Discount)',
+          'نماذج دخول عالية الاحتمالية، شروط التأكيد وإدارة رأس المال الصارمة'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-2',
-        name: 'ماستركلاس تفكيك تدفق الأوامر الاحترافي (برنامج تدريب 12 أسبوعاً)',
+        name: 'دورة مربع جان والتحليل الزمني — Gann Box & Time Analysis',
         category: 'Education & Masterclass',
-        price: 649,
-        originalPrice: 1200,
+        price: 450,
+        originalPrice: 600,
         rating: 4.98,
         reviewsCount: 188,
         image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
         badge: 'المسار المؤسسي',
         badgeColor: 'bg-cyan-500 text-slate-950',
-        description: 'برنامج تدريبي عميق بقيادة أبو أسد المنسي يغطي قراءة تدفق دلتا التراكمي (CVD)، مصفوفات السيولة، واستراتيجيات مكاتب التداول الاستثمارية الكبرى.',
+        description: 'دورة شاملة تركز على التحليل الزمني باستخدام مربع جان (Gann Box)، بما في ذلك الدورات الزمنية، علاقة السعر بالزمن، توقيت السوق، والتطبيقات العملية لتحديد نقاط التحول والانعكاس المحتملة في الأسواق.',
         features: [
-          'أكثر من 45 ساعة من الدروس المسجلة بجودة 4K فائقة الوضوح',
-          'جلسات تداول حي أسبوعية في غرف التداول مع أبو أسد المنسي',
-          'دخول مجتمعي خاص لمتداولي ألفا والخبراء الكميين',
-          'شهادة إتمام معتمدة من مكتب الأبحاث الكمية'
+          'التحليل الزمني والهندسي باستخدام أداة مربع جان (Gann Box)',
+          'استخراج الدورات الزمنية وتوازن السعر مع الزمن (Price-Time Squared)',
+          'التوقيت الدقيق وتحديد نقاط التحول والانعكاس في السوق',
+          'تطبيقات واستراتيجيات عملية على الرسوم البيانية الحية'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-3',
-        name: 'بوت التداول الخوارزمي الإحصائي (Python Quant Bot Engine)',
-        category: 'Software & Indicators',
-        price: 890,
-        originalPrice: 1500,
-        rating: 4.91,
-        reviewsCount: 94,
+        name: 'دورة التحليل الفني الكلاسيكي — من المبتدئ إلى التأسيس',
+        category: 'Education & Masterclass',
+        price: 150,
+        originalPrice: 300,
+        rating: 4.93,
+        reviewsCount: 142,
         image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80',
-        badge: 'كود بايثون كامل',
-        badgeColor: 'bg-emerald-500 text-slate-950',
-        description: 'شفرة برمجية كاملة بمكتبات Python جاهزة للربط عبر API مع Interactive Brokers وBinance، تطبق استراتيجيات التكامل المشترك والمراجحة الإحصائية.',
+        badge: 'للمبتدئين',
+        badgeColor: 'bg-blue-500 text-white',
+        description: 'دورة موجهة للمبتدئين تغطي أسس وقواعد التحليل الفني الكلاسيكي، بما في ذلك الدعم والمقاومة، خطوط الاتجاه (الترند)، النماذج السعرية، أساسيات الشموع اليابانية، المؤشرات الفنية، الاختراقات، وكيفية تحليل حركة السعر السلوكية.',
         features: [
-          'تنفيذ آلي عالي السرعة بزمن وصول فائق الانخفاض (Low Latency)',
-          'إدارة مخاطر تلقائية مع فحص مستمر لقيمة التعرض عند المخاطرة (VaR)',
-          'توثيق تفصيلي وبيئة تثبيت Docker كاملة بنقرة واحدة',
-          'محاكي اختبار رجعي (Backtester) متقدم يحاكي الانزلاق السعري الحقيقي'
+          'أسس التحليل الفني: مستويات الدعم والمقاومة وخطوط الاتجاه والشموع اليابانية',
+          'النماذج الفنية الانعكاسية والاستمرارية وديناميكيات الاختراق وإعادة الاختبار',
+          'استخدام المتوسطات المتحركة ومؤشرات الزخم لقراءة حركة السعر بدقة',
+          'قواعد إدارة رأس المال، حجم العقود وبناء خطة تداول واضحة ومحكمة'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-4',
-        name: 'لوحة المفاتيح الميكانيكية المخصصة لمتداولي وول ستريت (SMTrading Quant Keypad)',
-        category: 'Hardware & Merch',
-        price: 149,
-        originalPrice: 220,
-        rating: 4.89,
+        name: 'استراتيجية 144 — دورة تداول مربع جان المتقدمة',
+        category: 'Education & Masterclass',
+        price: 200,
+        originalPrice: 350,
+        rating: 4.95,
         reviewsCount: 215,
-        image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80',
-        badge: 'إصدار محدود',
+        image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+        badge: 'استراتيجية 144',
         badgeColor: 'bg-purple-500 text-white',
-        description: 'لوحة مفاتيح ماكرو قابلة للبرمجة من الألومنيوم المؤكسد بأزرار ميكانيكية مخصصة لتنفيذ أوامر الشراء، البيع، ووقف الخسارة في أجزاء من الثانية.',
+        description: 'دورة تعليمية متكاملة تشرح استراتيجية تداول 144 باستخدام مربع جان (Gann Box)، وقواعدها وشروط الإعداد، ظروف السوق المناسبة، مفاهيم الدخول، شروط التأكيد، وإدارة المخاطر الصارمة.',
         features: [
-          'هيكل ألومنيوم فضاء مؤكسد مع مفاتيح Cherry MX ميكانيكية سريعة',
-          'شاشة OLED مدمجة لعرض مؤشر تذبذب VIX وسعر البيتكوين في الوقت الفعلي',
-          'اتصال سلكي USB-C مطلي بالذهب ولاسلكي بتقنية Bluetooth 5.2',
-          'برمجية مخصصة لربط الأزرار بمنصات TradingView وMT5 وNinjaTrader'
+          'شرح مفصل وممنهج لاستراتيجية 144 وقواعد تطبيقها على مربع جان',
+          'تحديد ظروف السوق المثالية ونماذج الإعداد الفني عالية الجودة',
+          'مفاهيم الدخول الدقيق، شروط التأكيد وفلاتر تجنب الإشارات الكاذبة',
+          'قواعد إدارة المخاطر وتحديد الأهداف ونماذج وقف الخسارة الرياضية'
         ],
-        deliveryType: 'physical_tracked'
+        deliveryType: 'instant_digital'
       },
       {
         id: 'prod-5',
-        name: 'كتاب "تشريح سيولة وول ستريت" - الطبعة الفاخرة المجلدة بالجلد',
+        name: 'استراتيجية التداول عبر Bookmap — قراءة السيولة وتدفق الأوامر',
         category: 'Education & Masterclass',
-        price: 89,
-        originalPrice: 130,
+        price: 400,
+        originalPrice: 800,
         rating: 4.97,
-        reviewsCount: 512,
-        image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-        badge: 'توقيع الكاتب',
-        badgeColor: 'bg-rose-500 text-white',
-        description: 'الدليل المرجعي الشامل لتفكيك دفاتر الأوامر، خوارزميات صانعي السوق، وتجنب مصائد السيولة في الأسواق المعاصرة بقلم أبو أسد المنسي.',
+        reviewsCount: 318,
+        image: tradeSmcImg,
+        badge: 'احتراف السيولة',
+        badgeColor: 'bg-emerald-500 text-slate-950',
+        description: 'استراتيجية كاملة تركز على استخدام منصة Bookmap وتصور تدفق الأوامر لفهم السيولة، نشاط السوق، الامتصاص (Absorption)، الشراء والبيع العدواني، وفرص التداول عالية الاحتمالية.',
         features: [
-          'أكثر من 380 صفحة ملونة ومطرزة بالذهب ومطبوعة على ورق فاخر',
-          'أكثر من 120 مخططاً بيانياً حقيقياً يحلل صفقات مؤسسية فعلية بدقة الملي ثانية',
-          'مرفق نسخة رقمية تفاعلية بصيغة PDF قابلة للبحث والتعليق',
-          'مقدمة وإهداء موقع شخصياً من أبو أسد المنسي'
+          'قراءة الخرائط الحرارية (Heatmaps) وتتبع سيولة دفتر الأوامر عبر Bookmap',
+          'رصد الامتصاص المؤسسي، استنزاف المشترين/البائعين العدوانيين وأوامر الآيسبيرغ',
+          'دمج بروفايل الحجم مع تباعد الدلتا التراكمية (CVD Divergence)',
+          'نماذج تنفيذ عالية الدقة واستراتيجيات إدارة مخاطر محكمة'
         ],
-        deliveryType: 'physical_tracked'
+        deliveryType: 'instant_digital'
+      },
+      {
+        id: 'prod-6',
+        name: 'استراتيجية SMC — تداول المفاهيم المؤسسية المركزة',
+        category: 'Education & Masterclass',
+        price: 150,
+        originalPrice: 300,
+        rating: 4.96,
+        reviewsCount: 168,
+        image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
+        badge: 'استراتيجية SMC',
+        badgeColor: 'bg-indigo-500 text-white',
+        description: 'استراتيجية SMC مركزة تغطي نماذج مفاهيم الأموال الذكية العملية، السيولة، هيكل السوق، كتل الأوامر (Order Blocks)، فجوات القيمة العادلة (Fair Value Gaps)، نقاط الدخول، التأكيدات، وإدارة المخاطر.',
+        features: [
+          'قواعد ونماذج تنفيذ صفقات مفاهيم الأموال الذكية (SMC) العملية',
+          'رسم وتحديد هيكل السوق، أحواض السيولة وسحب السيولة الداخلي والخارجي',
+          'نقاط الدخول الدقيقة المعتمدة على كتل الأوامر وفجوات القيمة العادلة (FVG)',
+          'قوائم التحقق للتأكيد وإدارة نسبة العائد إلى المخاطرة الصارمة'
+        ],
+        deliveryType: 'instant_digital'
+      },
+      {
+        id: 'prod-7',
+        name: 'الباقة الشاملة — جميع الدورات والاستراتيجيات (Complete Bundle)',
+        category: 'Education & Masterclass',
+        price: 888,
+        originalPrice: 1500,
+        rating: 5.0,
+        reviewsCount: 420,
+        image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+        badge: 'الباقة الشاملة',
+        badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
+        description: 'حزمة SM Trading الشاملة والكاملة التي تتضمن جميع الدورات والاستراتيجيات المذكورة أعلاه:\n• دورة تداول SMC (SMC Trading Course)\n• تحليل مربع جان والزمن (Gann Box & Time Analysis)\n• التحليل الفني الكلاسيكي (Classic Technical Analysis)\n• استراتيجية 144 (144 Strategy)\n• استراتيجية التداول عبر Bookmap\n• استراتيجية SMC المركزة',
+        features: [
+          'دورة تداول SMC الشاملة من الصفر حتى الاحتراف المؤسسي',
+          'دورة تحليل مربع جان والزمن + استراتيجية 144 الرقمية',
+          'دورة التحليل الفني الكلاسيكي للمبتدئين وقراءة حركة السعر',
+          'استراتيجية Bookmap المتقدمة لتدفق الأوامر + استراتيجية SMC المركزة'
+        ],
+        deliveryType: 'instant_digital'
       }
     ]);
   }
@@ -390,103 +431,143 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
     return formatProducts([
       {
         id: 'prod-1',
-        name: 'Институциональный набор индикаторов TradingView (SMT Suite v4.2)',
-        category: 'Software & Indicators',
-        price: 289,
-        originalPrice: 499,
-        rating: 4.96,
+        name: 'Курс по торговле SMC — От новичка до профессионала',
+        category: 'Education & Masterclass',
+        price: 350,
+        originalPrice: 500,
+        rating: 4.97,
         reviewsCount: 342,
-        image: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=600&auto=format&fit=crop&q=80',
+        image: tradeSmcImg,
         badge: 'ХИТ ПРОДАЖ',
         badgeColor: 'bg-amber-500 text-slate-950',
-        description: 'Пакет закрытых скриптов Pine Script v5, который автоматически определяет айсберг-ордера, ордерблоки и дисбалансы ликвидности (FVG) в реальном времени.',
+        description: 'Полный курс по концепции Smart Money (SMC), который проведет вас от базовых основ до продвинутого профессионального уровня. Охватывает структуру рынка, ликвидность, ордерблоки, дисбалансы (FVG), брейкер-блоки, снятие ликвидности, премиум и дисконт зоны, BOS, CHoCH, точки входа, подтверждения, риск-менеджмент и практический разбор графиков.',
         features: [
-          'Высокоточное выявление айсбергов в книге заявок (DOM)',
-          'Динамическое построение зон FVG старшего таймфрейма',
-          'Мгновенные оповещения в Telegram/Webhook при сломе структуры (BOS)',
-          'Бессрочные обновления и полная коммерческая лицензия'
+          'Структура рынка, BOS, CHoCH и синхронизация таймфреймов',
+          'Ордерблоки, Fair Value Gaps (FVG) и брейкер-блоки',
+          'Снятие ликвидности (Liquidity Sweeps) и зоны Premium / Discount',
+          'Высоковероятные паттерны входа, сетапы подтверждения и риск-менеджмент'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-2',
-        name: 'Мастер-класс по институциональному Order Flow (12-недельная программа)',
+        name: 'Курс «Gann Box и временной анализ рынка»',
         category: 'Education & Masterclass',
-        price: 649,
-        originalPrice: 1200,
+        price: 450,
+        originalPrice: 600,
         rating: 4.98,
         reviewsCount: 188,
         image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
         badge: 'ИНСТИТУЦИОНАЛЬНЫЙ КУРС',
         badgeColor: 'bg-cyan-500 text-slate-950',
-        description: 'Флагманский курс от Абу Асада Альманси, охватывающий кумулятивную дельту (CVD), матрицы ликвидности и алгоритмы ведущих хедж-фондов.',
+        description: 'Полный курс, посвященный временному анализу с использованием коробки Ганна (Gann Box), включая временные циклы, соотношение цены и времени, тайминг рынка и практическое применение для определения потенциальных точек разворота.',
         features: [
-          'Более 45 часов структурированных видеолекций в 4K',
-          'Еженедельные живые торговые сессии с Абу Асадом Альманси',
-          'Закрытый Discord-чат для квант-трейдеров',
-          'Сертификат об окончании исследовательского деска'
+          'Временной и геометрический анализ с помощью инструмента Gann Box',
+          'Определение временных циклов и баланса цены и времени',
+          'Точный тайминг входа и прогнозирование разворотных точек',
+          'Практический разбор сетапов на реальных графиках'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-3',
-        name: 'Алгоритмический бот статистического арбитража (Python Quant Bot Engine)',
-        category: 'Software & Indicators',
-        price: 890,
-        originalPrice: 1500,
-        rating: 4.91,
-        reviewsCount: 94,
+        name: 'Курс «Классический технический анализ для начинающих»',
+        category: 'Education & Masterclass',
+        price: 150,
+        originalPrice: 300,
+        rating: 4.93,
+        reviewsCount: 142,
         image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80',
-        badge: 'ИСХОДНЫЙ КОД PYTHON',
-        badgeColor: 'bg-emerald-500 text-slate-950',
-        description: 'Готовый к развертыванию торговый движок на Python с API-коннекторами к Interactive Brokers и Binance для парного арбитража.',
+        badge: 'ДЛЯ НАЧИНАЮЩИХ',
+        badgeColor: 'bg-blue-500 text-white',
+        description: 'Курс для начинающих, охватывающий основы классического технического анализа: уровни поддержки и сопротивления, трендовые линии, графические паттерны, основы японских свечей, индикаторы, пробои и методы анализа движения цены.',
         features: [
-          'Ультранизкая задержка исполнения ордеров (Low Latency)',
-          'Встроенная система риск-менеджмента и мониторинг VaR',
-          'Подробная документация и Docker-окружение в 1 клик',
-          'Продвинутый бэктестер с реалистичным моделированием проскальзывания'
+          'Основы технического анализа: уровни поддержки/сопротивления и тренды',
+          'Графические паттерны, основы свечного анализа и пробои уровней',
+          'Индикаторы импульса, скользящие средние и логика Price Action',
+          'Правила управления рисками, расчет позиции и торговый план'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-4',
-        name: 'Механический макро-кейпад квант-трейдера (SMTrading Quant Keypad)',
-        category: 'Hardware & Merch',
-        price: 149,
-        originalPrice: 220,
-        rating: 4.89,
+        name: 'Курс «Стратегия 144» (144 Strategy — Gann Box)',
+        category: 'Education & Masterclass',
+        price: 200,
+        originalPrice: 350,
+        rating: 4.95,
         reviewsCount: 215,
-        image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80',
-        badge: 'ЛИМИТИРОВАННАЯ СЕРИЯ',
+        image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+        badge: 'СТРАТЕГИЯ 144',
         badgeColor: 'bg-purple-500 text-white',
-        description: 'Алюминиевый программируемый кейпад с быстрыми переключателями для молниеносного исполнения ордеров и закрытия позиций.',
+        description: 'Полный обучающий курс, подробно объясняющий торговую стратегию 144 на основе Gann Box: ее правила, сетап, рыночные условия, концепции входа, подтверждения и риск-менеджмент.',
         features: [
-          'Анодированный алюминиевый корпус и переключатели Cherry MX',
-          'OLED-дисплей реального времени с индексом VIX и курсом BTC',
-          'Позолоченный кабель USB-C и беспроводное подключение Bluetooth 5.2',
-          'Готовые профили для TradingView, MT5 и NinjaTrader'
+          'Детальный разбор торговой стратегии 144 и геометрии Gann Box',
+          'Правила сетапа, фильтрация рыночных условий и контекста',
+          'Точные точки входа, триггеры подтверждения и отмена сценария',
+          'Институциональный риск-менеджмент, расчет таргетов и стоп-лосса'
         ],
-        deliveryType: 'physical_tracked'
+        deliveryType: 'instant_digital'
       },
       {
         id: 'prod-5',
-        name: 'Книга «Анатомия ликвидности Уолл-стрит» — Премиальное издание в коже',
+        name: 'Курс «Торговая стратегия Bookmap» (Bookmap Trading Strategy)',
         category: 'Education & Masterclass',
-        price: 89,
-        originalPrice: 130,
+        price: 400,
+        originalPrice: 800,
         rating: 4.97,
-        reviewsCount: 512,
-        image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-        badge: 'ПОДПИСЬ АВТОРА',
-        badgeColor: 'bg-rose-500 text-white',
-        description: 'Фундаментальный справочник по анализу биржевого стакана, алгоритмам маркет-мейкеров и защите капитала от манипуляций.',
+        reviewsCount: 318,
+        image: tradeSmcImg,
+        badge: 'ORDER FLOW PRO',
+        badgeColor: 'bg-emerald-500 text-slate-950',
+        description: 'Полная стратегия, сфокусированная на использовании Bookmap и визуализации потока ордеров для понимания ликвидности, активности рынка, поглощения (Absorption), агрессивных покупок и продаж, а также поиска высоковероятных торговых возможностей.',
         features: [
-          '380+ страниц премиальной бумаги с золотым тиснением',
-          'Более 120 детальных разборов реальных институциональных сделок',
-          'Включает интерактивную цифровую PDF-версию с заметками',
-          'Личный автограф и послание от автора Абу Асада Альманси'
+          'Чтение тепловых карт Bookmap и отслеживание ликвидности в биржевом стакане',
+          'Выявление институционального поглощения, айсберг-ордеров и истощения агрессоров',
+          'Синхронизация профиля объема и дивергенций кумулятивной дельты (CVD)',
+          'Высоковероятные сетапы входа и институциональный риск-менеджмент'
         ],
-        deliveryType: 'physical_tracked'
+        deliveryType: 'instant_digital'
+      },
+      {
+        id: 'prod-6',
+        name: 'Стратегия SMC (SMC Strategy)',
+        category: 'Education & Masterclass',
+        price: 150,
+        originalPrice: 300,
+        rating: 4.96,
+        reviewsCount: 168,
+        image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
+        badge: 'СТРАТЕГИЯ SMC',
+        badgeColor: 'bg-indigo-500 text-white',
+        description: 'Практическая стратегия по концепции Smart Money (SMC), охватывающая рабочие сетапы, ликвидность, структуру рынка, ордерблоки, Fair Value Gaps (FVG), точки входа, подтверждения и риск-менеджмент.',
+        features: [
+          'Практические правила исполнения сетапов Smart Money Concepts (SMC)',
+          'Разметка структуры рынка, пулы ликвидности и снятие ликвидности',
+          'Точные входы от ордерблоков и зон дисбаланса Fair Value Gaps (FVG)',
+          'Чек-лист подтверждения точки входа и системный риск-менеджмент'
+        ],
+        deliveryType: 'instant_digital'
+      },
+      {
+        id: 'prod-7',
+        name: 'Полный пакет — Все курсы и стратегии (Complete Bundle)',
+        category: 'Education & Masterclass',
+        price: 888,
+        originalPrice: 1500,
+        rating: 5.0,
+        reviewsCount: 420,
+        image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+        badge: 'ВСЁ ВКЛЮЧЕНО',
+        badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
+        description: 'Полный образовательный пакет SM Trading, включающий ВСЕ вышеперечисленные курсы и стратегии:\n• Курс по торговле SMC (SMC Trading Course)\n• Анализ времени и Gann Box (Gann Box & Time Analysis)\n• Классический технический анализ (Classic Technical Analysis)\n• Стратегия 144 (144 Strategy)\n• Торговая стратегия Bookmap\n• Стратегия SMC',
+        features: [
+          'Курс по торговле SMC (От новичка до профессионала)',
+          'Курс «Gann Box & Анализ времени» и Стратегия 144',
+          'Курс «Классический технический анализ для начинающих»',
+          'Торговая стратегия Bookmap и Фокусная стратегия SMC'
+        ],
+        deliveryType: 'instant_digital'
       }
     ]);
   }
@@ -494,103 +575,143 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
     return formatProducts([
       {
         id: 'prod-1',
-        name: 'Інституційний набір індикаторів TradingView (SMT Suite v4.2)',
-        category: 'Software & Indicators',
-        price: 289,
-        originalPrice: 499,
-        rating: 4.96,
+        name: 'Курс з торгівлі SMC — Від новачка до професіонала',
+        category: 'Education & Masterclass',
+        price: 350,
+        originalPrice: 500,
+        rating: 4.97,
         reviewsCount: 342,
-        image: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=600&auto=format&fit=crop&q=80',
+        image: tradeSmcImg,
         badge: 'ХІТ ПРОДАЖІВ',
         badgeColor: 'bg-amber-500 text-slate-950',
-        description: 'Пакет закритих скриптів Pine Script v5, який автоматично визначає айсберг-ордери, ордерблоки та дисбаланси ліквідності (FVG) у реальному часі.',
+        description: 'Повний курс за концепцією Smart Money (SMC), який проведе вас від базових основ до просунутого професійного рівня. Охоплює структуру ринку, ліквідність, ордерблоки, дисбаланси (FVG), брейкер-блоки, зняття ліквідності, преміум та дисконт зони, BOS, CHoCH, точки входу, підтвердження, ризик-менеджмент та практичний аналіз графіків.',
         features: [
-          'Високоточне виявлення айсбергів у біржовому стакані (DOM)',
-          'Динамічна побудова зон FVG старшого таймфрейму',
-          'Миттєві сповіщення в Telegram/Webhook при зламі структури (BOS)',
-          'Безстрокові оновлення та повна комерційна ліцензія'
+          'Структура ринку, BOS, CHoCH та синхронізація таймфреймів',
+          'Ордерблоки, Fair Value Gaps (FVG) та брейкер-блоки',
+          'Зняття ліквідності (Liquidity Sweeps) та зони Premium / Discount',
+          'Високоймовірні патерни входу, сетапи підтвердження та ризик-менеджмент'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-2',
-        name: 'Майстер-клас з інституційного Order Flow (12-тижнева програма)',
+        name: 'Курс «Gann Box та часовий аналіз ринку»',
         category: 'Education & Masterclass',
-        price: 649,
-        originalPrice: 1200,
+        price: 450,
+        originalPrice: 600,
         rating: 4.98,
         reviewsCount: 188,
         image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
         badge: 'ІНСТИТУЦІЙНИЙ КУРС',
         badgeColor: 'bg-cyan-500 text-slate-950',
-        description: 'Флагманський курс від Абу Асада Альмансі, що охоплює кумулятивну дельту (CVD), матриці ліквідності та алгоритми провідних хедж-фондів.',
+        description: 'Повний курс, присвячений часовому аналізу з використанням коробки Ганна (Gann Box), включаючи часові цикли, співвідношення ціни та часу, таймінг ринку та практичне застосування для визначення потенційних точок розвороту.',
         features: [
-          'Понад 45 годин структурованих відеолекцій у 4K',
-          'Щотижневі живі торгові сесії з Абу Асадом Альмансі',
-          'Закритий Discord-чат для квант-трейдерів',
-          'Сертифікат про закінчення дослідницького деску'
+          'Часовий та геометричний аналіз за допомогою інструменту Gann Box',
+          'Визначення часових циклів та балансу ціни і часу',
+          'Точний таймінг входу та прогнозування розворотних точок',
+          'Практичний аналіз сетапів на реальних графіках'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-3',
-        name: 'Алгоритмічний бот статистичного арбітражу (Python Quant Bot Engine)',
-        category: 'Software & Indicators',
-        price: 890,
-        originalPrice: 1500,
-        rating: 4.91,
-        reviewsCount: 94,
+        name: 'Курс «Класичний технічний аналіз для початківців»',
+        category: 'Education & Masterclass',
+        price: 150,
+        originalPrice: 300,
+        rating: 4.93,
+        reviewsCount: 142,
         image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80',
-        badge: 'ВИХІДНИЙ КОД PYTHON',
-        badgeColor: 'bg-emerald-500 text-slate-950',
-        description: 'Готовий до розгортання торговий рушій на Python з API-конекторами до Interactive Brokers та Binance для парного арбітражу.',
+        badge: 'ДЛЯ ПОЧАТКІВЦІВ',
+        badgeColor: 'bg-blue-500 text-white',
+        description: 'Курс для початківців, що охоплює основи класичного технічного аналізу: рівні підтримки та опору, трендові лінії, графічні патерни, основи японських свічок, індикатори, пробої та методи аналізу руху ціни.',
         features: [
-          'Ультранизька затримка виконання ордерів (Low Latency)',
-          'Вбудована система ризик-менеджменту та моніторинг VaR',
-          'Детальна документація та Docker-оточення в 1 клік',
-          'Просунутий бектестер із реалістичним моделюванням проковзування'
+          'Основи технічного аналізу: рівні підтримки/опору та трендові лінії',
+          'Графічні патерни, основи свічкового аналізу та динаміка пробоїв',
+          'Індикатори імпульсу, ковзні середні та розуміння Price Action',
+          'Правила управління ризиками, розрахунок обсягу позиції та торговий план'
         ],
         deliveryType: 'instant_digital'
       },
       {
         id: 'prod-4',
-        name: 'Механічний макро-кейпад квант-трейдера (SMTrading Quant Keypad)',
-        category: 'Hardware & Merch',
-        price: 149,
-        originalPrice: 220,
-        rating: 4.89,
+        name: 'Курс «Стратегія 144» (144 Strategy — Gann Box)',
+        category: 'Education & Masterclass',
+        price: 200,
+        originalPrice: 350,
+        rating: 4.95,
         reviewsCount: 215,
-        image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80',
-        badge: 'ЛІМІТОВАНА СЕРІЯ',
+        image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+        badge: 'СТРАТЕГІЯ 144',
         badgeColor: 'bg-purple-500 text-white',
-        description: 'Алюмінієвий програмований кейпад зі швидкими перемикачами для блискавичного виконання ордерів та закриття позицій.',
+        description: 'Повний навчальний курс, що детально пояснює торгову стратегію 144 на основі Gann Box: її правила, сетап, ринкові умови, концепції входу, підтвердження та ризик-менеджмент.',
         features: [
-          'Анодований алюмінієвий корпус та перемикачі Cherry MX',
-          'OLED-дисплей реального часу з індексом VIX та курсом BTC',
-          'Позолочений кабель USB-C та бездротове підключення Bluetooth 5.2',
-          'Готові профілі для TradingView, MT5 та NinjaTrader'
+          'Детальний розбір торгової стратегії 144 та геометрії Gann Box',
+          'Правила сетапу, фільтрація ринкових умов та контексту',
+          'Точні точки входу, тригери підтвердження та скасування сценарію',
+          'Інституційний ризик-менеджмент, розрахунок цілей та стоп-лосу'
         ],
-        deliveryType: 'physical_tracked'
+        deliveryType: 'instant_digital'
       },
       {
         id: 'prod-5',
-        name: 'Книга «Анатомія ліквідності Волл-стріт» — Преміальне видання в шкірі',
+        name: 'Курс «Торгова стратегія Bookmap» (Bookmap Trading Strategy)',
         category: 'Education & Masterclass',
-        price: 89,
-        originalPrice: 130,
+        price: 400,
+        originalPrice: 800,
         rating: 4.97,
-        reviewsCount: 512,
-        image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-        badge: 'ПІДПИС АВТОРА',
-        badgeColor: 'bg-rose-500 text-white',
-        description: 'Фундаментальний довідник з аналізу біржового стакана, алгоритмів маркет-мейкерів та захисту капіталу від маніпуляцій.',
+        reviewsCount: 318,
+        image: tradeSmcImg,
+        badge: 'ORDER FLOW PRO',
+        badgeColor: 'bg-emerald-500 text-slate-950',
+        description: 'Повна стратегія, сфокусована на використанні Bookmap та візуалізації потоку ордерів для розуміння ліквідності, активності ринку, поглинання (Absorption), агресивних покупок і продажів, а також пошуку високоймовірних торгових можливостей.',
         features: [
-          '380+ сторінок преміального паперу із золотим тисненням',
-          'Понад 120 детальних розборів реальних інституційних угод',
-          'Включає інтерактивну цифрову PDF-версію з нотатками',
-          'Особистий автограф і послання від автора Абу Асада Альмансі'
+          'Читання теплових карт Bookmap та відстеження ліквідності в біржовому стакані',
+          'Виявлення інституційного поглинання, айсберг-ордерів та виснаження агресорів',
+          'Синхронізація профілю обсягу та дивергенцій кумулятивної дельти (CVD)',
+          'Високоймовірні сетапи входу та інституційний ризик-менеджмент'
         ],
-        deliveryType: 'physical_tracked'
+        deliveryType: 'instant_digital'
+      },
+      {
+        id: 'prod-6',
+        name: 'Стратегія SMC (SMC Strategy)',
+        category: 'Education & Masterclass',
+        price: 150,
+        originalPrice: 300,
+        rating: 4.96,
+        reviewsCount: 168,
+        image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
+        badge: 'СТРАТЕГІЯ SMC',
+        badgeColor: 'bg-indigo-500 text-white',
+        description: 'Практична стратегія за концепцією Smart Money (SMC), що охоплює робочі сетапи, ліквідність, структуру ринку, ордерблоки, Fair Value Gaps (FVG), точки входу, підтвердження та ризик-менеджмент.',
+        features: [
+          'Практичні правила виконання сетапів Smart Money Concepts (SMC)',
+          'Розмітка структури ринку, пули ліквідності та зняття ліквідності',
+          'Точні входи від ордерблоків та зон дисбалансу Fair Value Gaps (FVG)',
+          'Чек-лист підтвердження точки входу та системний ризик-менеджмент'
+        ],
+        deliveryType: 'instant_digital'
+      },
+      {
+        id: 'prod-7',
+        name: 'Повний пакет — Усі курси та стратегії (Complete Bundle)',
+        category: 'Education & Masterclass',
+        price: 888,
+        originalPrice: 1500,
+        rating: 5.0,
+        reviewsCount: 420,
+        image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+        badge: 'ВСЕ ВКЛЮЧЕНО',
+        badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
+        description: 'Повний навчальний пакет SM Trading, який містить УСІ перелічені вище курси та стратегії:\n• Курс з торгівлі SMC (SMC Trading Course)\n• Аналіз часу та Gann Box (Gann Box & Time Analysis)\n• Класичний технічний аналіз (Classic Technical Analysis)\n• Стратегія 144 (144 Strategy)\n• Торгова стратегія Bookmap\n• Стратегія SMC',
+        features: [
+          'Курс з торгівлі SMC (Від новачка до професіонала)',
+          'Курс «Gann Box та аналіз часу» і Стратегія 144',
+          'Курс «Класичний технічний аналіз для початківців»',
+          'Торгова стратегія Bookmap та Фокусна стратегія SMC'
+        ],
+        deliveryType: 'instant_digital'
       }
     ]);
   }
@@ -599,103 +720,143 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
   return formatProducts([
     {
       id: 'prod-1',
-      name: 'SMTrading Order Flow Pro Indicator Suite (TradingView Pine v5)',
-      category: 'Software & Indicators',
-      price: 289,
-      originalPrice: 499,
-      rating: 4.96,
+      name: 'SMC Trading Course — Beginner to Professional',
+      category: 'Education & Masterclass',
+      price: 350,
+      originalPrice: 500,
+      rating: 4.97,
       reviewsCount: 342,
-      image: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=600&auto=format&fit=crop&q=80',
+      image: tradeSmcImg,
       badge: 'BESTSELLER',
       badgeColor: 'bg-amber-500 text-slate-950',
-      description: 'Institutional-grade automated indicator toolkit detecting hidden iceberg orders, high-volume delta absorption pools, and Fair Value Gaps in real-time.',
+      description: 'A complete SMC (Smart Money Concepts) course taking students from the basics to advanced professional-level understanding. Covers market structure, liquidity, order blocks, Fair Value Gaps (FVG), Breaker Blocks, liquidity sweeps, premium & discount zones, BOS, CHoCH, entries, confirmations, risk management, and practical chart analysis.',
       features: [
-        'Real-time iceberg order detection & book footprint mapping',
-        'Automatic HTF Fair Value Gap (FVG) and Breaker block projections',
-        'Instant Telegram & Webhook alerts on structural Market Structure Breaks (BOS)',
-        'Lifetime access & full commercial user license'
+        'Market structure, liquidity sweeps, BOS & CHoCH frameworks',
+        'Institutional order blocks, Fair Value Gaps (FVG) & Breaker Blocks',
+        'Premium & Discount pricing zones with multi-timeframe alignment',
+        'High-probability trade entries, confirmations & disciplined risk management'
       ],
       deliveryType: 'instant_digital'
     },
     {
       id: 'prod-2',
-      name: 'Institutional Order Flow Masterclass (12-Week Immersion)',
+      name: 'Gann Box & Time Analysis Course',
       category: 'Education & Masterclass',
-      price: 649,
-      originalPrice: 1200,
+      price: 450,
+      originalPrice: 600,
       rating: 4.98,
       reviewsCount: 188,
       image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
       badge: 'INSTITUTIONAL TIER',
       badgeColor: 'bg-cyan-500 text-slate-950',
-      description: 'Flagship quantitative curriculum taught by Abu Asad Almansi covering Cumulative Volume Delta (CVD), auction market theory, and proprietary desk playbooks.',
+      description: 'A complete course focused on time analysis using the Gann Box, including time cycles, price-time relationships, market timing, and practical applications for identifying potential market turning points.',
       features: [
-        '45+ hours of structured video masterclasses in 4K resolution',
-        'Weekly live market auction walkthroughs with Abu Asad Almansi',
-        'Private quant trader community & alpha desk channel',
-        'Verified quantitative research desk certification diploma'
+        'Time analysis & geometric forecasting using the Gann Box framework',
+        'Market time cycle identification & price-time balance modeling',
+        'High-precision market timing & reversal pivot identification',
+        'Practical chart analysis setups across multi-timeframe structures'
       ],
       deliveryType: 'instant_digital'
     },
     {
       id: 'prod-3',
-      name: 'Python Statistical Arbitrage & Mean-Reversion Bot Engine',
-      category: 'Software & Indicators',
-      price: 890,
-      originalPrice: 1500,
-      rating: 4.91,
-      reviewsCount: 94,
+      name: 'Classic Technical Analysis — Beginner Course',
+      category: 'Education & Masterclass',
+      price: 150,
+      originalPrice: 300,
+      rating: 4.93,
+      reviewsCount: 142,
       image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80',
-      badge: 'FULL PYTHON SOURCE',
-      badgeColor: 'bg-emerald-500 text-slate-950',
-      description: 'Production-ready institutional quantitative trading bot executing cointegrated pairs trading with automatic risk budgeting and Interactive Brokers / Binance connectors.',
+      badge: 'BEGINNER FRIENDLY',
+      badgeColor: 'bg-blue-500 text-white',
+      description: 'A beginner-friendly course covering the foundations of classical technical analysis, including support and resistance, trendlines, chart patterns, candlestick basics, indicators, breakouts, and how to analyze price action.',
       features: [
-        'Sub-millisecond order execution via async Python framework',
-        'Real-time Value-at-Risk (VaR) position sizing & dynamic hedging',
-        'Comprehensive documentation and 1-click Docker deployment stack',
-        'High-fidelity backtester with realistic slippage & commission modeling'
+        'Foundations of technical analysis: support & resistance, trendlines, and candlesticks',
+        'Classical chart patterns, momentum indicators, and breakout dynamics',
+        'Price action interpretation and multi-timeframe chart structure reading',
+        'Core risk management rules, position sizing, and structured trade planning'
       ],
       deliveryType: 'instant_digital'
     },
     {
       id: 'prod-4',
-      name: 'SMTrading Desk Pro Macro Mechanical Keypad (Hot-Swappable)',
-      category: 'Hardware & Merch',
-      price: 149,
-      originalPrice: 220,
-      rating: 4.89,
+      name: '144 Strategy — Gann Box Course',
+      category: 'Education & Masterclass',
+      price: 200,
+      originalPrice: 350,
+      rating: 4.95,
       reviewsCount: 215,
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80',
-      badge: 'LIMITED RUN',
+      image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+      badge: '144 STRATEGY',
       badgeColor: 'bg-purple-500 text-white',
-      description: 'Custom anodized aluminum macro keyboard with rapid-fire switches engineered specifically for rapid order execution and risk toggling.',
+      description: 'Gann Box A complete educational course explaining the 144 trading strategy, its rules, setup, market conditions, entry concepts, confirmation, and risk management.',
       features: [
-        'Aircraft-grade aluminum casing with high-speed Cherry MX mechanical switches',
-        'Embedded live OLED screen streaming VIX and BTC price ticks',
-        'Gold-plated USB-C braided cable and low-latency Bluetooth 5.2 dual mode',
-        'Pre-programmed macro mappings for TradingView, MetaTrader 5, and NinjaTrader'
+        'Complete breakdown of the 144 trading strategy and Gann Box principles',
+        'Setup identification, high-probability filters, and optimal market conditions',
+        'Precision entry concepts, trigger rules, and confirmation checklists',
+        'Systematic risk management, stop placement, and profit target models'
       ],
-      deliveryType: 'physical_tracked'
+      deliveryType: 'instant_digital'
     },
     {
       id: 'prod-5',
-      name: '"Anatomy of Wall Street Liquidity" — Hardcover Collector\'s Edition',
+      name: 'Bookmap Trading Strategy',
       category: 'Education & Masterclass',
-      price: 89,
-      originalPrice: 130,
+      price: 400,
+      originalPrice: 800,
       rating: 4.97,
-      reviewsCount: 512,
-      image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-      badge: 'SIGNED COPY',
-      badgeColor: 'bg-rose-500 text-white',
-      description: 'The definitive handbook on order book dynamics, market maker inventory risk, and exploiting retail liquidity sweeps authored by Abu Asad Almansi.',
+      reviewsCount: 318,
+      image: tradeSmcImg,
+      badge: 'ORDER FLOW PRO',
+      badgeColor: 'bg-emerald-500 text-slate-950',
+      description: 'A complete strategy focused on using Bookmap and order-flow visualization to understand liquidity, market activity, absorption, aggressive buying and selling, and high-probability trading opportunities.',
       features: [
-        '380+ pages bound in Italian leather with embossed gold foil typography',
-        'Over 120 high-resolution full-color annotated institutional order book charts',
-        'Includes searchable digital interactive PDF with continuous errata updates',
-        'Hand-numbered and personally autographed by Abu Asad Almansi'
+        'Real-time Bookmap order book heatmap reading and DOM liquidity tracking',
+        'Detecting institutional absorption, aggressive buyer/seller exhaustion & icebergs',
+        'Volume profile integration, Cumulative Volume Delta (CVD) divergence setups',
+        'High-probability execution models and systematic risk management frameworks'
       ],
-      deliveryType: 'physical_tracked'
+      deliveryType: 'instant_digital'
+    },
+    {
+      id: 'prod-6',
+      name: 'SMC Strategy',
+      category: 'Education & Masterclass',
+      price: 150,
+      originalPrice: 300,
+      rating: 4.96,
+      reviewsCount: 168,
+      image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
+      badge: 'SMC STRATEGY',
+      badgeColor: 'bg-indigo-500 text-white',
+      description: 'A focused SMC strategy covering practical Smart Money Concepts setups, liquidity, market structure, order blocks, Fair Value Gaps, entries, confirmations, and risk management',
+      features: [
+        'Practical Smart Money Concepts (SMC) high-probability setup rules',
+        'Market structure identification, internal & external liquidity sweeps',
+        'Precision order blocks and Fair Value Gaps (FVG) execution entries',
+        'Confirmation checklists and disciplined risk-to-reward management'
+      ],
+      deliveryType: 'instant_digital'
+    },
+    {
+      id: 'prod-7',
+      name: 'Complete Bundle — All Courses & Strategies',
+      category: 'Education & Masterclass',
+      price: 888,
+      originalPrice: 1500,
+      rating: 5.0,
+      reviewsCount: 420,
+      image: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=600&auto=format&fit=crop&q=80',
+      badge: 'COMPLETE BUNDLE',
+      badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
+      description: 'The complete SM Trading package including ALL courses and strategies listed above:\nSMC Trading Course\nGann Box & Time Analysis\nClassic Technical Analysis\n144 Strategy\nBookmap Trading Strategy\nSMC Strategy',
+      features: [
+        'SMC Trading Course (Beginner to Pro) & Gann Box Time Analysis',
+        'Classic Technical Analysis & 144 Strategy (Gann Box)',
+        'Bookmap Order Flow Trading Strategy & Focused SMC Strategy',
+        'Lifetime access to all masterclass recordings, future updates & blueprints'
+      ],
+      deliveryType: 'instant_digital'
     }
   ]);
 };
