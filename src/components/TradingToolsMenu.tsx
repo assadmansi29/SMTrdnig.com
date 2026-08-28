@@ -15,12 +15,16 @@ interface TradingToolsMenuProps {
   onOpenChart: () => void;
   onOpenCalculator: () => void;
   onOpenCalendar: () => void;
+  compact?: boolean;
+  className?: string;
 }
 
 export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
   onOpenChart,
   onOpenCalculator,
-  onOpenCalendar
+  onOpenCalendar,
+  compact = false,
+  className = ''
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -56,7 +60,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
   };
 
   return (
-    <div className="relative inline-block text-left" ref={menuRef}>
+    <div className={`relative inline-block text-left ${className}`} ref={menuRef}>
       {/* Unified "Trading Tools" Button */}
       <button
         id="btn-trading-tools"
@@ -65,25 +69,27 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="true"
         title={t('navTradingToolsTitle')}
-        className={`flex items-center justify-between gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer select-none group whitespace-nowrap shadow-sm ${
+        className={`w-full flex items-center justify-between gap-1.5 sm:gap-2 ${
+          compact ? 'px-2.5 py-1 rounded-md text-[11px] sm:text-xs' : 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs'
+        } font-bold transition-all border cursor-pointer select-none group whitespace-nowrap shadow-sm ${
           isOpen
             ? 'bg-gradient-to-r from-[#111A2D] to-[#182440] border-amber-400 text-white shadow-amber-500/10'
             : 'bg-[#0E1424] hover:bg-[#131B30] text-slate-200 hover:text-white border-slate-700/80 hover:border-amber-400/60'
         }`}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-amber-400/20 to-emerald-400/20 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-inner">
-            <CandlestickChart className="w-3.5 h-3.5 text-amber-400 group-hover:text-amber-300 group-hover:scale-110 transition-transform" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-md bg-gradient-to-br from-amber-400/20 to-emerald-400/20 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-inner">
+            <CandlestickChart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 group-hover:text-amber-300 group-hover:scale-110 transition-transform" />
           </div>
           <span className="tracking-tight">{t('navTradingTools')}</span>
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="hidden sm:inline-flex text-[9px] font-mono-num font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded leading-none">
+          <span className="text-[9px] font-mono-num font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded leading-none">
             3
           </span>
           <ChevronDown
-            className={`w-3.5 h-3.5 text-slate-400 group-hover:text-amber-300 transition-transform duration-200 shrink-0 ${
+            className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 group-hover:text-amber-300 transition-transform duration-200 shrink-0 ${
               isOpen ? 'rotate-180 text-amber-400' : ''
             }`}
           />
@@ -94,7 +100,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
       {isOpen && (
         <div 
           id="menu-trading-tools-dropdown"
-          className="absolute ltr:right-0 rtl:left-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#0B0F17]/98 backdrop-blur-xl border border-slate-700/90 shadow-2xl shadow-black/90 p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+          className="absolute ltr:right-0 rtl:left-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-[#0B0F17]/98 backdrop-blur-xl border border-slate-700/90 shadow-2xl shadow-black/90 p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header Banner */}
           <div className="px-3 py-2 border-b border-slate-800 flex items-center justify-between">

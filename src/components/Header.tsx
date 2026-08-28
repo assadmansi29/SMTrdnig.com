@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Controls & Utilities */}
           <div className="flex items-center gap-2 sm:gap-2.5">
-            {/* 1. CTA Group: E-Commerce on top, VIP Alpha Dispatch directly under */}
+            {/* 1. CTA Group: E-Commerce on top, VIP Alpha Dispatch in middle, Trading Tools on mobile under VIP Alpha */}
             <div className="flex flex-col gap-1 shrink-0">
               {/* E-Commerce Store Navigation Button */}
               <button
@@ -123,9 +123,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="inline sm:hidden">{t('navVipAlphaShort')}</span>
                 <span className="hidden sm:inline">{t('navVipAlpha')}</span>
               </button>
+
+              {/* Trading Tools for Mobile (Under VIP Alpha Dispatch) */}
+              <div className="md:hidden">
+                <TradingToolsMenu
+                  onOpenChart={onOpenChart}
+                  onOpenCalculator={onOpenCalculator}
+                  onOpenCalendar={onOpenCalendar}
+                  compact={true}
+                />
+              </div>
             </div>
 
-            {/* 2. Languages & Search Group: Languages directly above Search button */}
+            {/* 2. Languages & Search Group: Languages on top, Search in middle, Saved List on mobile under Search */}
             <div className="flex flex-col gap-1 shrink-0">
               {/* Languages Button */}
               <LanguageSelector />
@@ -138,14 +148,30 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span className="hidden sm:inline">{t('navSearchPlaceholder')}</span>
+                <span className="inline sm:hidden">{t('navSearchPlaceholder')}</span>
                 <kbd className="hidden md:inline-block bg-slate-800 text-[9px] text-slate-400 px-1 py-0.2 rounded border border-slate-700 font-mono-num">
                   ⌘K
                 </kbd>
               </button>
+
+              {/* Saved Reading List for Mobile (Under Search Alpha) */}
+              <button
+                onClick={onOpenSavedModal}
+                className="md:hidden flex items-center justify-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-amber-300 px-2.5 py-1 rounded-md border border-slate-800 transition-all text-[11px] font-medium cursor-pointer whitespace-nowrap"
+                title={t('navSavedArticlesTitle')}
+              >
+                <Bookmark className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="truncate max-w-[90px]">{t('navSavedArticlesTitle')}</span>
+                {savedArticlesCount > 0 && (
+                  <span className="bg-amber-500 text-slate-950 font-mono-num font-bold text-[9px] px-1.5 py-0.2 rounded-full leading-none">
+                    {savedArticlesCount}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* 3. Consolidated Trading Tools Button (TradingView Studio, Risk Calculator & Calendar) */}
-            <div className="flex items-center shrink-0 border-l rtl:border-l-0 rtl:border-r border-slate-800 pl-2 rtl:pl-0 rtl:pr-2">
+            {/* 3. Desktop Consolidated Trading Tools Button */}
+            <div className="hidden md:flex items-center shrink-0 border-l rtl:border-l-0 rtl:border-r border-slate-800 pl-2 rtl:pl-0 rtl:pr-2">
               <TradingToolsMenu
                 onOpenChart={onOpenChart}
                 onOpenCalculator={onOpenCalculator}
@@ -153,10 +179,10 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
 
-            {/* Bookmarks Drawer Trigger */}
+            {/* 4. Desktop Bookmarks Drawer Trigger */}
             <button
               onClick={onOpenSavedModal}
-              className="relative p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 transition-colors cursor-pointer shrink-0 self-center"
+              className="hidden md:flex relative p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 transition-colors cursor-pointer shrink-0 self-center"
               title={t('navSavedArticlesTitle')}
             >
               <Bookmark className="w-4 h-4" />
