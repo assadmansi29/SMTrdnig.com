@@ -32,7 +32,6 @@ import { SavedArticlesModal } from './components/SavedArticlesModal';
 import { SearchModal } from './components/SearchModal';
 import { NewsletterModal } from './components/NewsletterModal';
 import { ECommerceModal } from './components/ECommerceModal';
-import { FearGreedGauge } from './components/FearGreedGauge';
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
 import { getArticlesByLanguage, getEconomicEventsByLanguage, getAuthorsByLanguage } from './data/localizedData';
@@ -350,10 +349,7 @@ export default function App() {
 
             {/* Sidebar Widgets (4 cols) */}
             <aside className="lg:col-span-4 space-y-6">
-              {/* 1. Fear & Greed Sentiment Widget */}
-              <FearGreedGauge />
-
-              {/* 2. Editorial Quantitative Analysts */}
+              {/* Editorial Quantitative Analysts */}
               <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-5 space-y-4 shadow-lg">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">

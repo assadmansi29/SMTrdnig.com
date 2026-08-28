@@ -153,8 +153,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </kbd>
               </button>
 
-              {/* Saved Reading List for Mobile (Beautiful small button under Search Alpha) */}
-              <div className="md:hidden flex justify-center w-full">
+              {/* Saved Reading List for Mobile (Beautiful small button under Search Alpha aligned to the right) */}
+              <div className="md:hidden flex justify-end w-full">
                 <button
                   onClick={onOpenSavedModal}
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-0.5 sm:py-1 bg-gradient-to-r from-[#0E1526] to-[#141F36] hover:from-[#131E36] hover:to-[#1B2A4A] text-amber-400 hover:text-amber-300 rounded-md border border-slate-700/80 hover:border-amber-400/50 shadow-sm transition-all duration-150 cursor-pointer group"
