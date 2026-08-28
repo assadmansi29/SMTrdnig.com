@@ -12,13 +12,15 @@ export const getLocalizedCategory = (
       return t('catMacro');
     case 'Order Flow & Price Action':
       return t('catOrderFlow');
+    case 'Trade Now':
     case 'Algorithmic & Quant':
       return t('catQuant');
-    case 'FX & Commodities':
-      return t('catFX');
+    case 'BookMap':
+      return t('catBookMap');
+    case 'LIVE Trade':
     case 'Options & Derivatives':
       return t('catOptions');
-    case 'Risk & Psychology':
+    case 'Support':
       return t('catRisk');
     default:
       return category;

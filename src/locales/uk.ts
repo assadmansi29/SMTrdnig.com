@@ -30,10 +30,10 @@ export const uk: Record<TranslationKey, string> = {
   catAll: 'Всі',
   catMacro: 'Макроекономіка та ліквідність',
   catOrderFlow: 'Потік ордерів та Price Action',
-  catQuant: 'Алгоритмічний та квант-трейдинг',
-  catFX: 'Форекс та сировинні товари',
-  catOptions: 'Опціони та деривативи',
-  catRisk: 'Управління ризиками та психологія',
+  catQuant: 'Торгувати зараз (Trade Now)',
+  catBookMap: 'BookMap',
+  catOptions: 'LIVE Trade',
+  catRisk: 'Підтримка (Support)',
 
   // Market Ticker
   tickerLiveFeed: 'Прямий потік Alpha',

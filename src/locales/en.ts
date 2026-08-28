@@ -28,10 +28,10 @@ export const en = {
   catAll: 'All',
   catMacro: 'Macro & Liquidity',
   catOrderFlow: 'Order Flow & Price Action',
-  catQuant: 'Algorithmic & Quant',
-  catFX: 'FX & Commodities',
-  catOptions: 'Options & Derivatives',
-  catRisk: 'Risk & Psychology',
+  catQuant: 'Trade Now',
+  catBookMap: 'BookMap',
+  catOptions: 'LIVE Trade',
+  catRisk: 'Support',
 
   // Market Ticker
   tickerLiveFeed: 'Live Alpha Feed',

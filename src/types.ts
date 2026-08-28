@@ -11,11 +11,11 @@ export interface Author {
 export type ArticleCategory = 
   | 'All'
   | 'Macro & Liquidity'
-  | 'Algorithmic & Quant'
+  | 'Trade Now'
   | 'Order Flow & Price Action'
-  | 'FX & Commodities'
-  | 'Options & Derivatives'
-  | 'Risk & Psychology';
+  | 'BookMap'
+  | 'LIVE Trade'
+  | 'Support';
 
 export interface TradeSetup {
   asset: string;

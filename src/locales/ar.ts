@@ -30,10 +30,10 @@ export const ar: Record<TranslationKey, string> = {
   catAll: 'الكل',
   catMacro: 'الاقتصاد الكلي والسيولة',
   catOrderFlow: 'تدفق الأوامر وحركة السعر',
-  catQuant: 'التداول الخوارزمي والكمي',
-  catFX: 'العملات والسلع الأساسية',
-  catOptions: 'الخيارات والمشتقات المالية',
-  catRisk: 'إدارة المخاطر وسيكولوجية التداول',
+  catQuant: 'تداول الآن Trade Now',
+  catBookMap: 'بوكماب BookMap',
+  catOptions: 'تداول مباشر LIVE Trade',
+  catRisk: 'الدعم والمساعدة Support',
 
   // Market Ticker
   tickerLiveFeed: 'بث ألفا المباشر',

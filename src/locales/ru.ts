@@ -30,10 +30,10 @@ export const ru: Record<TranslationKey, string> = {
   catAll: 'Все',
   catMacro: 'Макроэкономика и ликвидность',
   catOrderFlow: 'Поток ордеров и Price Action',
-  catQuant: 'Алгоритмический и квант-трейдинг',
-  catFX: 'Форекс и сырьевые товары',
-  catOptions: 'Опционы и деривативы',
-  catRisk: 'Управление рисками и психология',
+  catQuant: 'Торговать сейчас (Trade Now)',
+  catBookMap: 'BookMap',
+  catOptions: 'LIVE Trade',
+  catRisk: 'Поддержка (Support)',
 
   // Market Ticker
   tickerLiveFeed: 'Прямой поток Alpha',

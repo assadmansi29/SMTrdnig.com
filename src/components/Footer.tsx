@@ -25,10 +25,10 @@ export const Footer: React.FC<FooterProps> = ({
     'All': t('catAll'),
     'Macro & Liquidity': t('catMacro'),
     'Order Flow & Price Action': t('catOrderFlow'),
-    'Algorithmic & Quant': t('catQuant'),
-    'FX & Commodities': t('catFX'),
-    'Options & Derivatives': t('catOptions'),
-    'Risk & Psychology': t('catRisk')
+    'Trade Now': t('catQuant'),
+    'BookMap': t('catBookMap'),
+    'LIVE Trade': t('catOptions'),
+    'Support': t('catRisk')
   };
 
   return (
@@ -102,7 +102,7 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="space-y-3">
           <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerSectorsTitle')}</h4>
           <ul className="space-y-2">
-            {(['Macro & Liquidity', 'Order Flow & Price Action', 'Algorithmic & Quant', 'FX & Commodities', 'Options & Derivatives', 'Risk & Psychology'] as ArticleCategory[]).map(c => (
+            {(['Macro & Liquidity', 'Order Flow & Price Action', 'Trade Now', 'BookMap', 'LIVE Trade', 'Support'] as ArticleCategory[]).map(c => (
               <li key={c}>
                 <button
                   onClick={() => {

@@ -27,20 +27,20 @@ interface HeaderProps {
 
 const CATEGORIES: ArticleCategory[] = [
   'All',
-  'Algorithmic & Quant',
-  'FX & Commodities',
-  'Options & Derivatives',
-  'Risk & Psychology'
+  'Trade Now',
+  'BookMap',
+  'LIVE Trade',
+  'Support'
 ];
 
 const CATEGORY_KEYS: Record<ArticleCategory, TranslationKey> = {
   'All': 'catAll',
   'Macro & Liquidity': 'catMacro',
   'Order Flow & Price Action': 'catOrderFlow',
-  'Algorithmic & Quant': 'catQuant',
-  'FX & Commodities': 'catFX',
-  'Options & Derivatives': 'catOptions',
-  'Risk & Psychology': 'catRisk'
+  'Trade Now': 'catQuant',
+  'BookMap': 'catBookMap',
+  'LIVE Trade': 'catOptions',
+  'Support': 'catRisk'
 };
 
 export const Header: React.FC<HeaderProps> = ({
