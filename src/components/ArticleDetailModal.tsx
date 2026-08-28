@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
-import { useTranslation } from '../context/LanguageContext';
+import { useTranslation, getLocalizedCategory, getLocalizedDifficulty, getLocalizedDirection } from '../locales';
 
 interface ArticleDetailModalProps {
   article: Article | null;
@@ -141,7 +141,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
         <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 bg-[#080C14]/95 backdrop-blur-md border-b border-slate-800">
           <div className="flex items-center gap-2">
             <span className="bg-amber-400/10 text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded border border-amber-400/30">
-              {article.category}
+              {getLocalizedCategory(article.category, t)}
             </span>
             <span className="text-xs text-slate-400 font-mono-num hidden sm:inline">
               • {article.readTime}
@@ -240,7 +240,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                   {article.views.toLocaleString()} {t('modalViews')}
                 </span>
                 <span className="bg-slate-800/90 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700">
-                  {t('modalTier')}: {article.difficulty}
+                  {t('modalTier')}: {getLocalizedDifficulty(article.difficulty, t)}
                 </span>
               </div>
             </div>
@@ -296,7 +296,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                       : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                   }`}
                 >
-                  {article.tradeSetup.direction} ({article.tradeSetup.timeframe})
+                  {getLocalizedDirection(article.tradeSetup.direction, t)} ({article.tradeSetup.timeframe})
                 </span>
               </div>
 
@@ -370,7 +370,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 {sec.codeBlock && (
                   <div className="bg-[#06080E] border border-slate-800 rounded-xl overflow-hidden my-4 font-mono-num text-xs" dir="ltr">
                     <div className="bg-[#090D17] px-4 py-2 flex items-center justify-between border-b border-slate-800 text-slate-400">
-                      <span>{sec.codeBlock.language.toUpperCase()} ALGORITHM</span>
+                      <span>{sec.codeBlock.language.toUpperCase()} {t('modalAlgorithm')}</span>
                       <button
                         onClick={() => handleCopyCode(sec.codeBlock!.code, idx)}
                         className="flex items-center gap-1 text-slate-400 hover:text-white text-[11px] cursor-pointer"
@@ -599,7 +599,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                             : 'text-amber-300 bg-amber-950/60'
                         }`}
                       >
-                        {c.sentiment}
+                        {c.sentiment === 'BULLISH' ? t('modalBullish') : c.sentiment === 'BEARISH' ? t('modalBearish') : t('modalNeutral')}
                       </span>
                     </div>
                     <span className="text-[11px] text-slate-500 font-mono-num">{c.date}</span>
@@ -624,7 +624,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                     onClick={() => onSelectArticle(rel)}
                     className="p-4 bg-[#090D17] hover:bg-slate-800/50 border border-slate-800 rounded-xl cursor-pointer transition-all group space-y-2"
                   >
-                    <span className="text-[10px] text-amber-400 font-semibold">{rel.category}</span>
+                    <span className="text-[10px] text-amber-400 font-semibold">{getLocalizedCategory(rel.category, t)}</span>
                     <h4 className="font-bold text-xs text-white group-hover:text-amber-300 transition-colors line-clamp-2">
                       {rel.title}
                     </h4>

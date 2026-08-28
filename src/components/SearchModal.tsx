@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, Clock, ArrowRight, Tag, Sparkles } from 'lucide-react';
 import { Article } from '../types';
-import { useTranslation } from '../context/LanguageContext';
+import { useTranslation, getLocalizedCategory } from '../locales';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -96,7 +96,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 />
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-amber-400 font-semibold">{art.category}</span>
+                    <span className="text-[10px] text-amber-400 font-semibold">{getLocalizedCategory(art.category, t)}</span>
                     <span className="text-[10px] text-slate-500 font-mono-num">• {art.readTime}</span>
                   </div>
                   <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 transition-colors line-clamp-1">

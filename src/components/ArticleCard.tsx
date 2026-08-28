@@ -3,7 +3,7 @@ import { Article } from '../types';
 import { Clock, Eye, Bookmark, Share2, TrendingUp, Sparkles, User, ArrowUpRight } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
-import { useTranslation } from '../context/LanguageContext';
+import { useTranslation, getLocalizedCategory, getLocalizedDifficulty, getLocalizedDirection } from '../locales';
 
 interface ArticleCardProps {
   article: Article;
@@ -42,7 +42,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         {/* Category & Difficulty Badges */}
         <div className="absolute top-3 left-3 rtl:left-auto rtl:right-3 flex items-center gap-2">
           <span className="bg-[#0B0F17]/90 backdrop-blur-md text-amber-300 text-[11px] font-semibold px-2.5 py-1 rounded-md border border-amber-400/30 shadow-sm">
-            {article.category}
+            {getLocalizedCategory(article.category, t)}
           </span>
           <span
             className={`text-[10px] font-mono-num font-bold px-2 py-0.5 rounded backdrop-blur-md uppercase tracking-wider ${
@@ -53,7 +53,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
                 : 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
             }`}
           >
-            {article.difficulty}
+            {getLocalizedDifficulty(article.difficulty, t)}
           </span>
         </div>
 
@@ -79,7 +79,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         {article.tradeSetup && (
           <div className="absolute bottom-3 left-3 rtl:left-auto rtl:right-3 flex items-center gap-1.5 bg-[#0B0F17]/90 backdrop-blur-md px-2.5 py-1 rounded-md border border-emerald-500/40 text-[11px] font-mono-num text-emerald-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>{t('featuredSetupTitle')}: {article.tradeSetup.asset} ({article.tradeSetup.direction})</span>
+            <span>{t('featuredSetupTitle')}: {article.tradeSetup.asset} ({getLocalizedDirection(article.tradeSetup.direction, t)})</span>
           </div>
         )}
       </div>

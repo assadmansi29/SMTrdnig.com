@@ -35,6 +35,8 @@ import { ECommerceModal } from './components/ECommerceModal';
 import { FearGreedGauge } from './components/FearGreedGauge';
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
+import { getArticlesByLanguage, getEconomicEventsByLanguage, getAuthorsByLanguage } from './data/localizedData';
+import { getLocalizedCategory } from './locales';
 import { 
   TrendingUp, 
   Sparkles, 
@@ -54,12 +56,15 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, language } = useTranslation();
   const { abuAsadAvatar, handleFileUpload } = useAbuAsadAvatar();
-  const [articles, setArticles] = useState<Article[]>(INITIAL_ARTICLES);
+  const [articles, setArticles] = useState<Article[]>(() => getArticlesByLanguage(language));
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<'All' | 'Beginner' | 'Intermediate' | 'Institutional'>('All');
   const [activeFilterTab, setActiveFilterTab] = useState<'All' | 'Trending' | 'EditorPick'>('All');
+
+  const localizedEvents = getEconomicEventsByLanguage(language);
+  const localizedAuthors = getAuthorsByLanguage(language);
 
   // Modal States
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -72,6 +77,18 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
   const [isECommerceOpen, setIsECommerceOpen] = useState(false);
+
+  // Sync localized articles when language changes
+  useEffect(() => {
+    const localized = getArticlesByLanguage(language);
+    setArticles(localized);
+    if (selectedArticle) {
+      const refreshed = localized.find(a => a.id === selectedArticle.id);
+      if (refreshed) {
+        setSelectedArticle(refreshed);
+      }
+    }
+  }, [language]);
 
   // Bookmark persistence
   const [savedArticleIds, setSavedArticleIds] = useState<string[]>(() => {
@@ -189,6 +206,12 @@ export default function App() {
             if (symbol) setChartDefaultSymbol(symbol);
             setIsChartOpen(true);
           }} 
+          onOpenCalendar={() => setIsCalendarOpen(true)}
+          onOpenCalculator={() => {
+            setCalculatorSetup(null);
+            setIsCalculatorOpen(true);
+          }}
+          localizedEvents={localizedEvents}
         />
 
         {/* Desk Alpha Picks Section (Positioned directly under TradingView chart) */}
@@ -210,7 +233,7 @@ export default function App() {
                 {t('filterArchive')}
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-                {activeCategory}
+                {getLocalizedCategory(activeCategory, t)}
               </h2>
             </div>
             <button
@@ -330,87 +353,7 @@ export default function App() {
               {/* 1. Fear & Greed Sentiment Widget */}
               <FearGreedGauge />
 
-              {/* 2. Institutional Macro Catalyst Box */}
-              <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-5 space-y-4 shadow-lg">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-emerald-400" />
-                    <h4 className="font-bold text-xs text-white uppercase tracking-wider">
-                      {t('widgetCatalystsTitle')}
-                    </h4>
-                  </div>
-                  <button
-                    onClick={() => setIsCalendarOpen(true)}
-                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center cursor-pointer"
-                  >
-                    {t('widgetViewAll')} <ChevronRight className="w-3 h-3 ml-0.5 rtl:rotate-180" />
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {INITIAL_ECONOMIC_EVENTS.slice(0, 3).map(evt => (
-                    <div
-                      key={evt.id}
-                      onClick={() => setIsCalendarOpen(true)}
-                      className="p-2.5 bg-[#090D17] hover:bg-slate-800/50 rounded-xl border border-slate-800/80 cursor-pointer transition-colors space-y-1"
-                    >
-                      <div className="flex items-center justify-between text-[10px] font-mono-num">
-                        <span className="text-amber-400 font-semibold">{evt.countryCode} • {evt.time}</span>
-                        <span className="bg-rose-500/20 text-rose-300 px-1 rounded uppercase font-bold">
-                          {evt.impact}
-                        </span>
-                      </div>
-                      <h5 className="font-semibold text-xs text-slate-200 line-clamp-1">
-                        {evt.event}
-                      </h5>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 3. Interactive Quick Tools Launcher Card */}
-              <div className="bg-gradient-to-br from-[#0D1322] to-[#121A2E] border border-slate-800 rounded-2xl p-5 space-y-4 shadow-lg">
-                <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
-                  <Calculator className="w-4 h-4 text-amber-400" />
-                  {t('widgetToolsTitle')}
-                </h4>
-
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      setCalculatorSetup(null);
-                      setIsCalculatorOpen(true);
-                    }}
-                    className="w-full text-left rtl:text-right p-3 rounded-xl bg-[#090D17] hover:bg-slate-800/70 border border-slate-800 hover:border-amber-400/30 transition-all flex items-center justify-between group cursor-pointer"
-                  >
-                    <div>
-                      <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors block">
-                        {t('widgetPosToolTitle')}
-                      </span>
-                      <span className="text-[11px] text-slate-400">{t('widgetPosToolSubtitle')}</span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 ml-2 rtl:mr-2 rtl:ml-0" />
-                  </button>
-
-                  <button
-                    onClick={() => setIsChartOpen(true)}
-                    className="w-full text-left rtl:text-right p-3 rounded-xl bg-gradient-to-r from-[#090D17] to-[#0d1627] hover:bg-slate-800/70 border border-cyan-500/20 hover:border-cyan-400/40 transition-all flex items-center justify-between group cursor-pointer"
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors block">
-                          {t('widgetChartToolTitle')}
-                        </span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      </div>
-                      <span className="text-[11px] text-slate-400">{t('widgetChartToolSubtitle')}</span>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 ml-2 rtl:mr-2 rtl:ml-0" />
-                  </button>
-                </div>
-              </div>
-
-              {/* 4. Editorial Quantitative Analysts */}
+              {/* 2. Editorial Quantitative Analysts */}
               <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-5 space-y-4 shadow-lg">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <h4 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
@@ -434,7 +377,7 @@ export default function App() {
                       />
                       <img
                         src={abuAsadAvatar}
-                        alt={AUTHORS.abuAsad.name}
+                        alt={localizedAuthors.abuAsad.name}
                         referrerPolicy="no-referrer"
                         className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm transition-opacity group-hover/avatar:opacity-80"
                       />
@@ -447,19 +390,19 @@ export default function App() {
                     </label>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h5 className="font-extrabold text-xs text-white truncate">{AUTHORS.abuAsad.name}</h5>
+                        <h5 className="font-extrabold text-xs text-white truncate">{localizedAuthors.abuAsad.name}</h5>
                         <BlueVerifiedBadge size="xs" />
                         <span className="bg-amber-400/20 text-amber-300 text-[9px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/40">
                           {t('widgetFounderBadge')}
                         </span>
                       </div>
-                      <p className="text-[10px] text-amber-400/90 font-medium truncate">{AUTHORS.abuAsad.role}</p>
+                      <p className="text-[10px] text-amber-400/90 font-medium truncate">{localizedAuthors.abuAsad.role}</p>
                       <p className="text-[9px] text-slate-400 line-clamp-1 mt-0.5">{t('widgetAbuAsadLead')}</p>
                     </div>
                   </div>
 
                   {/* Other Desk Analysts */}
-                  {Object.values(AUTHORS).filter(a => a.id !== 'author-0').map(author => (
+                  {Object.values(localizedAuthors).filter(a => a.id !== 'author-0').map(author => (
                     <div key={author.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800/40 transition-colors">
                       <img
                         src={author.avatar}
@@ -512,7 +455,7 @@ export default function App() {
       <EconomicCalendarModal
         isOpen={isCalendarOpen}
         onClose={() => setIsCalendarOpen(false)}
-        events={INITIAL_ECONOMIC_EVENTS}
+        events={localizedEvents}
       />
 
       <ChartSimulatorModal

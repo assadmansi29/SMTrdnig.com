@@ -12,6 +12,11 @@ export const uk: Record<TranslationKey, string> = {
   navVipAlphaShort: 'VIP Alpha',
   navVipAlphaTitle: 'Підписатися на розсилку VIP Alpha Dispatch',
   navSearchPlaceholder: 'Пошук альфа-стратегій...',
+  navTradingTools: 'Торгові інструменти',
+  navTradingToolsTitle: 'Торгові інструменти: Студія TradingView, Калькулятор ризиків та Календар',
+  navTradingToolsStudioDesc: 'Інтерактивні графіки та симулятор ордер-флоу SMC',
+  navTradingToolsCalcDesc: 'Розрахунок розміру позиції та ризик-менеджмент',
+  navTradingToolsCalDesc: 'Економічні події та каталізатори центробанків',
   navRiskCalculator: 'Калькулятор ризиків',
   navRiskCalculatorTitle: 'Калькулятор розміру позиції та ризику',
   navCalendar: 'Економічний календар',
@@ -196,6 +201,7 @@ export const uk: Record<TranslationKey, string> = {
   calImpactAll: 'Всі',
   calImpactHigh: '🔥 Тільки високий',
   calImpactMedium: 'Середній',
+  calImpactLow: 'Низький',
   calNextEvent: 'Далі: Засідання FOMC через 38г 14хв',
   calVolatilitySuffix: 'Волатильність',
   calForecast: 'Прогноз:',
@@ -342,5 +348,67 @@ export const uk: Record<TranslationKey, string> = {
   footerPrivacy: 'Політика конфіденційності',
   footerTerms: 'Умови використання',
   footerDisclosures: 'Розкриття ризиків',
-  footerInstitutional: 'Інституційний API'
+  footerInstitutional: 'Інституційний API',
+
+  // Additional UI & Desk Alpha
+  deskAlphaTier1: 'Інституційні алгоритми Tier-1',
+  deskAlphaInvalidation: 'Математична інвалідація та співвідношення R:R',
+  deskAlphaActionable: 'Практичний футпринт та алгоритмічний код',
+  deskAlphaBrandDesk: 'Деск кількісних досліджень SMTrading.pro',
+  deskSimulate: 'Симуляція ↗',
+
+  // Trade Setup Directions
+  setupLong: 'ЛОНГ (Купівля)',
+  setupShort: 'ШОРТ (Продаж)',
+  setupNeutral: 'НЕЙТРАЛЬНО',
+
+  // Chart Simulator Elements
+  chartCandleSweep: 'Зняття ліквідності',
+  chartCandleAbsorption: 'Поглинання айсбергів',
+  chartCandleExpansion: 'Імпульсний пробій',
+  chartCandleTargetMet: 'Ціль 2 досягнута',
+  chartInsightBos: 'Бичачий BOS підтверджено',
+  chartInsightFvg: '5,898 - 5,906 FVG закрито',
+  chartInsightDelta: '+1,420 приплив дельти',
+  chartInsightSwingLow: '5,878.50 локальний мінімум',
+  chartCategoryMetals: 'Метали',
+  chartCategoryIndices: 'Індекси',
+  chartCategoryFutures: 'Ф\'ючерси',
+  chartCategoryCrypto: 'Криптовалюти',
+  chartCategoryForex: 'Форекс',
+  chartCategoryMacro: 'Макро',
+  chartCategoryEquities: 'Акції',
+
+  // Article Modal extras
+  modalAlgorithm: 'АЛГОРИТМ',
+  modalMemberBadge: 'Учасник спільноти',
+  modalJustNow: 'Щойно',
+  modalAnonymousTrader: 'Анонімний трейдер',
+  modalReadFullAnalysis: 'Читати аналіз',
+
+  // Footer Team Roles
+  footerAlexRole: 'Д-р Александр Венс (Квант)',
+  footerElenaRole: 'Олена Ростова (Макро та FX)',
+  footerMarcusRole: 'Маркус Стерлінг, CFA (Деривативи)',
+  footerSarahRole: 'Д-р Сара Чен (Нейропсихологія ризику)',
+
+  // Economic Events
+  ecoEventFomc: 'Рішення ФРС щодо процентної ставки та заява FOMC',
+  ecoEventCpi: 'Базовий індекс споживчих цін CPI (р/р)',
+  ecoEventEcb: 'Рішення ЄЦБ щодо процентної ставки',
+  ecoEventNfp: 'Дані про зайнятість у несільськогосподарському секторі (NFP) та безробіття',
+  ecoCountryUS: 'США',
+  ecoCountryEU: 'Єврозона',
+  ecoImpactHigh: 'Високий',
+  ecoImpactMedium: 'Середній',
+  ecoImpactLow: 'Низький',
+  ecoDateWed: 'Середа, 27 травня',
+  ecoDateThu: 'Четвер, 28 травня',
+  ecoDateFri: 'П\'ятниця, 29 травня',
+
+  // Desk Picks Banner
+  deskPicksTier1: 'Інституційні фреймворки першого рівня',
+  deskPicksMath: 'Математична інвалідація та співвідношення R:R',
+  deskPicksCode: 'Практичний футпринт та алгоритмічний код',
+  deskPicksDeskName: 'Відділ кількісних досліджень SMTrading.pro'
 };

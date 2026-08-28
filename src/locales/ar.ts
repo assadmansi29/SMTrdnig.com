@@ -12,6 +12,11 @@ export const ar: Record<TranslationKey, string> = {
   navVipAlphaShort: 'ألفا VIP',
   navVipAlphaTitle: 'اشترك في نشرة ألفا VIP الحصرية',
   navSearchPlaceholder: 'ابحث في استراتيجيات ألفا...',
+  navTradingTools: 'أدوات التداول',
+  navTradingToolsTitle: 'أدوات التداول: استوديو TradingView، حاسبة المخاطر والتقويم',
+  navTradingToolsStudioDesc: 'رسوم بيانية تفاعلية ومحاكي تدفق السيولة SMC',
+  navTradingToolsCalcDesc: 'حجم العقود وإدارة مخاطر المحفظة المؤسسية',
+  navTradingToolsCalDesc: 'محفزات البنوك المركزية والبيانات الاقتصادية',
   navRiskCalculator: 'حاسبة المخاطر',
   navRiskCalculatorTitle: 'حاسبة حجم الصفقات وإدارة المخاطر',
   navCalendar: 'التقويم الاقتصادي',
@@ -196,6 +201,7 @@ export const ar: Record<TranslationKey, string> = {
   calImpactAll: 'الكل',
   calImpactHigh: '🔥 عالي التأثير فقط',
   calImpactMedium: 'متوسط',
+  calImpactLow: 'منخفض',
   calNextEvent: 'الحدث القادم: اجتماع الفيدرالي FOMC خلال 38س 14د',
   calVolatilitySuffix: 'تقلبات',
   calForecast: 'المتوقع:',
@@ -342,5 +348,67 @@ export const ar: Record<TranslationKey, string> = {
   footerPrivacy: 'سياسة الخصوصية',
   footerTerms: 'شروط الخدمة',
   footerDisclosures: 'إفصاح المخاطر',
-  footerInstitutional: 'واجهة API المؤسسية'
+  footerInstitutional: 'واجهة API المؤسسية',
+
+  // Additional UI & Desk Alpha
+  deskAlphaTier1: 'أطر عمل مؤسسية من الفئة الأولى',
+  deskAlphaInvalidation: 'مستويات إبطال رياضية ونسب مخاطرة/عائد',
+  deskAlphaActionable: 'بصمة تدفق السيولة وأكواد خوارزمية',
+  deskAlphaBrandDesk: 'مكتب الأبحاث الكمية SMTrading.pro',
+  deskSimulate: 'محاكاة ↗',
+
+  // Trade Setup Directions
+  setupLong: 'شراء (LONG)',
+  setupShort: 'بيع (SHORT)',
+  setupNeutral: 'محايد (NEUTRAL)',
+
+  // Chart Simulator Elements
+  chartCandleSweep: 'سحب سيولة',
+  chartCandleAbsorption: 'امتصاص أوامر آيسبيرغ',
+  chartCandleExpansion: 'توسع اختراق',
+  chartCandleTargetMet: 'تحقق الهدف الثاني',
+  chartInsightBos: 'تم تأكيد كسر الهيكل الصاعد (BOS)',
+  chartInsightFvg: '5,898 - 5,906 تم ملء الفجوة',
+  chartInsightDelta: '+1,420 تدفق دلتا إيجابي',
+  chartInsightSwingLow: '5,878.50 قاع متأرجح',
+  chartCategoryMetals: 'معادن',
+  chartCategoryIndices: 'مؤشرات',
+  chartCategoryFutures: 'عقود آجلة',
+  chartCategoryCrypto: 'عملات رقمية',
+  chartCategoryForex: 'فوركس',
+  chartCategoryMacro: 'اقتصاد كلي',
+  chartCategoryEquities: 'أسهم',
+
+  // Article Modal extras
+  modalAlgorithm: 'خوارزمية',
+  modalMemberBadge: 'عضو مجتمع',
+  modalJustNow: 'الآن',
+  modalAnonymousTrader: 'متداول مجهول',
+  modalReadFullAnalysis: 'قراءة التحليل',
+
+  // Footer Team Roles
+  footerAlexRole: 'د. ألكسندر فانس (كمي)',
+  footerElenaRole: 'إيلينا روستوفا (ماكرو وفوركس)',
+  footerMarcusRole: 'ماركوس ستيرلينغ، CFA (مشتقات)',
+  footerSarahRole: 'د. سارة تشن (علم الأعصاب والمخاطر)',
+
+  // Economic Events
+  ecoEventFomc: 'بيان السياسة النقدية وقرار الفائدة الفيدرالي (FOMC)',
+  ecoEventCpi: 'مؤشر أسعار المستهلكين الأساسي للتضخم (سنوي)',
+  ecoEventEcb: 'قرار سعر إعادة التمويل للبنك المركزي الأوروبي',
+  ecoEventNfp: 'تقرير الوظائف غير الزراعية (NFP) ومعدل البطالة',
+  ecoCountryUS: 'الولايات المتحدة',
+  ecoCountryEU: 'منطقة اليورو',
+  ecoImpactHigh: 'مرتفع',
+  ecoImpactMedium: 'متوسط',
+  ecoImpactLow: 'منخفض',
+  ecoDateWed: 'الأربعاء، 27 مايو',
+  ecoDateThu: 'الخميس، 28 مايو',
+  ecoDateFri: 'الجمعة، 29 مايو',
+
+  // Desk Picks Banner
+  deskPicksTier1: 'أطر عمل مؤسسية رفيعة المستوى',
+  deskPicksMath: 'مستويات إبطال رياضية ونسب عائد للمخاطرة دقيقة',
+  deskPicksCode: 'قراءة حجم تداول وأكواد خوارزمية قابلة للتنفيذ',
+  deskPicksDeskName: 'مكتب الأبحاث الكمية SMTrading.pro'
 };

@@ -22,119 +22,9 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useTranslation } from '../context/LanguageContext';
+import { getProductsByLanguage, LocalizedProduct } from '../data/localizedData';
 
-interface Product {
-  id: string;
-  name: string;
-  category: 'Software & Indicators' | 'Education & Masterclass' | 'Hardware & Merch';
-  price: number;
-  originalPrice?: number;
-  rating: number;
-  reviewsCount: number;
-  badge?: string;
-  description: string;
-  features: string[];
-  image: string;
-  isDigital: boolean;
-}
-
-const PRODUCTS: Product[] = [
-  {
-    id: 'prod-smc-suite',
-    name: 'Institutional SMC & Liquidity Indicator Suite (TradingView PineScript v5)',
-    category: 'Software & Indicators',
-    price: 149,
-    originalPrice: 299,
-    rating: 4.95,
-    reviewsCount: 342,
-    badge: 'BESTSELLER',
-    description: 'Automated Fair Value Gap (FVG), Order Block (OB), Liquidity Sweeps, and Premium/Discount matrix with real-time institutional alerts.',
-    features: [
-      'Automatic Fair Value Gap (FVG) multi-timeframe detection',
-      'Proprietary Buy/Sell Liquidity Sweep alerts with audio triggers',
-      'Integrated Premium vs Discount zone equilibrium plotter',
-      'Lifetime updates & Discord VIP Alpha algorithmic channel access'
-    ],
-    image: 'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=600&q=80',
-    isDigital: true
-  },
-  {
-    id: 'prod-masterclass',
-    name: 'Abu Asad Almansi: The Institutional Order Flow & Macro Masterclass',
-    category: 'Education & Masterclass',
-    price: 249,
-    originalPrice: 499,
-    rating: 4.98,
-    reviewsCount: 512,
-    badge: 'ACCREDITED',
-    description: '38 hours of deep-dive institutional video modules covering sovereign liquidity, central bank balance sheets, intermarket correlations, and execution mastery.',
-    features: [
-      '38 High-Definition Video Modules + Quantitative Case Studies',
-      'Weekly Live Market Breakdown Webinars with Abu Asad Almansi',
-      'Institutional Trade Journal & Risk Allocation Templates',
-      'Verified Certificate of Quantitative SMC Completion'
-    ],
-    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80',
-    isDigital: true
-  },
-  {
-    id: 'prod-quant-bot',
-    name: 'SMTrading Algorithmic Execution Engine (Python / MT5 / FIX API)',
-    category: 'Software & Indicators',
-    price: 399,
-    originalPrice: 750,
-    rating: 4.91,
-    reviewsCount: 188,
-    badge: 'PRO TIER',
-    description: 'Ultra-low-latency algorithmic bot designed for statistical arbitrage, mean-reversion order flow, and automated hedging across XAUUSD & FX majors.',
-    features: [
-      'Full Python source code + MetaTrader 5 Expert Advisor (EA)',
-      'Sub-millisecond FIX Protocol execution module',
-      'Dynamic volatility stop-loss & Value-at-Risk (VaR) guards',
-      'Plug-and-play VPS configuration guide included'
-    ],
-    image: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=600&q=80',
-    isDigital: true
-  },
-  {
-    id: 'prod-risk-model',
-    name: 'Wall Street Proprietary Risk & Lot-Sizing Spreadsheet Suite',
-    category: 'Software & Indicators',
-    price: 49,
-    originalPrice: 99,
-    rating: 4.88,
-    reviewsCount: 420,
-    badge: 'ESSENTIAL',
-    description: 'Dynamic Monte Carlo drawdown simulator, portfolio Kelly Criterion calculator, and institutional trade journal in Excel/Google Sheets.',
-    features: [
-      'Monte Carlo 10,000-run drawdown probability simulator',
-      'Fractional Kelly Criterion & R:R expectation model',
-      'Automated equity curve tracking & Sharpe ratio calculator',
-      'Instant cloud copy access (Excel + Google Sheets)'
-    ],
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80',
-    isDigital: true
-  },
-  {
-    id: 'prod-hardware-key',
-    name: 'SMTrading Custom Hardware Crypto & 2FA Security Key',
-    category: 'Hardware & Merch',
-    price: 79,
-    originalPrice: 119,
-    rating: 4.97,
-    reviewsCount: 164,
-    badge: 'HIGH SECURITY',
-    description: 'Military-grade FIDO2 / U2F encrypted hardware authenticator for securing your trading brokerage accounts, exchange wallets, and proprietary APIs.',
-    features: [
-      'FIDO2 and WebAuthn certified zero-trust hardware chip',
-      'Laser-engraved SMTrading matte aerospace aluminum chassis',
-      'Dual USB-C and NFC contactless tap connectivity',
-      'Tamper-evident sealed packaging'
-    ],
-    image: 'https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=600&q=80',
-    isDigital: false
-  }
-];
+type Product = LocalizedProduct;
 
 interface ECommerceModalProps {
   isOpen: boolean;
@@ -142,13 +32,15 @@ interface ECommerceModalProps {
 }
 
 export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose }) => {
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, language } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartView, setIsCartView] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
+
+  const products = getProductsByLanguage(language);
 
   if (!isOpen) return null;
 
@@ -160,11 +52,14 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
   };
 
   const filteredProducts = selectedCategory === 'All'
-    ? PRODUCTS
-    : PRODUCTS.filter(p => p.category === selectedCategory);
+    ? products
+    : products.filter(p => p.category === selectedCategory);
 
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => {
+    const currentProd = products.find(p => p.id === item.product.id) || item.product;
+    return sum + currentProd.price * item.quantity;
+  }, 0);
   const discount = promoApplied ? subtotal * 0.15 : 0;
   const grandTotal = Math.max(0, subtotal - discount);
 
@@ -358,32 +253,34 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                   {/* Cart Items List (8 cols) */}
                   <div className="lg:col-span-8 space-y-3">
-                    {cart.map(({ product, quantity }) => (
+                    {cart.map(({ product, quantity }) => {
+                      const currentProd = products.find(p => p.id === product.id) || product;
+                      return (
                       <div
                         key={product.id}
                         className="bg-[#0C1220] border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between"
                       >
                         <div className="flex items-center gap-3.5">
                           <img
-                            src={product.image}
-                            alt={product.name}
+                            src={currentProd.image}
+                            alt={currentProd.name}
                             referrerPolicy="no-referrer"
                             className="w-16 h-16 rounded-lg object-cover border border-slate-700 shrink-0"
                           />
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-mono-num font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.2 rounded border border-emerald-500/20">
-                                {categoryLabels[product.category] || product.category}
+                                {categoryLabels[currentProd.category] || currentProd.category}
                               </span>
-                              {product.isDigital && (
+                              {currentProd.isDigital && (
                                 <span className="text-[10px] text-cyan-300 font-mono-num">{t('ecomInstantDigital')}</span>
                               )}
                             </div>
                             <h4 className="font-bold text-xs sm:text-sm text-white line-clamp-1">
-                              {product.name}
+                              {currentProd.name}
                             </h4>
                             <div className="text-xs font-mono-num font-bold text-amber-300">
-                              ${product.price} USD
+                              ${currentProd.price} USD
                             </div>
                           </div>
                         </div>
@@ -409,7 +306,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                           </div>
 
                           <span className="text-sm font-mono-num font-extrabold text-white min-w-[70px] text-right rtl:text-left">
-                            ${product.price * quantity}
+                            ${currentProd.price * quantity}
                           </span>
 
                           <button
@@ -421,7 +318,8 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                           </button>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
 
                   {/* Order Summary & Checkout (4 cols) */}

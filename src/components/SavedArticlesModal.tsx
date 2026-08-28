@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Bookmark, Trash2, ArrowRight, BookOpen } from 'lucide-react';
 import { Article } from '../types';
-import { useTranslation } from '../context/LanguageContext';
+import { useTranslation, getLocalizedCategory } from '../locales';
 
 interface SavedArticlesModalProps {
   isOpen: boolean;
@@ -76,7 +76,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
                     className="w-14 h-14 rounded-lg object-cover border border-slate-700 shrink-0"
                   />
                   <div className="min-w-0">
-                    <span className="text-[10px] text-amber-400 font-semibold">{art.category}</span>
+                    <span className="text-[10px] text-amber-400 font-semibold">{getLocalizedCategory(art.category, t)}</span>
                     <h4 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 transition-colors line-clamp-1">
                       {art.title}
                     </h4>

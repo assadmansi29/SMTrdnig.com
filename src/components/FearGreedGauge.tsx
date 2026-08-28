@@ -1,9 +1,10 @@
 import React from 'react';
 import { Gauge, ShieldAlert, TrendingUp, Zap, BarChart2 } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
 export const FearGreedGauge: React.FC = () => {
+  const { t } = useTranslation();
   const indexValue = 72; // Greed / Risk-On
-  const label = 'Risk-On Greed';
 
   return (
     <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-5 space-y-4 shadow-lg">
@@ -13,8 +14,8 @@ export const FearGreedGauge: React.FC = () => {
             <Gauge className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="font-bold text-xs text-white uppercase tracking-wider">SMTrading Risk Sentiment</h4>
-            <p className="text-[11px] text-slate-400">Cross-Asset Fear & Greed Index</p>
+            <h4 className="font-bold text-xs text-white uppercase tracking-wider">{t('widgetSentimentTitle')}</h4>
+            <p className="text-[11px] text-slate-400">{t('widgetSentimentSubtitle')}</p>
           </div>
         </div>
 
@@ -32,21 +33,21 @@ export const FearGreedGauge: React.FC = () => {
           ></div>
         </div>
         <div className="flex justify-between text-[10px] text-slate-500 font-mono-num">
-          <span>0 (Extreme Fear)</span>
-          <span className="text-amber-400 font-bold">{label}</span>
-          <span>100 (Extreme Greed)</span>
+          <span>0 ({t('widgetFearExtreme')})</span>
+          <span className="text-amber-400 font-bold">{t('widgetRiskOn')}</span>
+          <span>100 ({t('widgetGreedExtreme')})</span>
         </div>
       </div>
 
       {/* Micro Market Matrix */}
       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800 text-[11px] font-mono-num">
         <div className="bg-[#090D17] p-2 rounded-lg border border-slate-800">
-          <span className="text-slate-500 block text-[10px]">Put/Call Ratio</span>
-          <span className="text-slate-200 font-bold">0.68 (Bullish Bias)</span>
+          <span className="text-slate-500 block text-[10px]">{t('widgetPutCall')}</span>
+          <span className="text-slate-200 font-bold">{t('widgetPutCallVal')}</span>
         </div>
         <div className="bg-[#090D17] p-2 rounded-lg border border-slate-800">
-          <span className="text-slate-500 block text-[10px]">G10 Net Liquidity</span>
-          <span className="text-emerald-400 font-bold">+$240B / Mo</span>
+          <span className="text-slate-500 block text-[10px]">{t('widgetG10Liquidity')}</span>
+          <span className="text-emerald-400 font-bold">{t('widgetG10Val')}</span>
         </div>
       </div>
     </div>

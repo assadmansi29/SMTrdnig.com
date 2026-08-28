@@ -10,6 +10,11 @@ export const en = {
   navVipAlphaShort: 'VIP Alpha',
   navVipAlphaTitle: 'Subscribe to VIP Alpha Dispatch',
   navSearchPlaceholder: 'Search Alpha...',
+  navTradingTools: 'Trading Tools',
+  navTradingToolsTitle: 'Trading Tools: TradingView Studio, Risk Calculator & Calendar',
+  navTradingToolsStudioDesc: 'Interactive charts & SMC order flow simulator',
+  navTradingToolsCalcDesc: 'Institutional position sizing & risk calculator',
+  navTradingToolsCalDesc: 'High-impact central bank & economic catalysts',
   navRiskCalculator: 'Risk Calculator',
   navRiskCalculatorTitle: 'Position Size & Risk Calculator',
   navCalendar: 'Calendar',
@@ -194,6 +199,7 @@ export const en = {
   calImpactAll: 'All',
   calImpactHigh: '🔥 High Impact Only',
   calImpactMedium: 'Medium',
+  calImpactLow: 'Low',
   calNextEvent: 'Next: FOMC in 38h 14m',
   calVolatilitySuffix: 'Volatility',
   calForecast: 'Forecast:',
@@ -340,7 +346,69 @@ export const en = {
   footerPrivacy: 'Privacy Policy',
   footerTerms: 'Terms of Service',
   footerDisclosures: 'Risk Disclosure',
-  footerInstitutional: 'Institutional API'
+  footerInstitutional: 'Institutional API',
+
+  // Additional UI & Desk Alpha
+  deskAlphaTier1: 'Tier-1 Institutional Frameworks',
+  deskAlphaInvalidation: 'Mathematical Invalidation & R:R Ratios',
+  deskAlphaActionable: 'Actionable Footprint & Algorithmic Code',
+  deskAlphaBrandDesk: 'SMTrading.pro Quantitative Research Desk',
+  deskSimulate: 'Simulate ↗',
+
+  // Trade Setup Directions
+  setupLong: 'LONG',
+  setupShort: 'SHORT',
+  setupNeutral: 'NEUTRAL',
+
+  // Chart Simulator Elements
+  chartCandleSweep: 'Liquidity Sweep',
+  chartCandleAbsorption: 'Iceberg Absorption',
+  chartCandleExpansion: 'Breakout Expansion',
+  chartCandleTargetMet: 'Target 2 Met',
+  chartInsightBos: 'Bullish BOS Confirmed',
+  chartInsightFvg: '5,898 - 5,906 Filled',
+  chartInsightDelta: '+1,420 Delta Inflow',
+  chartInsightSwingLow: '5,878.50 Swing Low',
+  chartCategoryMetals: 'Metals',
+  chartCategoryIndices: 'Indices',
+  chartCategoryFutures: 'Futures',
+  chartCategoryCrypto: 'Crypto',
+  chartCategoryForex: 'Forex',
+  chartCategoryMacro: 'Macro',
+  chartCategoryEquities: 'Equities',
+
+  // Article Modal extras
+  modalAlgorithm: 'ALGORITHM',
+  modalMemberBadge: 'Community Member',
+  modalJustNow: 'Just now',
+  modalAnonymousTrader: 'Anonymous Trader',
+  modalReadFullAnalysis: 'Read Analysis',
+
+  // Footer Team Roles
+  footerAlexRole: 'Dr. Alexander Vance (Quant)',
+  footerElenaRole: 'Elena Rostova (Macro & FX)',
+  footerMarcusRole: 'Marcus Sterling, CFA (Derivatives)',
+  footerSarahRole: 'Dr. Sarah Chen (Risk Neuroscience)',
+
+  // Economic Events
+  ecoEventFomc: 'FOMC Monetary Policy Statement & Rate Decision',
+  ecoEventCpi: 'Core CPI Inflation Index (YoY)',
+  ecoEventEcb: 'ECB Main Refinancing Rate Decision',
+  ecoEventNfp: 'Non-Farm Payrolls (NFP) & Unemployment Rate',
+  ecoCountryUS: 'United States',
+  ecoCountryEU: 'Eurozone',
+  ecoImpactHigh: 'High',
+  ecoImpactMedium: 'Medium',
+  ecoImpactLow: 'Low',
+  ecoDateWed: 'Wednesday, May 27',
+  ecoDateThu: 'Thursday, May 28',
+  ecoDateFri: 'Friday, May 29',
+
+  // Desk Picks Banner
+  deskPicksTier1: 'Tier-1 Institutional Frameworks',
+  deskPicksMath: 'Mathematical Invalidation & R:R Ratios',
+  deskPicksCode: 'Actionable Footprint & Algorithmic Code',
+  deskPicksDeskName: 'SMTrading.pro Quantitative Research Desk'
 };
 
 export type TranslationKey = keyof typeof en;

@@ -12,6 +12,11 @@ export const ru: Record<TranslationKey, string> = {
   navVipAlphaShort: 'VIP Alpha',
   navVipAlphaTitle: 'Подписаться на рассылку VIP Alpha Dispatch',
   navSearchPlaceholder: 'Поиск альфа-стратегий...',
+  navTradingTools: 'Торговые инструменты',
+  navTradingToolsTitle: 'Торговые инструменты: Студия TradingView, Калькулятор рисков и Календарь',
+  navTradingToolsStudioDesc: 'Интерактивные графики и симулятор ордер-флоу SMC',
+  navTradingToolsCalcDesc: 'Расчет размера позиции и риск-менеджмент',
+  navTradingToolsCalDesc: 'Экономические события и катализаторы центробанков',
   navRiskCalculator: 'Калькулятор рисков',
   navRiskCalculatorTitle: 'Калькулятор размера позиции и риска',
   navCalendar: 'Экономический календарь',
@@ -196,6 +201,7 @@ export const ru: Record<TranslationKey, string> = {
   calImpactAll: 'Все',
   calImpactHigh: '🔥 Только высокое',
   calImpactMedium: 'Среднее',
+  calImpactLow: 'Низкое',
   calNextEvent: 'Далее: Заседание FOMC через 38ч 14м',
   calVolatilitySuffix: 'Волатильность',
   calForecast: 'Прогноз:',
@@ -342,5 +348,67 @@ export const ru: Record<TranslationKey, string> = {
   footerPrivacy: 'Политика конфиденциальности',
   footerTerms: 'Условия использования',
   footerDisclosures: 'Раскрытие рисков',
-  footerInstitutional: 'Институциональный API'
+  footerInstitutional: 'Институциональный API',
+
+  // Additional UI & Desk Alpha
+  deskAlphaTier1: 'Институциональные алгоритмы Tier-1',
+  deskAlphaInvalidation: 'Математическая инвалидация и соотношение R:R',
+  deskAlphaActionable: 'Практический футпринт и алгоритмический код',
+  deskAlphaBrandDesk: 'Деск количественных исследований SMTrading.pro',
+  deskSimulate: 'Симуляция ↗',
+
+  // Trade Setup Directions
+  setupLong: 'ЛОНГ (Покупка)',
+  setupShort: 'ШОРТ (Продажа)',
+  setupNeutral: 'НЕЙТРАЛЬНО',
+
+  // Chart Simulator Elements
+  chartCandleSweep: 'Снятие ликвидности',
+  chartCandleAbsorption: 'Поглощение айсбергов',
+  chartCandleExpansion: 'Импульсный пробой',
+  chartCandleTargetMet: 'Цель 2 достигнута',
+  chartInsightBos: 'Бычий BOS подтвержден',
+  chartInsightFvg: '5,898 - 5,906 FVG закрыт',
+  chartInsightDelta: '+1,420 приток дельты',
+  chartInsightSwingLow: '5,878.50 локальный минимум',
+  chartCategoryMetals: 'Металлы',
+  chartCategoryIndices: 'Индексы',
+  chartCategoryFutures: 'Фьючерсы',
+  chartCategoryCrypto: 'Криптовалюты',
+  chartCategoryForex: 'Форекс',
+  chartCategoryMacro: 'Макро',
+  chartCategoryEquities: 'Акции',
+
+  // Article Modal extras
+  modalAlgorithm: 'АЛГОРИТМ',
+  modalMemberBadge: 'Участник сообщества',
+  modalJustNow: 'Только что',
+  modalAnonymousTrader: 'Анонимный трейдер',
+  modalReadFullAnalysis: 'Читать анализ',
+
+  // Footer Team Roles
+  footerAlexRole: 'Д-р Александр Вэнс (Квант)',
+  footerElenaRole: 'Елена Ростова (Макро и FX)',
+  footerMarcusRole: 'Маркус Стерлинг, CFA (Деривативы)',
+  footerSarahRole: 'Д-р Сара Чен (Нейропсихология риска)',
+
+  // Economic Events
+  ecoEventFomc: 'Решение ФРС по процентной ставке и заявление FOMC',
+  ecoEventCpi: 'Базовый индекс потребительских цен CPI (г/г)',
+  ecoEventEcb: 'Решение ЕЦБ по процентной ставке',
+  ecoEventNfp: 'Данные по занятости в несельскохозяйственном секторе (NFP) и безработица',
+  ecoCountryUS: 'США',
+  ecoCountryEU: 'Еврозона',
+  ecoImpactHigh: 'Высокое',
+  ecoImpactMedium: 'Среднее',
+  ecoImpactLow: 'Низкое',
+  ecoDateWed: 'Среда, 27 мая',
+  ecoDateThu: 'Четверг, 28 мая',
+  ecoDateFri: 'Пятница, 29 мая',
+
+  // Desk Picks Banner
+  deskPicksTier1: 'Институциональные фреймворки первого уровня',
+  deskPicksMath: 'Математическая инвалидация и соотношение R:R',
+  deskPicksCode: 'Практический футпринт и алгоритмический код',
+  deskPicksDeskName: 'Отдел количественных исследований SMTrading.pro'
 };

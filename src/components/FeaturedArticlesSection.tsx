@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
-import { useTranslation } from '../context/LanguageContext';
+import { useTranslation, getLocalizedCategory, getLocalizedDifficulty, getLocalizedDirection } from '../locales';
 
 interface FeaturedArticlesSectionProps {
   articles: Article[];
@@ -95,8 +95,8 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
               title={art.title}
             >
               <span>#{idx + 1}</span>
-              <span className="hidden lg:inline text-[11px] max-w-[80px] truncate">
-                {art.category.split('&')[0]}
+              <span className="hidden lg:inline text-[11px] max-w-[90px] truncate">
+                {getLocalizedCategory(art.category, t).split('&')[0]}
               </span>
             </button>
           ))}
@@ -129,12 +129,12 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                   {t('featuredLeadTag')}
                 </span>
                 <span className="bg-[#090D17]/90 backdrop-blur-md text-amber-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-400/30">
-                  {leadArticle.category}
+                  {getLocalizedCategory(leadArticle.category, t)}
                 </span>
               </div>
 
               <span className="bg-slate-950/80 backdrop-blur-md text-slate-200 text-xs font-mono-num px-2.5 py-1 rounded-full border border-slate-700/80 pointer-events-auto">
-                {leadArticle.difficulty}
+                {getLocalizedDifficulty(leadArticle.difficulty, t)}
               </span>
             </div>
 
@@ -161,7 +161,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                       {t('featuredSetupTitle')}
                     </span>
                     <span className="text-white font-extrabold truncate block">
-                      {leadArticle.tradeSetup.asset} ({leadArticle.tradeSetup.direction})
+                      {leadArticle.tradeSetup.asset} ({getLocalizedDirection(leadArticle.tradeSetup.direction, t)})
                     </span>
                   </div>
                 </div>
@@ -170,7 +170,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                     R:R {leadArticle.tradeSetup.riskReward}
                   </span>
                   <span className="text-[10px] text-slate-400 hover:text-emerald-300 underline font-sans hidden sm:inline">
-                    Simulate ↗
+                    {t('deskSimulate')}
                   </span>
                 </div>
               </div>

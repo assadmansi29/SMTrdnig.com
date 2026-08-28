@@ -90,7 +90,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                           : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       }`}
                     >
-                      {evt.impact} {t('calVolatilitySuffix')}
+                      {evt.impact === 'High' ? t('calImpactHigh') : t('calImpactMedium')} {t('calVolatilitySuffix')}
                     </span>
                   </div>
 

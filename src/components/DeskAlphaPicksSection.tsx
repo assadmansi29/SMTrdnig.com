@@ -11,7 +11,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
-import { useTranslation } from '../context/LanguageContext';
+import { useTranslation, getLocalizedCategory, getLocalizedDifficulty } from '../locales';
 
 interface DeskAlphaPicksSectionProps {
   articles: Article[];
@@ -97,7 +97,7 @@ export const DeskAlphaPicksSection: React.FC<DeskAlphaPicksSectionProps> = ({
 
                   {/* Difficulty */}
                   <span className="absolute bottom-2 left-2 rtl:left-auto rtl:right-2 bg-slate-950/90 text-slate-200 text-[10px] font-mono-num px-2 py-0.5 rounded-md border border-slate-800 backdrop-blur-sm">
-                    {article.difficulty}
+                    {getLocalizedDifficulty(article.difficulty, t)}
                   </span>
 
                   {/* Bookmark Button */}
@@ -121,7 +121,7 @@ export const DeskAlphaPicksSection: React.FC<DeskAlphaPicksSectionProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2 text-[10px] font-mono-num">
                     <span className="font-bold text-amber-400 uppercase tracking-wider truncate">
-                      {article.category}
+                      {getLocalizedCategory(article.category, t)}
                     </span>
                     <span className="text-slate-400 shrink-0 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-500" />
@@ -183,20 +183,20 @@ export const DeskAlphaPicksSection: React.FC<DeskAlphaPicksSectionProps> = ({
         <div className="flex flex-wrap items-center gap-6 text-slate-300">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-amber-400" />
-            <span className="font-semibold text-white">Tier-1 Institutional Frameworks</span>
+            <span className="font-semibold text-white">{t('deskPicksTier1')}</span>
           </div>
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-emerald-400" />
-            <span className="font-semibold text-white">Mathematical Invalidation & R:R Ratios</span>
+            <span className="font-semibold text-white">{t('deskPicksMath')}</span>
           </div>
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-cyan-400" />
-            <span className="font-semibold text-white">Actionable Footprint & Algorithmic Code</span>
+            <span className="font-semibold text-white">{t('deskPicksCode')}</span>
           </div>
         </div>
 
         <div className="text-amber-400/90 font-mono-num text-[11px] font-bold">
-          SMTrading.pro Quantitative Research Desk
+          {t('deskPicksDeskName')}
         </div>
       </div>
     </section>

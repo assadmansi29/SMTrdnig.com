@@ -3,14 +3,12 @@ import { ArticleCategory } from '../types';
 import { 
   Search, 
   Bookmark, 
-  Calculator, 
-  Calendar, 
-  LineChart, 
   Sparkles, 
   ShoppingBag 
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
+import { TradingToolsMenu } from './TradingToolsMenu';
 import { useTranslation } from '../context/LanguageContext';
 import { TranslationKey } from '../locales';
 
@@ -146,37 +144,13 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* 3. Institutional Tools Stack (TradingView Studio → Risk Calculator → Calendar) */}
-            <div className="hidden md:flex flex-col gap-1 shrink-0 border-l rtl:border-l-0 rtl:border-r border-slate-800 pl-2 rtl:pl-0 rtl:pr-2">
-              {/* 1. TradingView Studio */}
-              <button
-                onClick={onOpenChart}
-                className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-cyan-300 hover:text-cyan-200 bg-cyan-950/40 hover:bg-cyan-900/50 px-2.5 py-0.5 rounded-md border border-cyan-500/30 transition-colors cursor-pointer shadow-sm whitespace-nowrap"
-                title={t('navChartStudioTitle')}
-              >
-                <LineChart className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span>{t('navChartStudio')}</span>
-              </button>
-
-              {/* 2. Risk Calculator */}
-              <button
-                onClick={onOpenCalculator}
-                className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-300 hover:text-amber-300 bg-slate-900/80 hover:bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-800 transition-colors cursor-pointer whitespace-nowrap"
-                title={t('navRiskCalculatorTitle')}
-              >
-                <Calculator className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>{t('navRiskCalculator')}</span>
-              </button>
-
-              {/* 3. Calendar */}
-              <button
-                onClick={onOpenCalendar}
-                className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-medium text-slate-300 hover:text-amber-300 bg-slate-900/80 hover:bg-slate-800 px-2.5 py-0.5 rounded-md border border-slate-800 transition-colors cursor-pointer whitespace-nowrap"
-                title={t('navCalendarTitle')}
-              >
-                <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>{t('navCalendar')}</span>
-              </button>
+            {/* 3. Consolidated Trading Tools Button (TradingView Studio, Risk Calculator & Calendar) */}
+            <div className="flex items-center shrink-0 border-l rtl:border-l-0 rtl:border-r border-slate-800 pl-2 rtl:pl-0 rtl:pr-2">
+              <TradingToolsMenu
+                onOpenChart={onOpenChart}
+                onOpenCalculator={onOpenCalculator}
+                onOpenCalendar={onOpenCalendar}
+              />
             </div>
 
             {/* Bookmarks Drawer Trigger */}
