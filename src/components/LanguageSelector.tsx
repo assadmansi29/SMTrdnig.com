@@ -41,7 +41,7 @@ export const LanguageSelector: React.FC = () => {
   };
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className="relative inline-block text-left w-full" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         type="button"
@@ -50,12 +50,12 @@ export const LanguageSelector: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="Select language"
-        className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-md text-[11px] sm:text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap"
+        className="w-full flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 md:px-3 py-0.5 sm:py-1 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-md text-[10px] sm:text-[11px] md:text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap"
       >
-        <span className="text-sm leading-none">{currentLanguage.flag}</span>
-        <span className="font-mono-num uppercase font-bold tracking-wider">{currentLanguage.code}</span>
+        <span className="text-xs sm:text-sm leading-none shrink-0">{currentLanguage.flag}</span>
+        <span className="font-mono-num uppercase font-bold tracking-wider text-[10px] sm:text-[11px] md:text-xs">{currentLanguage.code}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+          className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
             isOpen ? 'rotate-180 text-amber-400' : ''
           }`}
         />

@@ -69,23 +69,23 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="true"
         title={t('navTradingToolsTitle')}
-        className={`w-full flex items-center justify-between gap-1.5 sm:gap-2 ${
-          compact ? 'px-2.5 py-1 rounded-md text-[11px] sm:text-xs' : 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs'
+        className={`w-full flex items-center justify-between gap-1 sm:gap-2 ${
+          compact ? 'px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[10px] sm:text-[11px] md:text-xs' : 'px-2.5 sm:px-3 py-1.5 rounded-lg text-xs'
         } font-bold transition-all border cursor-pointer select-none group whitespace-nowrap shadow-sm ${
           isOpen
             ? 'bg-gradient-to-r from-[#111A2D] to-[#182440] border-amber-400 text-white shadow-amber-500/10'
             : 'bg-[#0E1424] hover:bg-[#131B30] text-slate-200 hover:text-white border-slate-700/80 hover:border-amber-400/60'
         }`}
       >
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-md bg-gradient-to-br from-amber-400/20 to-emerald-400/20 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-inner">
-            <CandlestickChart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 group-hover:text-amber-300 group-hover:scale-110 transition-transform" />
+        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+          <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-md bg-gradient-to-br from-amber-400/20 to-emerald-400/20 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-inner">
+            <CandlestickChart className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-3.5 md:h-3.5 text-amber-400 group-hover:text-amber-300 group-hover:scale-110 transition-transform" />
           </div>
-          <span className="tracking-tight">{t('navTradingTools')}</span>
+          <span className="tracking-tight truncate">{t('navTradingTools')}</span>
         </div>
 
-        <div className="flex items-center gap-1">
-          <span className="text-[9px] font-mono-num font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded leading-none">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          <span className="text-[8px] sm:text-[9px] font-mono-num font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded leading-none">
             3
           </span>
           <ChevronDown
