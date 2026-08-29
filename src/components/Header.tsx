@@ -4,13 +4,18 @@ import {
   Search, 
   Bookmark, 
   Sparkles, 
-  ShoppingBag 
+  ShoppingBag,
+  User,
+  Crown,
+  ShieldCheck,
+  Wallet
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
 import { TradingToolsMenu } from './TradingToolsMenu';
 import { useTranslation } from '../context/LanguageContext';
 import { TranslationKey } from '../locales';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -23,6 +28,8 @@ interface HeaderProps {
   onOpenChart: () => void;
   onOpenNewsletter: () => void;
   onOpenECommerce: () => void;
+  onOpenProfile: () => void;
+  onOpenAdmin: () => void;
 }
 
 const CATEGORIES: ArticleCategory[] = [
@@ -53,9 +60,12 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCalendar,
   onOpenChart,
   onOpenNewsletter,
-  onOpenECommerce
+  onOpenECommerce,
+  onOpenProfile,
+  onOpenAdmin
 }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   return (
     <header className="relative bg-[#0B0F17] border-b border-slate-800">
@@ -101,6 +111,44 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Controls & Utilities */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-2.5 shrink-0">
+            
+            {/* 0. User Profile & Admin Badges */}
+            {user && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {user.role === 'admin' && (
+                  <button
+                    onClick={onOpenAdmin}
+                    className="flex items-center gap-1 bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/50 text-amber-300 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-black transition-all cursor-pointer shadow-sm shadow-amber-500/10"
+                    title="Master Admin Management"
+                  >
+                    <Crown className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden sm:inline">Admin Desk</span>
+                  </button>
+                )}
+
+                {/* Profile Trigger Button */}
+                <button
+                  onClick={onOpenProfile}
+                  className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer group"
+                  title="View Profile & Referral Earnings"
+                >
+                  <img
+                    src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                    alt={user.username}
+                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-md object-cover bg-slate-800"
+                  />
+                  <div className="text-left hidden xs:block">
+                    <div className="text-[10px] sm:text-[11px] font-bold text-white group-hover:text-amber-300 leading-tight">
+                      @{user.username}
+                    </div>
+                    <div className="text-[9px] font-mono text-emerald-400 font-bold leading-none">
+                      ${user.balance.toFixed(2)}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+
             {/* 1. CTA Group: E-Commerce on top, VIP Alpha Dispatch in middle, Trading Tools on mobile under VIP Alpha */}
             <div className="flex flex-col gap-1 w-[90px] xs:w-[105px] sm:w-[125px] md:w-auto shrink-0">
               {/* E-Commerce Store Navigation Button */}

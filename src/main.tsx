@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AvatarProvider } from './context/AvatarContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
 // Guard against third-party cross-origin script errors (e.g., TradingView iframe scripts)
@@ -50,11 +51,13 @@ class GlobalErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBound
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <GlobalErrorBoundary>
-      <LanguageProvider>
-        <AvatarProvider>
-          <App />
-        </AvatarProvider>
-      </LanguageProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <AvatarProvider>
+            <App />
+          </AvatarProvider>
+        </LanguageProvider>
+      </AuthProvider>
     </GlobalErrorBoundary>
   </StrictMode>,
 );

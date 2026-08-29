@@ -1,0 +1,190 @@
+import { Router, Response } from 'express';
+import { Database } from '../db';
+import { authenticateToken, sanitizeUser, AuthRequest } from '../auth';
+
+const router = Router();
+
+// All routes require authentication
+router.use(authenticateToken);
+
+// GET /api/user/profile
+router.get('/profile', (req: AuthRequest, res: Response): void => {
+  const user = Database.findUserById(req.user!.id);
+  if (!user) {
+    res.status(404).json({ error: 'User profile not found.' });
+    return;
+  }
+  res.json({ success: true, profile: sanitizeUser(user) });
+});
+
+// PATCH /api/user/profile
+router.patch('/profile', (req: AuthRequest, res: Response): void => {
+  const { fullName, phone, avatarUrl } = req.body;
+  const updates: any = {};
+  if (fullName !== undefined) updates.fullName = fullName.trim();
+  if (phone !== undefined) updates.phone = phone.trim();
+  if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl.trim();
+
+  const updated = Database.updateUser(req.user!.id, updates);
+  if (!updated) {
+    res.status(404).json({ error: 'Failed to update profile.' });
+    return;
+  }
+
+  res.json({ success: true, profile: sanitizeUser(updated) });
+});
+
+// GET /api/user/referrals
+router.get('/referrals', (req: AuthRequest, res: Response): void => {
+  const userId = req.user!.id;
+  const user = Database.findUserById(userId);
+  if (!user) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  const referrals = Database.getReferralsForUser(user.id);
+  const sanitizedReferrals = referrals.map(r => ({
+    id: r.id,
+    username: r.username,
+    fullName: r.fullName,
+    role: r.role,
+    subscriptionStatus: r.subscriptionStatus,
+    createdAt: r.createdAt,
+    avatarUrl: r.avatarUrl,
+  }));
+
+  const transactions = Database.getTransactionsByUser(userId).filter(t => t.type === 'commission');
+
+  res.json({
+    success: true,
+    referralCode: user.referralCode,
+    commissionRate: user.commissionRate,
+    balance: user.balance,
+    pendingBalance: user.pendingBalance,
+    totalEarned: user.totalEarned,
+    totalReferredCount: sanitizedReferrals.length,
+    referrals: sanitizedReferrals,
+    commissionHistory: transactions,
+  });
+});
+
+// GET /api/user/transactions
+router.get('/transactions', (req: AuthRequest, res: Response): void => {
+  const transactions = Database.getTransactionsByUser(req.user!.id);
+  res.json({ success: true, transactions });
+});
+
+// POST /api/user/activate-subscription
+router.post('/activate-subscription', (req: AuthRequest, res: Response): void => {
+  const { durationMonths = 1, planName = 'Pro Institutional Trading Pass' } = req.body;
+  const user = Database.findUserById(req.user!.id);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  const planCost = durationMonths === 12 ? 990 : durationMonths === 3 ? 290 : 120;
+  
+  // Calculate new expiration date
+  const baseDate = user.subscriptionStatus === 'active' && new Date(user.subscriptionExpiresAt) > new Date()
+    ? new Date(user.subscriptionExpiresAt)
+    : new Date();
+  
+  baseDate.setMonth(baseDate.getMonth() + Number(durationMonths));
+
+  const updatedUser = Database.updateUser(user.id, {
+    subscriptionStatus: 'active',
+    subscriptionPlan: planName,
+    subscriptionExpiresAt: baseDate.toISOString(),
+  });
+
+  // Record user subscription transaction
+  Database.addTransaction({
+    userId: user.id,
+    username: user.username,
+    type: 'subscription_purchase',
+    amount: planCost,
+    description: `Subscription activated: ${planName} (${durationMonths} Month${durationMonths > 1 ? 's' : ''})`,
+    status: 'completed',
+    metadata: {
+      durationMonths,
+      planName,
+      expiresAt: baseDate.toISOString(),
+    }
+  });
+
+  // Process referral commission for referrer if user was referred
+  Database.processReferralCommission(
+    user.id,
+    planCost,
+    `Commission on ${durationMonths}-month plan renewal`
+  );
+
+  res.json({
+    success: true,
+    message: `Subscription successfully activated until ${baseDate.toLocaleDateString()}`,
+    user: sanitizeUser(updatedUser!),
+  });
+});
+
+// POST /api/user/request-payout
+router.post('/request-payout', (req: AuthRequest, res: Response): void => {
+  const { amount, payoutMethod, payoutAddress } = req.body;
+  const user = Database.findUserById(req.user!.id);
+
+  if (!user) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  const requestAmount = Number(amount);
+  if (!requestAmount || isNaN(requestAmount) || requestAmount <= 0) {
+    res.status(400).json({ error: 'Invalid payout amount.' });
+    return;
+  }
+
+  if (requestAmount > user.balance) {
+    res.status(400).json({ error: `Insufficient commission balance. Current available balance is $${user.balance.toFixed(2)}.` });
+    return;
+  }
+
+  if (requestAmount < 50) {
+    res.status(400).json({ error: 'Minimum payout threshold is $50.00 USD.' });
+    return;
+  }
+
+  // Deduct balance and move to pending
+  const newBalance = Number((user.balance - requestAmount).toFixed(2));
+  const newPending = Number((user.pendingBalance + requestAmount).toFixed(2));
+
+  Database.updateUser(user.id, {
+    balance: newBalance,
+    pendingBalance: newPending,
+  });
+
+  const tx = Database.addTransaction({
+    userId: user.id,
+    username: user.username,
+    type: 'payout_request',
+    amount: requestAmount,
+    description: `Payout Request: $${requestAmount.toFixed(2)} via ${payoutMethod || 'USDT/Crypto'} (${payoutAddress || 'Standard Wallet'})`,
+    status: 'pending',
+    metadata: {
+      payoutMethod,
+      payoutAddress,
+      requestedAt: new Date().toISOString(),
+    }
+  });
+
+  res.json({
+    success: true,
+    message: `Payout request of $${requestAmount.toFixed(2)} submitted to administrator.`,
+    transaction: tx,
+    newBalance,
+    newPending,
+  });
+});
+
+export default router;

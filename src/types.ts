@@ -101,3 +101,60 @@ export interface EconomicEvent {
   previous: string;
   actual?: string;
 }
+
+export type UserRole = 'client' | 'employee' | 'admin';
+export type SubscriptionStatus = 'active' | 'expired' | 'inactive';
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionPlan: string;
+  subscriptionExpiresAt: string;
+  referralCode: string;
+  referredBy?: string;
+  commissionRate: number;
+  balance: number;
+  pendingBalance: number;
+  totalEarned: number;
+  createdAt: string;
+  lastLoginAt: string;
+  avatarUrl?: string;
+  phone?: string;
+  notes?: string;
+  referralsCount?: number;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  username: string;
+  type: 'commission' | 'subscription_purchase' | 'manual_adjustment' | 'payout_request';
+  amount: number;
+  description: string;
+  status: 'completed' | 'pending' | 'rejected';
+  createdAt: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ReferralData {
+  referralCode: string;
+  commissionRate: number;
+  balance: number;
+  pendingBalance: number;
+  totalEarned: number;
+  totalReferredCount: number;
+  referrals: {
+    id: string;
+    username: string;
+    fullName: string;
+    role: UserRole;
+    subscriptionStatus: SubscriptionStatus;
+    createdAt: string;
+    avatarUrl?: string;
+  }[];
+  commissionHistory: Transaction[];
+}

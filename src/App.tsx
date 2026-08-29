@@ -32,6 +32,9 @@ import { SavedArticlesModal } from './components/SavedArticlesModal';
 import { SearchModal } from './components/SearchModal';
 import { NewsletterModal } from './components/NewsletterModal';
 import { ECommerceModal } from './components/ECommerceModal';
+import { AuthGate } from './components/AuthGate';
+import { UserProfileModal } from './components/UserProfileModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
 import { getArticlesByLanguage, getEconomicEventsByLanguage, getAuthorsByLanguage } from './data/localizedData';
@@ -76,6 +79,8 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
   const [isECommerceOpen, setIsECommerceOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   // Sync localized articles when language changes
   useEffect(() => {
@@ -162,12 +167,13 @@ export default function App() {
   const savedArticles = articles.filter(a => savedArticleIds.includes(a.id));
 
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col selection:bg-amber-400/20 selection:text-amber-300">
-      {/* 1. Live Market Ticker Strip */}
-      <MarketTicker
-        tickers={INITIAL_MARKET_TICKERS}
-        onSelectTicker={handleSelectTicker}
-      />
+    <AuthGate>
+      <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col selection:bg-amber-400/20 selection:text-amber-300">
+        {/* 1. Live Market Ticker Strip */}
+        <MarketTicker
+          tickers={INITIAL_MARKET_TICKERS}
+          onSelectTicker={handleSelectTicker}
+        />
 
       {/* 2. Top Navigation & Brand Header */}
       <Header
@@ -184,6 +190,8 @@ export default function App() {
         onOpenChart={() => setIsChartOpen(true)}
         onOpenNewsletter={() => setIsNewsletterOpen(true)}
         onOpenECommerce={() => setIsECommerceOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
 
       {/* 3. Main Body Container */}
@@ -484,6 +492,18 @@ export default function App() {
         isOpen={isECommerceOpen}
         onClose={() => setIsECommerceOpen(false)}
       />
+
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onOpenAdmin={() => setIsAdminOpen(true)}
+      />
+
+      <AdminPanelModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+      />
     </div>
+    </AuthGate>
   );
 }
