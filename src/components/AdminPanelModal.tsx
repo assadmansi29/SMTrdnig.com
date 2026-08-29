@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserProfile, Transaction, UserRole, SubscriptionStatus } from '../types';
+import { UserProfile, Transaction, UserRole, SubscriptionStatus, YouTubeLiveStatus } from '../types';
 import { 
   X, 
   ShieldCheck, 
@@ -22,7 +22,11 @@ import {
   Wallet,
   Settings,
   ArrowUpRight,
-  UserPlus
+  UserPlus,
+  Radio,
+  Tv,
+  ExternalLink,
+  KeyRound
 } from 'lucide-react';
 
 interface AdminPanelModalProps {
@@ -32,7 +36,7 @@ interface AdminPanelModalProps {
 
 export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClose }) => {
   const { user, token } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'transactions' | 'create_user'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'transactions' | 'create_user' | 'youtube'>('users');
   
   // Data states
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -42,6 +46,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // YouTube Stream Config state
+  const [ytChannelHandle, setYtChannelHandle] = useState('');
+  const [ytChannelId, setYtChannelId] = useState('');
+  const [ytApiKeyConfigured, setYtApiKeyConfigured] = useState(false);
+  const [ytLiveStatus, setYtLiveStatus] = useState<YouTubeLiveStatus | null>(null);
+  const [ytTesting, setYtTesting] = useState(false);
+  const [ytSaveStatus, setYtSaveStatus] = useState<string | null>(null);
 
   // Balance Adjustment Submodal
   const [selectedUserForBalance, setSelectedUserForBalance] = useState<UserProfile | null>(null);
@@ -100,9 +112,70 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     }
   };
 
+  const fetchYouTubeSettings = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/youtube/settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setYtApiKeyConfigured(data.configured);
+        setYtChannelId(data.channelId || '');
+        setYtChannelHandle(data.channelHandle || '');
+      }
+    } catch (err) {
+      console.error('Error loading YouTube settings:', err);
+    }
+  };
+
+  const testYouTubeStreamScan = async () => {
+    setYtTesting(true);
+    try {
+      const res = await fetch('/api/youtube/live-stream?force=true');
+      const data = await res.json();
+      setYtLiveStatus(data);
+    } catch (err: any) {
+      console.error('Error scanning live stream:', err);
+    } finally {
+      setYtTesting(false);
+    }
+  };
+
+  const handleSaveYouTubeSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setYtSaveStatus('Saving channel settings...');
+    try {
+      const res = await fetch('/api/youtube/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          channelId: ytChannelId.trim(),
+          channelHandle: ytChannelHandle.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setYtSaveStatus('YouTube settings saved & live scanner refreshed!');
+        testYouTubeStreamScan();
+        setTimeout(() => setYtSaveStatus(null), 3000);
+      } else {
+        setYtSaveStatus(`Error: ${data.error}`);
+      }
+    } catch (err: any) {
+      setYtSaveStatus(`Failed: ${err.message}`);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && user?.role === 'admin') {
       fetchAdminData();
+      fetchYouTubeSettings();
+      testYouTubeStreamScan();
     }
   }, [isOpen, token, user]);
 
@@ -423,6 +496,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             >
               <UserPlus className="w-4 h-4" />
               <span>Create Account</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('youtube')}
+              className={`pb-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'youtube' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Radio className="w-4 h-4 text-rose-400" />
+              <span>Live Desk (YouTube API)</span>
             </button>
           </div>
         </div>
@@ -826,6 +909,191 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* TAB 4: YOUTUBE LIVE STREAM DESK INTEGRATION */}
+          {activeTab === 'youtube' && (
+            <div className="space-y-6 max-w-4xl">
+              {/* Header Box */}
+              <div className="bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-900 border border-rose-500/30 rounded-2xl p-5 space-y-2 shadow-lg">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-rose-500/20 text-rose-400">
+                    <Radio className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-white flex items-center gap-2">
+                      <span>YouTube Live Stream Automated Detector</span>
+                      <span className="text-[10px] bg-rose-600/30 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded font-mono font-bold">
+                        SECURE SERVER PROXY
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Dynamically detects and streams your active YouTube broadcast directly inside the LIVE TRADE room.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status and Health Diagnostics */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                {/* 1. API Key Status */}
+                <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 uppercase font-bold text-[10px]">YouTube API Key</span>
+                    <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${ytApiKeyConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                    <span className={`font-bold ${ytApiKeyConfigured ? 'text-emerald-300' : 'text-amber-300'}`}>
+                      {ytApiKeyConfigured ? 'Connected (Server-Side)' : 'Set in .env or Settings'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    Key is securely stored on the backend; never exposed to clients.
+                  </p>
+                </div>
+
+                {/* 2. Detected Channel Handle / ID */}
+                <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 uppercase font-bold text-[10px]">Target Channel</span>
+                    <Tv className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <div className="font-bold text-white font-mono truncate">
+                    {ytChannelHandle || ytChannelId || '@SMTradingOfficial'}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    Live events on this channel are automatically scanned.
+                  </p>
+                </div>
+
+                {/* 3. Live Detection Status */}
+                <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 uppercase font-bold text-[10px]">Current Stream Status</span>
+                    <button
+                      onClick={testYouTubeStreamScan}
+                      disabled={ytTesting}
+                      className="text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer font-bold"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${ytTesting ? 'animate-spin' : ''}`} />
+                      <span>Test Scan</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${ytLiveStatus?.isLive ? 'bg-rose-500 animate-ping' : 'bg-slate-500'}`}></span>
+                    <span className={`font-black ${ytLiveStatus?.isLive ? 'text-rose-400' : 'text-slate-300'}`}>
+                      {ytLiveStatus?.isLive ? 'STREAMING NOW 🔴' : 'No Live Stream Currently'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    {ytLiveStatus?.checkedAt ? `Last scanned: ${new Date(ytLiveStatus.checkedAt).toLocaleTimeString()}` : 'Auto-scanning every 45s'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Channel Configuration Form */}
+              <form onSubmit={handleSaveYouTubeSettings} className="bg-[#090D17] border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-amber-400" />
+                    <span>Channel Identification Settings</span>
+                  </h4>
+                  {ytSaveStatus && (
+                    <span className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+                      {ytSaveStatus}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">
+                      YouTube Channel Handle (Recommended)
+                    </label>
+                    <input
+                      type="text"
+                      value={ytChannelHandle}
+                      onChange={(e) => setYtChannelHandle(e.target.value)}
+                      placeholder="@YourChannelHandle (e.g. @SMTrading)"
+                      className="w-full bg-[#070A11] border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-400"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      The backend automatically resolves this to the canonical Channel ID via API.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">
+                      Direct Channel ID (Optional fallback)
+                    </label>
+                    <input
+                      type="text"
+                      value={ytChannelId}
+                      onChange={(e) => setYtChannelId(e.target.value)}
+                      placeholder="UCxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full bg-[#070A11] border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-400"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      24-character YouTube Channel ID starting with &quot;UC&quot;.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                  <span className="text-[11px] text-slate-400">
+                    Changes take effect immediately and flush the live stream cache.
+                  </span>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-lg transition-all cursor-pointer shadow-md shadow-amber-500/20 text-xs flex items-center gap-1.5"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Save Channel Configuration</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Live Preview / Diagnostic Result */}
+              {ytLiveStatus && (
+                <div className="bg-[#090D17] border border-slate-800 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+                    <span className="font-bold text-slate-300">Live API Diagnostic Payload:</span>
+                    <span className="font-mono text-slate-500 text-[10px]">{ytLiveStatus.checkedAt}</span>
+                  </div>
+
+                  {ytLiveStatus.isLive && ytLiveStatus.stream ? (
+                    <div className="p-3 bg-rose-950/30 border border-rose-500/30 rounded-xl space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-rose-300 text-sm">{ytLiveStatus.stream.title}</span>
+                        <a 
+                          href={ytLiveStatus.stream.watchUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-amber-400 hover:underline text-[11px]"
+                        >
+                          <span>Open Live Video</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Channel: <span className="text-white font-medium">{ytLiveStatus.stream.channelTitle}</span> • Viewers: <span className="text-emerald-400 font-bold">{ytLiveStatus.stream.concurrentViewers || 'Live'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-200 block">Status: No Live Stream Currently</span>
+                        <span className="text-[11px] text-slate-400">{ytLiveStatus.message}</span>
+                      </div>
+                      <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-1 rounded font-mono">
+                        SCAN READY
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

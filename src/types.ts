@@ -15,6 +15,7 @@ export type ArticleCategory =
   | 'Order Flow & Price Action'
   | 'BookMap'
   | 'LIVE Trade'
+  | 'VIP Signals'
   | 'Support';
 
 export interface TradeSetup {
@@ -158,3 +159,36 @@ export interface ReferralData {
   }[];
   commissionHistory: Transaction[];
 }
+
+export interface YouTubeLiveStream {
+  videoId: string;
+  title: string;
+  description: string;
+  channelTitle: string;
+  channelId: string;
+  publishedAt?: string;
+  actualStartTime?: string;
+  scheduledStartTime?: string;
+  thumbnailUrl?: string;
+  concurrentViewers?: number;
+  embedUrl: string;
+  watchUrl: string;
+}
+
+export interface YouTubeLiveStatus {
+  success: boolean;
+  isLive: boolean;
+  message: string;
+  status: 'live' | 'idle' | 'offline' | 'error';
+  stream: YouTubeLiveStream | null;
+  channel: {
+    id?: string | null;
+    handle?: string | null;
+    title?: string;
+    thumbnail?: string;
+  } | null;
+  apiKeyConfigured: boolean;
+  checkedAt: string;
+  cached?: boolean;
+}
+

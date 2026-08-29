@@ -4,7 +4,7 @@
       "id": "usr_admin_01",
       "username": "admin",
       "email": "admin@smtrading.pro",
-      "passwordHash": "$2b$12$XXC/paKh35Av8kpvRoMpAuxxphwESXGNLS5xgagZrYA66YTKWhduG",
+      "passwordHash": "$2b$12$.ownt4sYcNwoW9bfJs8XQOwEvv/vn0EWfhuQhHfDRHJb0Ofdz4gwO",
       "fullName": "Abu Asad Almansi (Super Admin)",
       "role": "admin",
       "subscriptionStatus": "active",
@@ -16,7 +16,7 @@
       "pendingBalance": 1200,
       "totalEarned": 48900,
       "createdAt": "2025-01-01T00:00:00.000Z",
-      "lastLoginAt": "2026-08-29T13:55:31.755Z",
+      "lastLoginAt": "2026-08-29T14:06:50.516Z",
       "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
       "notes": "Main system super administrator with full institutional permissions"
     },
@@ -85,6 +85,34 @@
     }
   ],
   "transactions": [
+    {
+      "userId": "usr_admin_01",
+      "username": "admin",
+      "type": "manual_adjustment",
+      "amount": 0,
+      "description": "Security credential update: Password modified by account holder",
+      "status": "completed",
+      "metadata": {
+        "action": "change_password",
+        "timestamp": "2026-08-29T14:06:50.093Z"
+      },
+      "id": "tx_1788012410093_7iexq",
+      "createdAt": "2026-08-29T14:06:50.093Z"
+    },
+    {
+      "userId": "usr_admin_01",
+      "username": "admin",
+      "type": "manual_adjustment",
+      "amount": 0,
+      "description": "Security credential update: Password modified by account holder",
+      "status": "completed",
+      "metadata": {
+        "action": "change_password",
+        "timestamp": "2026-08-29T14:06:48.740Z"
+      },
+      "id": "tx_1788012408740_isc68",
+      "createdAt": "2026-08-29T14:06:48.740Z"
+    },
     {
       "id": "tx_seed_01",
       "userId": "usr_admin_01",

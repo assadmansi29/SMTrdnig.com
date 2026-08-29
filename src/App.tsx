@@ -209,6 +209,7 @@ export default function App() {
 
         {/* Live Market TradingView Terminal Section */}
         <LiveTradingSection 
+          activeCategory={activeCategory}
           onOpenChartModal={(symbol) => {
             if (symbol) setChartDefaultSymbol(symbol);
             setIsChartOpen(true);

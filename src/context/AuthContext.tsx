@@ -11,6 +11,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   activateSubscription: (durationMonths: number, planName?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   updateProfile: (data: { fullName?: string; phone?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -171,6 +172,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const res = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to change password' };
+      }
+
+      return { success: true, message: data.message || 'Password changed successfully' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error while updating password' };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -183,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshUser,
         activateSubscription,
         updateProfile,
+        changePassword,
       }}
     >
       {children}

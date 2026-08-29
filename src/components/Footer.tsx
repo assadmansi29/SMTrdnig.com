@@ -28,6 +28,7 @@ export const Footer: React.FC<FooterProps> = ({
     'Trade Now': t('catQuant'),
     'BookMap': t('catBookMap'),
     'LIVE Trade': t('catOptions'),
+    'VIP Signals': t('catVipSignals'),
     'Support': t('catRisk')
   };
 
@@ -102,7 +103,7 @@ export const Footer: React.FC<FooterProps> = ({
         <div className="space-y-3">
           <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerSectorsTitle')}</h4>
           <ul className="space-y-2">
-            {(['Macro & Liquidity', 'Order Flow & Price Action', 'Trade Now', 'BookMap', 'LIVE Trade', 'Support'] as ArticleCategory[]).map(c => (
+            {(['Macro & Liquidity', 'Order Flow & Price Action', 'Trade Now', 'BookMap', 'LIVE Trade', 'VIP Signals', 'Support'] as ArticleCategory[]).map(c => (
               <li key={c}>
                 <button
                   onClick={() => {

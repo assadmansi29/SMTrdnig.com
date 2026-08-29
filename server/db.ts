@@ -48,6 +48,8 @@ export interface DatabaseSchema {
     defaultEmployeeCommission: number;
     defaultAdminCommission: number;
     siteName: string;
+    youtubeChannelId?: string;
+    youtubeChannelHandle?: string;
   };
 }
 
@@ -362,4 +364,30 @@ export class Database {
       u => u.referredBy === user.id || u.referredBy?.toUpperCase() === user.referralCode.toUpperCase()
     );
   }
+
+  static getSystemSettings(): DatabaseSchema['systemSettings'] {
+    const db = this.getDB();
+    return db.systemSettings || {
+      defaultClientCommission: 10,
+      defaultEmployeeCommission: 15,
+      defaultAdminCommission: 25,
+      siteName: 'SMTrading Pro Desk',
+    };
+  }
+
+  static updateSystemSettings(settings: Partial<DatabaseSchema['systemSettings']>): DatabaseSchema['systemSettings'] {
+    const db = this.getDB();
+    db.systemSettings = {
+      ...(db.systemSettings || {
+        defaultClientCommission: 10,
+        defaultEmployeeCommission: 15,
+        defaultAdminCommission: 25,
+        siteName: 'SMTrading Pro Desk',
+      }),
+      ...settings,
+    };
+    this.saveDB(db);
+    return db.systemSettings;
+  }
 }
+

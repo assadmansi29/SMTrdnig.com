@@ -37,6 +37,7 @@ const CATEGORIES: ArticleCategory[] = [
   'Trade Now',
   'BookMap',
   'LIVE Trade',
+  'VIP Signals',
   'Support'
 ];
 
@@ -47,6 +48,7 @@ const CATEGORY_KEYS: Record<ArticleCategory, TranslationKey> = {
   'Trade Now': 'catQuant',
   'BookMap': 'catBookMap',
   'LIVE Trade': 'catOptions',
+  'VIP Signals': 'catVipSignals',
   'Support': 'catRisk'
 };
 

@@ -6,7 +6,6 @@ import {
   ShieldCheck, 
   Eye, 
   EyeOff, 
-  Sparkles, 
   CheckCircle2, 
   AlertCircle, 
   Crown, 
@@ -19,9 +18,11 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
+import { useTranslation } from '../context/LanguageContext';
 
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading, login, register, logout, activateSubscription } = useAuth();
+  const { t, isRTL, language } = useTranslation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
   // Form states
@@ -42,7 +43,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password) {
-      setErrorMsg('Please provide both username and password.');
+      setErrorMsg(t('authErrorProvideCreds'));
       return;
     }
 
@@ -54,14 +55,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     setIsSubmitting(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Authentication failed. Please check credentials.');
+      setErrorMsg(res.error || t('authFailedGeneral'));
     }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !email.trim() || !password) {
-      setErrorMsg('Please complete all required fields.');
+      setErrorMsg(t('authErrorCompleteFields'));
       return;
     }
 
@@ -79,9 +80,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
     setIsSubmitting(false);
     if (!res.success) {
-      setErrorMsg(res.error || 'Registration failed.');
+      setErrorMsg(res.error || t('authFailedGeneral'));
     } else {
-      setSuccessMsg('Account registered successfully! Redirecting...');
+      setSuccessMsg(t('authSuccessRegistered'));
     }
   };
 
@@ -91,7 +92,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     const res = await activateSubscription(months, planName);
     setRenewing(false);
     if (!res.success) {
-      setErrorMsg(res.error || 'Failed to activate subscription.');
+      setErrorMsg(res.error || t('authFailedGeneral'));
     }
   };
 
@@ -107,7 +108,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           </div>
         </div>
         <p className="mt-4 text-slate-400 text-xs font-mono tracking-widest uppercase">
-          Initializing Institutional Security Gate...
+          {t('authLoading')}
         </p>
       </div>
     );
@@ -117,7 +118,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   if (user && user.role === 'client' && user.subscriptionStatus !== 'active') {
     const isExpired = user.subscriptionStatus === 'expired';
     const expiresFormatted = user.subscriptionExpiresAt 
-      ? new Date(user.subscriptionExpiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+      ? new Date(user.subscriptionExpiresAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : language === 'ru' ? 'ru-RU' : language === 'uk' ? 'uk-UA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
       : 'N/A';
 
     return (
@@ -138,7 +139,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
+            <LanguageSelector />
+            <div className="text-right rtl:text-left hidden sm:block">
               <div className="text-xs font-semibold text-white">@{user.username}</div>
               <div className="text-[10px] text-slate-400">{user.email}</div>
             </div>
@@ -146,8 +148,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
               onClick={() => logout()}
               className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Log Out</span>
+              <LogOut className="w-3.5 h-3.5 rtl:rotate-180" />
+              <span>{t('authSubLogOut')}</span>
             </button>
           </div>
         </div>
@@ -157,14 +159,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <div className="bg-[#0C111C]/90 border border-amber-500/30 rounded-2xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-bold uppercase tracking-wider mb-4">
               <Clock className="w-3.5 h-3.5" />
-              <span>Membership {isExpired ? 'Expired' : 'Inactive'}</span>
+              <span>{t('authSubMembership')} {isExpired ? t('authSubExpired') : t('authSubInactive')}</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Active Subscription Required to Enter Portal
+              {t('authSubRequiredTitle')}
             </h1>
             <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Hello <strong className="text-amber-400">@{user.username}</strong>, your account is verified, but your trading membership access was expired on <strong className="text-slate-100">{expiresFormatted}</strong>. Renew your access below to instantly unlock real-time BookMap analytics, live desk alpha feeds, proprietary order flow setups, and position calculators.
+              {t('authSubHello')} <strong className="text-amber-400">@{user.username}</strong>, {t('authSubExpiredDesc', { expiresFormatted })}
             </p>
 
             {errorMsg && (
@@ -186,12 +188,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 }`}
               >
                 <div>
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monthly Pass</div>
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('authSubPlanMonthly')}</div>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-white">$120</span>
-                    <span className="text-xs text-slate-400">/ 30 days</span>
+                    <span className="text-2xl font-black text-white">{t('authSubPlanMonthlyPrice')}</span>
+                    <span className="text-xs text-slate-400">{t('authSubPlanMonthlyPeriod')}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-400">Essential access to live analysis & institutional setups.</p>
+                  <p className="mt-2 text-xs text-slate-400">{t('authSubPlanMonthlyDesc')}</p>
                 </div>
                 <button
                   disabled={renewing}
@@ -201,7 +203,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   }}
                   className="mt-5 w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
                 >
-                  {renewing && selectedPlanMonths === 1 ? 'Activating...' : 'Select Monthly ($120)'}
+                  {renewing && selectedPlanMonths === 1 ? t('authSubActivating') : t('authSubPlanMonthlyBtn')}
                 </button>
               </div>
 
@@ -214,16 +216,16 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     : 'bg-[#090D15] border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <div className="absolute -top-2.5 right-4 bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">
-                  Most Popular
+                <div className="absolute -top-2.5 right-4 rtl:right-auto rtl:left-4 bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">
+                  {t('authSubPlanQuarterlyBadge')}
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Quarterly VIP</div>
+                  <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider">{t('authSubPlanQuarterly')}</div>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-white">$290</span>
-                    <span className="text-xs text-slate-400">/ 90 days</span>
+                    <span className="text-2xl font-black text-white">{t('authSubPlanQuarterlyPrice')}</span>
+                    <span className="text-xs text-slate-400">{t('authSubPlanQuarterlyPeriod')}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-400">Complete Bookmap feeds, live webinars, and priority desk signals.</p>
+                  <p className="mt-2 text-xs text-slate-400">{t('authSubPlanQuarterlyDesc')}</p>
                 </div>
                 <button
                   disabled={renewing}
@@ -233,7 +235,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   }}
                   className="mt-5 w-full py-2 px-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-lg transition-all shadow-md shadow-amber-500/20 cursor-pointer"
                 >
-                  {renewing && selectedPlanMonths === 3 ? 'Activating...' : 'Activate Quarterly ($290)'}
+                  {renewing && selectedPlanMonths === 3 ? t('authSubActivating') : t('authSubPlanQuarterlyBtn')}
                 </button>
               </div>
 
@@ -247,12 +249,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 }`}
               >
                 <div>
-                  <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Annual Institutional</div>
+                  <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">{t('authSubPlanAnnual')}</div>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-white">$990</span>
-                    <span className="text-xs text-slate-400">/ 365 days</span>
+                    <span className="text-2xl font-black text-white">{t('authSubPlanAnnualPrice')}</span>
+                    <span className="text-xs text-slate-400">{t('authSubPlanAnnualPeriod')}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-400">All institutional strategies, 1-on-1 desk review & maximum affiliate commission.</p>
+                  <p className="mt-2 text-xs text-slate-400">{t('authSubPlanAnnualDesc')}</p>
                 </div>
                 <button
                   disabled={renewing}
@@ -262,7 +264,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   }}
                   className="mt-5 w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
                 >
-                  {renewing && selectedPlanMonths === 12 ? 'Activating...' : 'Select Annual ($990)'}
+                  {renewing && selectedPlanMonths === 12 ? t('authSubActivating') : t('authSubPlanAnnualBtn')}
                 </button>
               </div>
             </div>
@@ -272,7 +274,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
               <div className="flex items-center gap-3">
                 <Zap className="w-5 h-5 text-amber-400 shrink-0" />
                 <div className="text-xs text-slate-300">
-                  <span className="font-bold text-white">Instant Sandbox Activation:</span> Click below to simulate an active subscription and grant immediate dashboard access.
+                  <span className="font-bold text-white">{t('authSubSandboxTitle')}</span> {t('authSubSandboxDesc')}
                 </div>
               </div>
               <button
@@ -280,14 +282,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 onClick={() => handleActivatePlan(selectedPlanMonths, 'SM Pro Trader Active Pass')}
                 className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer shadow-md shadow-emerald-600/20"
               >
-                {renewing ? 'Unlocking...' : 'Instant One-Click Unlock'}
+                {renewing ? t('authSubSandboxUnlocking') : t('authSubSandboxBtn')}
               </button>
             </div>
           </div>
         </main>
 
         <footer className="py-4 text-center text-xs text-slate-500 z-10">
-          SMTrading.pro • Institutional Grade Risk & Alpha Infrastructure
+          {t('authSubFooter')}
         </footer>
       </div>
     );
@@ -321,12 +323,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 SMTrading<span className="text-amber-400">.pro</span>
               </span>
               <div className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/40">
-                <span>Abu Asad Almansi</span>
+                <span>{t('authAuthor')}</span>
                 <BlueVerifiedBadge size="sm" />
               </div>
             </div>
             <p className="text-[11px] text-slate-400 font-medium">
-              Institutional Order Flow • Quantitative Market Intelligence
+              {t('authHeaderTagline')}
             </p>
           </div>
         </div>
@@ -341,54 +343,54 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Left Column: Platform Highlights & Institutional Overview */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+          <div className="lg:col-span-6 space-y-6 text-center lg:text-left rtl:lg:text-right">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-amber-400 text-xs font-semibold">
               <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span>Members-Only Quantitative Trading Desk</span>
+              <span>{t('authHeaderBadge')}</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-              Trade With The <br className="hidden sm:block" />
+              {t('authHeroTitlePre')} <br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
-                Smart Money Advantage
+                {t('authHeroTitleHighlight')}
               </span>
             </h1>
 
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-lg mx-auto lg:mx-0">
-              Direct access to live Bookmap volume profiles, institutional gamma skew models, proprietary algorithmic trading setups, advanced trading strategies, and professional education programs covering SMC, Gann Box, and Trading Strategies — alongside our automated referral commission system.
+              {t('authHeroDesc')}
             </p>
 
             {/* Highlights List */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left rtl:text-right">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-white">Live BookMap Order Flow</div>
-                  <div className="text-[11px] text-slate-400">Institutional limit order liquidity depth</div>
+                  <div className="text-xs font-bold text-white">{t('authFeatureBookmapTitle')}</div>
+                  <div className="text-[11px] text-slate-400">{t('authFeatureBookmapDesc')}</div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left rtl:text-right">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-white">Referral Balance Engine</div>
-                  <div className="text-[11px] text-slate-400">Up to 25% recurring affiliate revenue</div>
+                  <div className="text-xs font-bold text-white">{t('authFeatureReferralTitle')}</div>
+                  <div className="text-[11px] text-slate-400">{t('authFeatureReferralDesc')}</div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left rtl:text-right">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-white">LIVE TRADE</div>
-                  <div className="text-[11px] text-slate-400">With professional traders</div>
+                  <div className="text-xs font-bold text-white">{t('authFeatureLiveTradeTitle')}</div>
+                  <div className="text-[11px] text-slate-400">{t('authFeatureLiveTradeDesc')}</div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left">
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left rtl:text-right">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-white">LIVE Support & Coaches</div>
-                  <div className="text-[11px] text-slate-400">24/7 active desk guidance & support</div>
+                  <div className="text-xs font-bold text-white">{t('authFeatureSupportTitle')}</div>
+                  <div className="text-[11px] text-slate-400">{t('authFeatureSupportDesc')}</div>
                 </div>
               </div>
             </div>
@@ -412,7 +414,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Sign In (Members)
+                  {t('authTabSignIn')}
                 </button>
                 <button
                   onClick={() => {
@@ -426,7 +428,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Create Account
+                  {t('authTabRegister')}
                 </button>
               </div>
 
@@ -450,10 +452,10 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                      Username or Email
+                      {t('authLabelUsernameOrEmail')}
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-500">
                         <User className="w-4 h-4" />
                       </div>
                       <input
@@ -461,18 +463,18 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         required
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="e.g. admin, employee, trader_pro"
-                        className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-sans"
+                        placeholder={t('authPlaceholderUsernameOrEmail')}
+                        className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl ps-9 pe-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-sans"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                      Password
+                      {t('authLabelPassword')}
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-slate-500">
                         <Lock className="w-4 h-4" />
                       </div>
                       <input
@@ -480,13 +482,13 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl pl-9 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all"
+                        placeholder={t('authPlaceholderPassword')}
+                        className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl ps-9 pe-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                        className="absolute inset-y-0 end-0 pe-3 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -501,12 +503,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     {isSubmitting ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Verifying Security Access...</span>
+                        <span>{t('authBtnSigningIn')}</span>
                       </>
                     ) : (
                       <>
-                        <span>Access Members Portal</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <span>{t('authBtnSignIn')}</span>
+                        <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                       </>
                     )}
                   </button>
@@ -516,13 +518,13 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
                   <div>
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Full Name
+                      {t('authLabelFullName')}
                     </label>
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Tariq Al-Mansoor"
+                      placeholder={t('authPlaceholderFullName')}
                       className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                     />
                   </div>
@@ -530,27 +532,27 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                        Username *
+                        {t('authLabelUsernameReq')}
                       </label>
                       <input
                         type="text"
                         required
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="trader_pro"
+                        placeholder={t('authPlaceholderUsername')}
                         className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                        Email Address *
+                        {t('authLabelEmailReq')}
                       </label>
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@domain.com"
+                        placeholder={t('authPlaceholderEmail')}
                         className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                       />
                     </div>
@@ -558,7 +560,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                   <div>
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
-                      Password *
+                      {t('authLabelPasswordReq')}
                     </label>
                     <div className="relative">
                       <input
@@ -566,13 +568,13 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Minimum 6 characters"
-                        className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl px-3.5 pr-10 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                        placeholder={t('authPlaceholderPasswordReq')}
+                        className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl px-3.5 pe-10 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
+                        className="absolute inset-y-0 end-0 pe-3 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -583,15 +585,15 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     <label className="flex items-center justify-between text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                       <span className="flex items-center gap-1">
                         <Gift className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Referral Code (Optional)</span>
+                        <span>{t('authLabelReferralCode')}</span>
                       </span>
-                      <span className="text-[10px] text-amber-400 font-normal">Bonus + 10% Off</span>
+                      <span className="text-[10px] text-amber-400 font-normal">{t('authReferralBonusBadge')}</span>
                     </label>
                     <input
                       type="text"
                       value={referralCode}
                       onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. SMADMIN, SMSTAFF"
+                      placeholder={t('authPlaceholderReferral')}
                       className="w-full bg-[#080B12] border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-amber-300 font-mono placeholder-slate-600 focus:outline-none focus:border-amber-400 uppercase"
                     />
                   </div>
@@ -604,12 +606,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     {isSubmitting ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Creating Institutional Account...</span>
+                        <span>{t('authBtnRegistering')}</span>
                       </>
                     ) : (
                       <>
-                        <span>Join & Unlock Trading Pass</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <span>{t('authBtnRegister')}</span>
+                        <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                       </>
                     )}
                   </button>
@@ -622,12 +624,12 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
                     <div>
-                      <span className="text-[11px] font-bold text-slate-300 block">End-to-End Encrypted Access</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Bcrypt salted hashing • Role-Gated RBAC</span>
+                      <span className="text-[11px] font-bold text-slate-300 block">{t('authEncryptionTitle')}</span>
+                      <span className="text-[10px] text-slate-500 font-mono">{t('authEncryptionDesc')}</span>
                     </div>
                   </div>
                   <span className="text-[9px] bg-amber-400/10 border border-amber-400/30 text-amber-300 px-2 py-0.5 rounded-full font-mono uppercase font-bold">
-                    Institutional
+                    {t('authInstitutionalBadge')}
                   </span>
                 </div>
               </div>
@@ -640,13 +642,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
       {/* Footer */}
       <footer className="max-w-7xl mx-auto w-full px-4 py-4 text-center text-xs text-slate-500 z-10 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span>© 2026 SMTrading.pro • Abu Asad Almansi. All Rights Reserved.</span>
+        <span>{t('authFooterCopyright')}</span>
         <div className="flex items-center gap-4 text-slate-400">
-          <span>End-to-End Encrypted Session</span>
+          <span>{t('authFooterEncrypted')}</span>
           <span>•</span>
-          <span>Role Guarded (RBAC)</span>
+          <span>{t('authFooterRoleGuarded')}</span>
         </div>
       </footer>
     </div>
   );
 };
+

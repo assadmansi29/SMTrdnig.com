@@ -20,6 +20,8 @@ export const getLocalizedCategory = (
     case 'LIVE Trade':
     case 'Options & Derivatives':
       return t('catOptions');
+    case 'VIP Signals':
+      return t('catVipSignals');
     case 'Support':
       return t('catRisk');
     default:

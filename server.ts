@@ -5,6 +5,7 @@ import { createServer as createViteServer } from "vite";
 import authRoutes from './server/routes/authRoutes';
 import userRoutes from './server/routes/userRoutes';
 import adminRoutes from './server/routes/adminRoutes';
+import youtubeRoutes from './server/routes/youtubeRoutes';
 
 async function startServer() {
   const app = express();
@@ -19,6 +20,7 @@ async function startServer() {
   app.use('/api/auth', authRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/youtube', youtubeRoutes);
 
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", server: "SMTrading Pro Engine", time: new Date().toISOString() });

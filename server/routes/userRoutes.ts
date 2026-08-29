@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { Database } from '../db';
 import { authenticateToken, sanitizeUser, AuthRequest } from '../auth';
 
@@ -32,6 +33,59 @@ router.patch('/profile', (req: AuthRequest, res: Response): void => {
   }
 
   res.json({ success: true, profile: sanitizeUser(updated) });
+});
+
+// POST /api/user/change-password
+router.post('/change-password', (req: AuthRequest, res: Response): void => {
+  const { currentPassword, newPassword } = req.body;
+  const user = Database.findUserById(req.user!.id);
+
+  if (!user) {
+    res.status(404).json({ error: 'User account not found.' });
+    return;
+  }
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: 'Both current password and new password are required.' });
+    return;
+  }
+
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+    return;
+  }
+
+  // Verify current password against stored bcrypt hash
+  const isMatch = bcrypt.compareSync(currentPassword, user.passwordHash);
+  if (!isMatch) {
+    res.status(400).json({ error: 'Current password is incorrect.' });
+    return;
+  }
+
+  // Generate strong salt and hash new password
+  const salt = bcrypt.genSaltSync(12);
+  const newPasswordHash = bcrypt.hashSync(newPassword, salt);
+
+  Database.updateUser(user.id, { passwordHash: newPasswordHash });
+
+  // Log password update in transactions/audit
+  Database.addTransaction({
+    userId: user.id,
+    username: user.username,
+    type: 'manual_adjustment',
+    amount: 0,
+    description: 'Security credential update: Password modified by account holder',
+    status: 'completed',
+    metadata: {
+      action: 'change_password',
+      timestamp: new Date().toISOString(),
+    }
+  });
+
+  res.json({
+    success: true,
+    message: 'Your password has been changed successfully.',
+  });
 });
 
 // GET /api/user/referrals

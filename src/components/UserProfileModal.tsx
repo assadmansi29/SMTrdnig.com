@@ -25,7 +25,12 @@ import {
   Phone,
   Mail,
   Edit3,
-  Save
+  Save,
+  Lock,
+  KeyRound,
+  Eye,
+  EyeOff,
+  CheckCircle2
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 
@@ -40,7 +45,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   onOpenAdmin,
 }) => {
-  const { user, token, logout, updateProfile, activateSubscription } = useAuth();
+  const { user, token, logout, updateProfile, activateSubscription, changePassword } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'referrals' | 'transactions' | 'subscription'>('profile');
 
   // Referral data state
@@ -55,6 +60,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editAvatar, setEditAvatar] = useState(user?.avatarUrl || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // Change Password state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [passwordStatus, setPasswordStatus] = useState<{ type: 'success' | 'error' | 'loading'; msg: string } | null>(null);
 
   // Payout state
   const [showPayoutModal, setShowPayoutModal] = useState(false);
@@ -202,6 +217,38 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setTimeout(() => setRenewMsg(null), 3000);
     } else {
       setRenewMsg(`Error: ${res.error}`);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      setPasswordStatus({ type: 'error', msg: 'Please enter your current password.' });
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordStatus({ type: 'error', msg: 'New password must be at least 6 characters long.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordStatus({ type: 'error', msg: 'New passwords do not match. Please verify.' });
+      return;
+    }
+
+    setPasswordStatus({ type: 'loading', msg: 'Verifying and encrypting new password...' });
+
+    const res = await changePassword(currentPassword, newPassword);
+    if (res.success) {
+      setPasswordStatus({ type: 'success', msg: res.message || 'Password changed successfully!' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setPasswordStatus(null);
+        setShowPasswordChange(false);
+      }, 3000);
+    } else {
+      setPasswordStatus({ type: 'error', msg: res.error || 'Failed to update password.' });
     }
   };
 
@@ -484,6 +531,163 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <span className="font-bold text-emerald-400">{user.commissionRate}% per referred plan</span>
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Security & Password Management Card */}
+              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-amber-400 shrink-0">
+                      <KeyRound className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Account Security & Password</span>
+                        <span className="text-[10px] bg-slate-800 text-slate-400 font-mono px-2 py-0.5 rounded border border-slate-700">
+                          Bcrypt 12-Rounds
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Change your account password with end-to-end cryptographic hashing.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordChange(!showPasswordChange);
+                      setPasswordStatus(null);
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                    }}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
+                      showPasswordChange 
+                        ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700' 
+                        : 'bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 border border-amber-400/40'
+                    }`}
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>{showPasswordChange ? 'Close Form' : 'Change Password'}</span>
+                  </button>
+                </div>
+
+                {showPasswordChange && (
+                  <form onSubmit={handleChangePasswordSubmit} className="mt-4 pt-4 border-t border-slate-800/90 space-y-4">
+                    {passwordStatus && (
+                      <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
+                        passwordStatus.type === 'success' 
+                          ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300' 
+                          : passwordStatus.type === 'error'
+                          ? 'bg-rose-950/60 border border-rose-500/40 text-rose-300'
+                          : 'bg-slate-800 text-amber-300 border border-amber-400/30'
+                      }`}>
+                        {passwordStatus.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+                        {passwordStatus.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+                        <span>{passwordStatus.msg}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                      {/* Current Password */}
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold">Current Password</label>
+                        <div className="relative">
+                          <input
+                            type={showCurrentPass ? 'text' : 'password'}
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Enter current password"
+                            required
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPass(!showCurrentPass)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                          >
+                            {showCurrentPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* New Password */}
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold">New Password</label>
+                        <div className="relative">
+                          <input
+                            type={showNewPass ? 'text' : 'password'}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Min 6 characters"
+                            required
+                            minLength={6}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPass(!showNewPass)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                          >
+                            {showNewPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm New Password */}
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold">Confirm New Password</label>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPass ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Re-type new password"
+                            required
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPass(!showConfirmPass)}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                          >
+                            {showConfirmPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live helper notes & match indicator */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-[11px]">
+                      <div className="flex items-center gap-3">
+                        {newPassword && (
+                          <span className={`font-mono font-bold ${
+                            newPassword.length >= 8 ? 'text-emerald-400' : newPassword.length >= 6 ? 'text-amber-400' : 'text-rose-400'
+                          }`}>
+                            Strength: {newPassword.length >= 8 ? 'Strong' : newPassword.length >= 6 ? 'Fair' : 'Too Short'}
+                          </span>
+                        )}
+                        {newPassword && confirmPassword && (
+                          <span className={`font-semibold ${
+                            newPassword === confirmPassword ? 'text-emerald-400' : 'text-rose-400'
+                          }`}>
+                            {newPassword === confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={passwordStatus?.type === 'loading'}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm shadow-amber-500/20"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>{passwordStatus?.type === 'loading' ? 'Updating...' : 'Save New Password'}</span>
+                      </button>
+                    </div>
+                  </form>
                 )}
               </div>
 

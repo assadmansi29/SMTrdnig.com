@@ -418,6 +418,57 @@ def test_pair_cointegration(asset_a_prices, asset_b_prices):
         ]
       }
     ]
+  },
+  {
+    id: 'art-7',
+    slug: 'vip-signals-gold-nasdaq-institutional-confluence-breakout',
+    title: 'VIP Alpha Signal: High-Probability Institutional Confluence on Gold (XAUUSD) & Nasdaq (NQ)',
+    subtitle: 'Exclusive VIP desk signal detailing multi-timeframe liquidity sweep, gamma flip levels, and institutional stop runs.',
+    category: 'VIP Signals',
+    image: forexGoldImg,
+    imageCaption: 'SMTrading VIP Institutional Signal Suite - Real-Time Execution Triggers',
+    publishedAt: 'May 28, 2026',
+    readTime: '6 min read',
+    difficulty: 'Institutional',
+    author: AUTHORS.abuAsad,
+    featured: true,
+    trending: true,
+    editorPick: true,
+    views: 18940,
+    bullishVotes: 890,
+    bearishVotes: 14,
+    tags: ['VIP Signals', 'XAUUSD', 'Gold', 'Nasdaq', 'SMC', 'Order Block', 'Gamma Flip'],
+    summary: [
+      'Institutional liquidity sweep at key Asian range session lows with heavy tick delta absorption.',
+      'Confluence of 4H bullish fair value gap (FVG) and Point of Control (POC) supporting rapid breakout expansion.',
+      'Strict 1:4.20 risk-to-reward ratio with institutional scale-out targets.'
+    ],
+    tradeSetup: {
+      asset: 'Spot Gold / USD (XAU/USD)',
+      direction: 'LONG',
+      timeframe: '15M / 1H / 4H Multi-Timeframe Confluence',
+      entryZone: '$3,240.00 - $3,252.00 (Institutional Demand Zone)',
+      stopLoss: '$3,218.00 (Below Asian Session Liquidity Sweep)',
+      takeProfit1: '$3,320.00 (Previous Daily High / Buy-Side Liquidity)',
+      takeProfit2: '$3,385.00 (Major 1.618 Fib Extension Target)',
+      riskReward: '1 : 4.20',
+      keyCatalyst: 'Tier-1 Desk Absorption Wall & US Session Opening Momentum Expansion'
+    },
+    content: [
+      {
+        sectionId: 'sec-1',
+        sectionTitle: 'VIP Execution Strategy & Microstructure Edge',
+        paragraphs: [
+          'This VIP signal captures a signature Smart Money accumulation sequence: early session liquidity runs targeting retail stop-losses, immediately followed by multi-million dollar institutional bid absorption.',
+          'Execution is strictly gated to confirmed 15M break-of-structure (BOS) with cumulative volume delta (CVD) divergence confirm.'
+        ],
+        callout: {
+          type: 'alpha',
+          title: 'VIP Desk Risk Protocol',
+          text: 'Risk strictly 1% to 1.5% of allocated desk capital. Move stop loss to breakeven once Take Profit 1 ($3,320.00) is achieved.'
+        }
+      }
+    ]
   }
 ];
 
