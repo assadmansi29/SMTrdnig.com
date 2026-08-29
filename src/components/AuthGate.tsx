@@ -355,7 +355,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </h1>
 
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-lg mx-auto lg:mx-0">
-              Direct access to live BookMap volume profiles, institutional gamma skew models, proprietary algorithmic setups, and automated referral commission engines.
+              Direct access to live Bookmap volume profiles, institutional gamma skew models, proprietary algorithmic trading setups, advanced trading strategies, and professional education programs covering SMC, Gann Box, and Trading Strategies — alongside our automated referral commission system.
             </p>
 
             {/* Highlights List */}
@@ -379,16 +379,16 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-white">Role-Gated Permissions</div>
-                  <div className="text-[11px] text-slate-400">Client, Employee & Master Admin control</div>
+                  <div className="text-xs font-bold text-white">LIVE TRADE</div>
+                  <div className="text-[11px] text-slate-400">With professional traders</div>
                 </div>
               </div>
 
               <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-left">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-xs font-bold text-white">4 Language Desk</div>
-                  <div className="text-[11px] text-slate-400">English, Arabic, Russian & Ukrainian</div>
+                  <div className="text-xs font-bold text-white">LIVE Support & Coaches</div>
+                  <div className="text-[11px] text-slate-400">24/7 active desk guidance & support</div>
                 </div>
               </div>
             </div>
