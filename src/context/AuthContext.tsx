@@ -10,7 +10,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   activateSubscription: (durationMonths: number, planName?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
-  updateProfile: (data: { fullName?: string; phone?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (data: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string }) => Promise<{ success: boolean; error?: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
 }
 
@@ -147,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateProfile = async (profileUpdates: { fullName?: string; phone?: string; avatarUrl?: string }) => {
+  const updateProfile = async (profileUpdates: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string }) => {
     if (!token) return { success: false, error: 'Not authenticated' };
 
     try {

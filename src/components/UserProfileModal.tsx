@@ -57,8 +57,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   // Edit profile state
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(user?.fullName || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
   const [editPhone, setEditPhone] = useState(user?.phone || '');
   const [editAvatar, setEditAvatar] = useState(user?.avatarUrl || '');
+  const [editUsername, setEditUsername] = useState(user?.username || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   // Change Password state
@@ -89,8 +91,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   useEffect(() => {
     if (user) {
       setEditName(user.fullName || '');
+      setEditEmail(user.email || '');
       setEditPhone(user.phone || '');
       setEditAvatar(user.avatarUrl || '');
+      setEditUsername(user.username || '');
     }
   }, [user]);
 
@@ -154,11 +158,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const handleSaveProfile = async () => {
     setSaveStatus('Saving changes...');
-    const res = await updateProfile({
+    const payload: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string } = {
       fullName: editName,
+      email: editEmail,
       phone: editPhone,
       avatarUrl: editAvatar,
-    });
+    };
+    if (user.role === 'admin') {
+      payload.username = editUsername;
+    }
+    const res = await updateProfile(payload);
     if (res.success) {
       setSaveStatus('Profile updated successfully!');
       setIsEditing(false);
@@ -464,40 +473,119 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 )}
 
                 {isEditing ? (
-                  <div className="space-y-3.5">
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1 font-semibold">Full Display Name</label>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-                      />
+                  <div className="space-y-4">
+                    {/* Username Field (Editable ONLY for Super Admin) */}
+                    {user.role === 'admin' ? (
+                      <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-amber-300 font-bold flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-amber-400" />
+                            <span>Super Admin Username</span>
+                          </label>
+                          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
+                            Super Admin Privilege
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 text-sm font-mono select-none">
+                            @
+                          </span>
+                          <input
+                            type="text"
+                            value={editUsername}
+                            onChange={(e) => setEditUsername(e.target.value)}
+                            placeholder="admin_username"
+                            className="w-full bg-slate-950 border border-amber-500/40 rounded-lg pl-7 pr-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                          />
+                        </div>
+                        <p className="text-[11px] text-amber-300/80">
+                          As Super Admin, you can change your system-wide handle/username.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-slate-400 font-semibold flex items-center gap-1.5">
+                            <Lock className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Username</span>
+                          </label>
+                          <span className="text-[10px] text-slate-500">
+                            Locked (Super Admin Only)
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          disabled
+                          value={`@${user.username}`}
+                          className="w-full bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-400 font-mono cursor-not-allowed"
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Full Display Name</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="e.g. Tariq Al-Mansoor"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Email Address</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          placeholder="trader@example.com"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1 font-semibold">Contact Phone / Telegram</label>
-                      <input
-                        type="text"
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        placeholder="+971 50 123 4567 or @telegram"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Phone Number / Contact</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          placeholder="+1 (555) 000-0000 or @telegram"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Avatar Image URL</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editAvatar}
+                          onChange={(e) => setEditAvatar(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1 font-semibold">Avatar Image URL</label>
-                      <input
-                        type="text"
-                        value={editAvatar}
-                        onChange={(e) => setEditAvatar(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-                      />
-                    </div>
+
                     <div className="pt-2 flex justify-end">
                       <button
                         onClick={handleSaveProfile}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-md shadow-amber-400/20"
                       >
                         <Save className="w-3.5 h-3.5" />
                         <span>Save Changes</span>
@@ -508,11 +596,26 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
                       <span className="text-slate-500 block mb-0.5">Username</span>
-                      <span className="font-mono text-slate-200 font-bold">@{user.username}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-slate-200 font-bold">@{user.username}</span>
+                        {user.role === 'admin' && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                            Super Admin
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <span className="text-slate-500 block mb-0.5">Email Address</span>
-                      <span className="text-slate-200">{user.email}</span>
+                      <span className="text-slate-200 font-medium">{user.email || 'Not configured'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block mb-0.5">Phone Number / Contact</span>
+                      <span className="text-slate-200 font-medium">{user.phone || 'Not configured'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block mb-0.5">Full Display Name</span>
+                      <span className="text-slate-200 font-medium">{user.fullName || user.username}</span>
                     </div>
                     <div>
                       <span className="text-slate-500 block mb-0.5">Account Role</span>

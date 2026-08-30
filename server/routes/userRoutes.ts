@@ -20,13 +20,54 @@ router.get('/profile', (req: AuthRequest, res: Response): void => {
 
 // PATCH /api/user/profile
 router.patch('/profile', (req: AuthRequest, res: Response): void => {
-  const { fullName, phone, avatarUrl } = req.body;
+  const { fullName, phone, avatarUrl, email, username } = req.body;
+  const user = req.user!;
   const updates: any = {};
+
   if (fullName !== undefined) updates.fullName = fullName.trim();
   if (phone !== undefined) updates.phone = phone.trim();
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl.trim();
 
-  const updated = Database.updateUser(req.user!.id, updates);
+  // Email update validation
+  if (email !== undefined) {
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      res.status(400).json({ error: 'Please provide a valid email address.' });
+      return;
+    }
+    const existingUser = Database.findUserByEmail(cleanEmail);
+    if (existingUser && existingUser.id !== user.id) {
+      res.status(400).json({ error: 'This email address is already registered to another account.' });
+      return;
+    }
+    updates.email = cleanEmail;
+  }
+
+  // Username update validation (Admin / Super Admin privilege only)
+  if (username !== undefined) {
+    const cleanUsername = username.trim();
+    if (user.role !== 'admin') {
+      res.status(403).json({ error: 'Changing username is restricted to Super Admin only.' });
+      return;
+    }
+    if (!cleanUsername || cleanUsername.length < 3) {
+      res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+      return;
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(cleanUsername)) {
+      res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, dashes, and periods.' });
+      return;
+    }
+    const existingUser = Database.findUserByUsername(cleanUsername);
+    if (existingUser && existingUser.id !== user.id) {
+      res.status(400).json({ error: 'This username is already taken by another account.' });
+      return;
+    }
+    updates.username = cleanUsername;
+  }
+
+  const updated = Database.updateUser(user.id, updates);
   if (!updated) {
     res.status(404).json({ error: 'Failed to update profile.' });
     return;
