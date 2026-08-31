@@ -4,7 +4,7 @@
       "id": "usr_admin_01",
       "username": "abuasad2299",
       "email": "admin@smtrading.pro",
-      "passwordHash": "$2b$10$1nj2foj1RxoiTnWdiSUMGePY5aP5G92IwHfIad5rc0WliaLOCBZJO",
+      "passwordHash": "$2b$10$i/5xaf4UzjUha4lyw/CusO7IVS4CmVu5P6xpQk8TnxKO/YKE47QXm",
       "fullName": "Abu Asad Almansi (Super Admin)",
       "role": "admin",
       "subscriptionStatus": "active",
@@ -16,7 +16,7 @@
       "pendingBalance": 1200,
       "totalEarned": 48900,
       "createdAt": "2025-01-01T00:00:00.000Z",
-      "lastLoginAt": "2026-08-31T22:00:01.195Z",
+      "lastLoginAt": "2026-08-31T22:35:34.019Z",
       "avatarUrl": "/abu_asad_almansi.jpg",
       "notes": "Main system super administrator with full institutional permissions"
     },

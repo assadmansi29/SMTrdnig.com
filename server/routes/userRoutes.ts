@@ -76,6 +76,78 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
   res.json({ success: true, profile: sanitizeUser(updated) });
 });
 
+// POST /api/user/avatar (Upload & Link Profile Picture)
+router.post('/avatar', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { avatarData } = req.body;
+  const user = req.user!;
+
+  if (!avatarData || typeof avatarData !== 'string') {
+    res.status(400).json({ error: 'Image data is required.' });
+    return;
+  }
+
+  const trimmed = avatarData.trim();
+
+  // Validate format (Data URI or valid image URL)
+  const isDataUri = /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(trimmed);
+  const isHttpUrl = /^https?:\/\/.+\.(jpg|jpeg|png|webp|svg)(\?.*)?$/i.test(trimmed) || trimmed.startsWith('/');
+
+  if (!isDataUri && !isHttpUrl) {
+    res.status(400).json({
+      error: 'Invalid image format. Please provide a valid JPG, JPEG, PNG, or WEBP photo.',
+    });
+    return;
+  }
+
+  // Validate size if data URI (Max 10MB base64)
+  if (isDataUri) {
+    const sizeInBytes = (trimmed.length * 3) / 4;
+    const maxSizeBytes = 8 * 1024 * 1024; // 8MB
+    if (sizeInBytes > maxSizeBytes) {
+      res.status(400).json({
+        error: 'The selected image is too large. Maximum supported size is 5MB.',
+      });
+      return;
+    }
+  }
+
+  const updatedUser = await Database.updateUser(user.id, {
+    avatarUrl: trimmed,
+  });
+
+  if (!updatedUser) {
+    res.status(404).json({ error: 'Failed to update avatar in database.' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: 'Profile picture successfully updated and saved.',
+    avatarUrl: updatedUser.avatarUrl,
+    user: sanitizeUser(updatedUser),
+  });
+});
+
+// DELETE /api/user/avatar (Remove Profile Picture & Reset to Default)
+router.delete('/avatar', async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = req.user!;
+
+  const updatedUser = await Database.updateUser(user.id, {
+    avatarUrl: '',
+  });
+
+  if (!updatedUser) {
+    res.status(404).json({ error: 'Failed to remove avatar.' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    message: 'Profile picture removed. Default avatar restored.',
+    user: sanitizeUser(updatedUser),
+  });
+});
+
 // POST /api/user/change-password
 router.post('/change-password', async (req: AuthRequest, res: Response): Promise<void> => {
   const { currentPassword, newPassword } = req.body;

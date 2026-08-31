@@ -15,15 +15,20 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
+    const cleanInput = (username || '').toString().trim();
+    const cleanPassword = (password || '').toString();
+
     // Lookup user by username or email
-    const user = (await Database.findUserByUsername(username)) || (await Database.findUserByEmail(username));
+    const user = (await Database.findUserByUsername(cleanInput)) || 
+                 (await Database.findUserByEmail(cleanInput));
 
     if (!user) {
       res.status(401).json({ error: 'Invalid username or password.' });
       return;
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    const isMatch = await bcrypt.compare(cleanPassword, user.passwordHash);
+
     if (!isMatch) {
       res.status(401).json({ error: 'Invalid username or password.' });
       return;

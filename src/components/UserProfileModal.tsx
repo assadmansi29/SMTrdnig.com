@@ -30,9 +30,14 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-  CheckCircle2
+  CheckCircle2,
+  Camera,
+  Upload,
+  ImageIcon
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { UserAvatar } from './UserAvatar';
+import { AvatarUploadModal } from './AvatarUploadModal';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -53,6 +58,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [loadingRef, setLoadingRef] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Avatar upload modal state
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
 
   // Edit profile state
   const [isEditing, setIsEditing] = useState(false);
@@ -274,12 +282,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         {/* Modal Top Header */}
         <div className="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between bg-[#080C14]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-700 p-[1px]">
-              <img
-                src={user.avatarUrl || (user.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`)}
-                alt={user.username}
-                className="w-full h-full rounded-[11px] object-cover bg-slate-900"
+            <div className="relative group cursor-pointer" onClick={() => setShowAvatarModal(true)} title="Click to change profile picture">
+              <UserAvatar
+                user={user}
+                size="lg"
+                isEditable={true}
+                onEditClick={() => setShowAvatarModal(true)}
+                className="w-11 h-11 ring-2 ring-amber-400/40 group-hover:ring-amber-400 transition-all rounded-xl shadow-md"
               />
+              <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full shadow-sm border border-slate-900">
+                <Camera className="w-2.5 h-2.5" />
+              </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -451,6 +464,60 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </div>
               </div>
 
+              {/* Profile Avatar & Photo Management Card */}
+              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative group cursor-pointer" onClick={() => setShowAvatarModal(true)}>
+                      <UserAvatar
+                        user={user}
+                        size="2xl"
+                        isEditable={true}
+                        onEditClick={() => setShowAvatarModal(true)}
+                        className="ring-2 ring-amber-400/40 group-hover:ring-amber-400 transition-all rounded-2xl shadow-lg"
+                      />
+                      <span className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-slate-950 p-1 rounded-full shadow-md border border-slate-900">
+                        <Camera className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-white">Profile Photo</h3>
+                        <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                          {user.avatarUrl ? 'Custom Image' : 'Default Avatar'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                        Click your photo or tap the button to choose an image from Gallery Photos or Files (JPG, PNG, WEBP).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setShowAvatarModal(true)}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-md shadow-amber-400/20"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Upload Photo</span>
+                    </button>
+
+                    {user.avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAvatarModal(true)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Manage</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Account Details & Edit Form */}
               <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -571,23 +638,37 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-xs text-slate-400 font-semibold flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Avatar Image URL</span>
+                            <span>Avatar Image</span>
                           </label>
-                          <button
-                            type="button"
-                            onClick={() => setEditAvatar('/abu_asad_almansi.jpg')}
-                            className="text-[10px] text-amber-400 hover:text-amber-300 underline font-medium cursor-pointer"
-                          >
-                            Set Abu Asad Photo
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowAvatarModal(true)}
+                              className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Upload className="w-3 h-3" />
+                              <span>Upload File</span>
+                            </button>
+                            {user.role === 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => setEditAvatar('/abu_asad_almansi.jpg')}
+                                className="text-[10px] text-slate-400 hover:text-white underline font-medium cursor-pointer"
+                              >
+                                Abu Asad Photo
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <input
-                          type="text"
-                          value={editAvatar}
-                          onChange={(e) => setEditAvatar(e.target.value)}
-                          placeholder="/abu_asad_almansi.jpg or https://..."
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={editAvatar}
+                            onChange={(e) => setEditAvatar(e.target.value)}
+                            placeholder="/abu_asad_almansi.jpg or https://... or base64"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 font-mono text-xs"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -889,10 +970,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     {referralData.referrals.map((refUser) => (
                       <div key={refUser.id} className="py-2.5 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2.5">
-                          <img
-                            src={refUser.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${refUser.username}`}
-                            alt={refUser.username}
-                            className="w-7 h-7 rounded-lg bg-slate-800 object-cover"
+                          <UserAvatar
+                            user={refUser}
+                            size="md"
+                            className="rounded-lg"
                           />
                           <div>
                             <div className="font-bold text-slate-200">@{refUser.username}</div>
@@ -1177,6 +1258,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Avatar Upload Modal */}
+      <AvatarUploadModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+      />
     </div>
   );
 };

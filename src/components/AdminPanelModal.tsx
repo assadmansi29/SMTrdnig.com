@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, Transaction, UserRole, SubscriptionStatus, YouTubeLiveStatus } from '../types';
+import { UserAvatar } from './UserAvatar';
 import { 
   X, 
   ShieldCheck, 
@@ -586,10 +587,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                           {/* User Info */}
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
-                              <img
-                                src={u.avatarUrl || (u.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`)}
-                                alt={u.username}
-                                className="w-8 h-8 rounded-lg bg-slate-800 object-cover shrink-0"
+                              <UserAvatar
+                                user={u}
+                                size="md"
+                                className="rounded-lg"
                               />
                               <div>
                                 <div className="font-bold text-white flex items-center gap-1.5">

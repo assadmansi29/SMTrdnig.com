@@ -13,6 +13,7 @@ import { TradingToolsMenu } from './TradingToolsMenu';
 import { useTranslation } from '../context/LanguageContext';
 import { TranslationKey } from '../locales';
 import { useAuth } from '../context/AuthContext';
+import { UserAvatar } from './UserAvatar';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -148,10 +149,10 @@ export const Header: React.FC<HeaderProps> = ({
                     className="flex items-center gap-2 bg-slate-900/95 hover:bg-slate-850 text-slate-200 border border-slate-700/90 hover:border-amber-400/60 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group shrink-0 shadow-xs"
                     title="View Profile & Account Settings"
                   >
-                    <img
-                      src={user.avatarUrl || (user.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`)}
-                      alt={user.username}
-                      className="w-5 h-5 rounded-md object-cover bg-slate-800 shrink-0 border border-slate-700 group-hover:border-amber-400/60 transition-colors"
+                    <UserAvatar
+                      user={user}
+                      size="sm"
+                      className="shrink-0 group-hover:ring-1 group-hover:ring-amber-400/60 rounded-md"
                     />
                     <div className="text-left hidden lg:block">
                       <div className="text-[11px] font-bold text-white group-hover:text-amber-300 leading-tight truncate max-w-[100px]">
@@ -214,13 +215,13 @@ export const Header: React.FC<HeaderProps> = ({
               {user && (
                 <button
                   onClick={onOpenProfile}
-                  className="p-1 rounded-lg border border-slate-700 bg-slate-900 cursor-pointer"
+                  className="p-1 rounded-lg border border-slate-700 hover:border-amber-400/60 bg-slate-900 cursor-pointer transition-colors"
                   title="Profile"
                 >
-                  <img
-                    src={user.avatarUrl || (user.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`)}
-                    alt={user.username}
-                    className="w-6 h-6 rounded-md object-cover bg-slate-800"
+                  <UserAvatar
+                    user={user}
+                    size="sm"
+                    className="shrink-0 rounded-md"
                   />
                 </button>
               )}

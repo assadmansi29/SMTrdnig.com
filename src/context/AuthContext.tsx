@@ -11,6 +11,8 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   activateSubscription: (durationMonths: number, planName?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   updateProfile: (data: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string }) => Promise<{ success: boolean; error?: string }>;
+  uploadAvatar: (avatarData: string) => Promise<{ success: boolean; avatarUrl?: string; error?: string; message?: string }>;
+  removeAvatar: () => Promise<{ success: boolean; error?: string; message?: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
 }
 
@@ -172,6 +174,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const uploadAvatar = async (avatarData: string) => {
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const res = await fetch('/api/user/avatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ avatarData }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to upload profile picture' };
+      }
+
+      if (data.user) {
+        setUser(data.user);
+      }
+      return { success: true, avatarUrl: data.avatarUrl, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error while uploading avatar' };
+    }
+  };
+
+  const removeAvatar = async () => {
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const res = await fetch('/api/user/avatar', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to remove avatar' };
+      }
+
+      if (data.user) {
+        setUser(data.user);
+      }
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error while removing avatar' };
+    }
+  };
+
   const changePassword = async (currentPassword: string, newPassword: string) => {
     if (!token) return { success: false, error: 'Not authenticated' };
 
@@ -208,6 +262,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshUser,
         activateSubscription,
         updateProfile,
+        uploadAvatar,
+        removeAvatar,
         changePassword,
       }}
     >

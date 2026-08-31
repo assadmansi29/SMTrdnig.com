@@ -477,34 +477,34 @@ async function getActivePg(): Promise<PgPool | null> {
 export class Database {
   // User Operations
   static async findUserByUsername(username: string): Promise<UserRecord | undefined> {
+    const clean = (username || '').trim().toLowerCase();
     const p = await getActivePg();
     if (p) {
       try {
-        const res = await p.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username.trim()]);
-        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+        const res = await p.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [clean]);
+        if (res.rows.length > 0) return mapUserRow(res.rows[0]);
       } catch (err) {
         console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
       }
     }
 
     const db = ensureDbFile();
-    const clean = username.trim().toLowerCase();
     return db.users.find(u => u.username.toLowerCase() === clean);
   }
 
   static async findUserByEmail(email: string): Promise<UserRecord | undefined> {
+    const clean = (email || '').trim().toLowerCase();
     const p = await getActivePg();
     if (p) {
       try {
-        const res = await p.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [email.trim()]);
-        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+        const res = await p.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [clean]);
+        if (res.rows.length > 0) return mapUserRow(res.rows[0]);
       } catch (err) {
         console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
       }
     }
 
     const db = ensureDbFile();
-    const clean = email.trim().toLowerCase();
     return db.users.find(u => u.email.toLowerCase() === clean);
   }
 
