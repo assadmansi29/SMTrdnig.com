@@ -31,7 +31,7 @@ export const uk: Record<TranslationKey, string> = {
   catMacro: 'Макроекономіка та ліквідність',
   catOrderFlow: 'Потік ордерів та Price Action',
   catQuant: 'Торгувати зараз (Trade Now)',
-  catBookMap: 'BookMap',
+  catBookMap: 'LIVE BookMap',
   catOptions: 'LIVE Trade',
   catVipSignals: 'VIP Сигнали (VIP Signals)',
   catRisk: 'Підтримка (Support)',

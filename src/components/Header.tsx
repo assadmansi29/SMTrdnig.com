@@ -246,16 +246,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Quick Action Strip (< md) */}
-        <div className="md:hidden border-t border-slate-800/80 bg-[#090D14]/95 px-2.5 sm:px-4 py-2 flex items-center justify-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="md:hidden border-t border-slate-800/80 bg-[#090D14]/95 px-2 sm:px-4 py-2 grid grid-cols-4 gap-1.5 items-center">
           <button
             onClick={onOpenSearchModal}
-            className="flex-1 flex items-center justify-center gap-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer shrink-0"
+            className="w-full flex items-center justify-center gap-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer"
           >
-            <Search className="w-3 h-3 text-amber-400" />
-            <span>Search</span>
+            <Search className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate">Search</span>
           </button>
 
-          <div className="flex-1 min-w-[90px]">
+          <div className="w-full">
             <TradingToolsMenu
               onOpenChart={onOpenChart}
               onOpenCalculator={onOpenCalculator}
@@ -266,18 +266,18 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onOpenECommerce}
-            className="flex-1 flex items-center justify-center gap-1 bg-[#0E1726] hover:bg-[#132035] text-emerald-300 border border-emerald-500/30 px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer shrink-0"
+            className="w-full flex items-center justify-center gap-1 bg-[#0E1726] hover:bg-[#132035] text-emerald-300 border border-emerald-500/30 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
           >
-            <ShoppingBag className="w-3 h-3 text-emerald-400" />
-            <span>{t('navEcommerce')}</span>
+            <ShoppingBag className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span className="truncate">{t('navEcommerce')}</span>
           </button>
 
           <button
             onClick={onOpenNewsletter}
-            className="flex-1 flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 shadow-xs"
+            className="w-full flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer shadow-xs"
           >
-            <Sparkles className="w-3 h-3 text-slate-950" />
-            <span>{t('navVipAlphaShort')}</span>
+            <Sparkles className="w-3 h-3 text-slate-950 shrink-0" />
+            <span className="truncate">{t('navVipAlphaShort')}</span>
           </button>
         </div>
       </div>

@@ -31,7 +31,7 @@ export const ru: Record<TranslationKey, string> = {
   catMacro: 'Макроэкономика и ликвидность',
   catOrderFlow: 'Поток ордеров и Price Action',
   catQuant: 'Торговать сейчас (Trade Now)',
-  catBookMap: 'BookMap',
+  catBookMap: 'LIVE BookMap',
   catOptions: 'LIVE Trade',
   catVipSignals: 'VIP Сигналы (VIP Signals)',
   catRisk: 'Поддержка (Support)',

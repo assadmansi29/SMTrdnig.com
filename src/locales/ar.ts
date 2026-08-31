@@ -31,7 +31,7 @@ export const ar: Record<TranslationKey, string> = {
   catMacro: 'الاقتصاد الكلي والسيولة',
   catOrderFlow: 'تدفق الأوامر وحركة السعر',
   catQuant: 'تداول الآن Trade Now',
-  catBookMap: 'بوكماب BookMap',
+  catBookMap: 'بوكماب LIVE BookMap',
   catOptions: 'تداول مباشر LIVE Trade',
   catVipSignals: 'توصيات VIP Signals',
   catRisk: 'الدعم والمساعدة Support',

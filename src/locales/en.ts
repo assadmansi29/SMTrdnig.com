@@ -29,7 +29,7 @@ export const en = {
   catMacro: 'Macro & Liquidity',
   catOrderFlow: 'Order Flow & Price Action',
   catQuant: 'Trade Now',
-  catBookMap: 'BookMap',
+  catBookMap: 'LIVE BookMap',
   catOptions: 'LIVE Trade',
   catVipSignals: 'VIP Signals',
   catRisk: 'Support',
