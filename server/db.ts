@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
-import { Pool, PoolConfig } from 'pg';
+import pg from 'pg';
+import type { Pool as PgPool, PoolConfig } from 'pg';
+const { Pool } = pg;
 
 export type UserRole = 'client' | 'employee' | 'admin';
 export type SubscriptionStatus = 'active' | 'expired' | 'inactive';
@@ -57,10 +59,11 @@ export interface DatabaseSchema {
 // ----------------------------------------------------
 // PostgreSQL Pool & Schema Setup
 // ----------------------------------------------------
-let pool: Pool | null = null;
-let initPromise: Promise<void> | null = null;
+let pool: PgPool | null = null;
+let initPromise: Promise<boolean> | null = null;
+let isPostgresHealthy = false;
 
-export function getPool(): Pool | null {
+export function getPool(): PgPool | null {
   if (pool) return pool;
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) return null;
@@ -72,12 +75,13 @@ export function getPool(): Pool | null {
     ssl: isLocal ? false : { rejectUnauthorized: false },
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 3000,
   };
 
   pool = new Pool(config);
   pool.on('error', (err) => {
     console.error('[PostgreSQL] Unexpected error on idle client:', err);
+    isPostgresHealthy = false;
   });
 
   return pool;
@@ -122,9 +126,9 @@ function mapTransactionRow(row: any): TransactionRecord {
   };
 }
 
-export async function initPostgres(): Promise<void> {
+export async function isPostgresReady(): Promise<boolean> {
   const p = getPool();
-  if (!p) return;
+  if (!p) return false;
 
   if (initPromise) return initPromise;
 
@@ -208,8 +212,8 @@ export async function initPostgres(): Promise<void> {
               total_earned, created_at, last_login_at, avatar_url, notes
             ) VALUES 
             (
-              'usr_admin_01', 'admin', 'admin@smtrading.pro',
-              '$2b$12$XXC/paKh35Av8kpvRoMpAuxxphwESXGNLS5xgagZrYA66YTKWhduG',
+              'usr_admin_01', 'abuasad2299', 'admin@smtrading.pro',
+              '$2b$10$1nj2foj1RxoiTnWdiSUMGePY5aP5G92IwHfIad5rc0WliaLOCBZJO',
               'Abu Asad Almansi (Super Admin)', 'admin', 'active',
               'Institutional Master VIP', $1, 'SMADMIN', NULL,
               25.00, 14500.00, 1200.00, 48900.00, '2025-01-01T00:00:00.000Z', $2,
@@ -249,7 +253,7 @@ export async function initPostgres(): Promise<void> {
           await client.query(`
             INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at)
             VALUES
-            ('tx_seed_01', 'usr_admin_01', 'admin', 'commission', 500.00, 'Tier-1 Referral Commission from VIP Enterprise Enrollment', 'completed', NOW() - INTERVAL '2 days'),
+            ('tx_seed_01', 'usr_admin_01', 'abuasad2299', 'commission', 500.00, 'Tier-1 Referral Commission from VIP Enterprise Enrollment', 'completed', NOW() - INTERVAL '2 days'),
             ('tx_seed_02', 'usr_emp_01', 'employee', 'commission', 250.00, 'Direct Affiliate commission for Bookmap Master Strategy sale', 'completed', NOW() - INTERVAL '4 days'),
             ('tx_seed_03', 'usr_client_01', 'trader_pro', 'commission', 80.00, 'Referral reward from invited trading buddy', 'completed', NOW() - INTERVAL '7 days')
             ON CONFLICT (id) DO NOTHING;
@@ -271,15 +275,24 @@ export async function initPostgres(): Promise<void> {
             ON CONFLICT (id) DO NOTHING;
           `);
         }
+
+        isPostgresHealthy = true;
+        return true;
       } finally {
         client.release();
       }
     } catch (err) {
-      console.error('[PostgreSQL] Database initialization error:', err);
+      console.warn('[PostgreSQL] Database connection failed - using local JSON database storage.');
+      isPostgresHealthy = false;
+      return false;
     }
   })();
 
   return initPromise;
+}
+
+export async function initPostgres(): Promise<void> {
+  await isPostgresReady();
 }
 
 // ----------------------------------------------------
@@ -304,9 +317,9 @@ function ensureDbFile(): DatabaseSchema {
       users: [
         {
           id: 'usr_admin_01',
-          username: 'admin',
+          username: 'abuasad2299',
           email: 'admin@smtrading.pro',
-          passwordHash: '$2b$12$XXC/paKh35Av8kpvRoMpAuxxphwESXGNLS5xgagZrYA66YTKWhduG',
+          passwordHash: '$2b$10$1nj2foj1RxoiTnWdiSUMGePY5aP5G92IwHfIad5rc0WliaLOCBZJO',
           fullName: 'Abu Asad Almansi (Super Admin)',
           role: 'admin',
           subscriptionStatus: 'active',
@@ -390,7 +403,7 @@ function ensureDbFile(): DatabaseSchema {
         {
           id: 'tx_seed_01',
           userId: 'usr_admin_01',
-          username: 'admin',
+          username: 'abuasad2299',
           type: 'commission',
           amount: 500.0,
           description: 'Tier-1 Referral Commission from VIP Enterprise Enrollment',
@@ -446,17 +459,32 @@ function saveDbFile(data: DatabaseSchema): void {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+async function getActivePg(): Promise<PgPool | null> {
+  try {
+    const ready = await isPostgresReady();
+    if (ready && isPostgresHealthy && pool) {
+      return pool;
+    }
+  } catch (err) {
+    isPostgresHealthy = false;
+  }
+  return null;
+}
+
 // ----------------------------------------------------
 // Unified Database Layer API
 // ----------------------------------------------------
 export class Database {
   // User Operations
   static async findUserByUsername(username: string): Promise<UserRecord | undefined> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username.trim()]);
-      return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      try {
+        const res = await p.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username.trim()]);
+        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -465,11 +493,14 @@ export class Database {
   }
 
   static async findUserByEmail(email: string): Promise<UserRecord | undefined> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [email.trim()]);
-      return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      try {
+        const res = await p.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [email.trim()]);
+        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -478,11 +509,14 @@ export class Database {
   }
 
   static async findUserById(id: string): Promise<UserRecord | undefined> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [id]);
-      return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      try {
+        const res = await p.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [id]);
+        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -490,11 +524,14 @@ export class Database {
   }
 
   static async findUserByReferralCode(code: string): Promise<UserRecord | undefined> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM users WHERE UPPER(referral_code) = UPPER($1) LIMIT 1', [code.trim()]);
-      return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      try {
+        const res = await p.query('SELECT * FROM users WHERE UPPER(referral_code) = UPPER($1) LIMIT 1', [code.trim()]);
+        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -503,11 +540,14 @@ export class Database {
   }
 
   static async getAllUsers(): Promise<UserRecord[]> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM users ORDER BY created_at DESC');
-      return res.rows.map(mapUserRow);
+      try {
+        const res = await p.query('SELECT * FROM users ORDER BY created_at DESC');
+        return res.rows.map(mapUserRow);
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -518,45 +558,48 @@ export class Database {
     const id = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
 
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const query = `
-        INSERT INTO users (
-          id, username, email, password_hash, full_name, role,
-          subscription_status, subscription_plan, subscription_expires_at,
-          referral_code, referred_by, commission_rate, balance, pending_balance,
-          total_earned, created_at, last_login_at, avatar_url, phone, notes
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6,
-          $7, $8, $9, $10, $11, $12,
-          $13, $14, $15, $16, $17, $18, $19, $20
-        ) RETURNING *
-      `;
-      const values = [
-        id,
-        user.username.trim(),
-        user.email.trim().toLowerCase(),
-        user.passwordHash,
-        user.fullName.trim(),
-        user.role,
-        user.subscriptionStatus,
-        user.subscriptionPlan,
-        user.subscriptionExpiresAt,
-        user.referralCode.trim().toUpperCase(),
-        user.referredBy || null,
-        user.commissionRate || 10,
-        user.balance || 0,
-        user.pendingBalance || 0,
-        user.totalEarned || 0,
-        now,
-        now,
-        user.avatarUrl || null,
-        user.phone || null,
-        user.notes || null,
-      ];
-      const res = await p.query(query, values);
-      return mapUserRow(res.rows[0]);
+      try {
+        const query = `
+          INSERT INTO users (
+            id, username, email, password_hash, full_name, role,
+            subscription_status, subscription_plan, subscription_expires_at,
+            referral_code, referred_by, commission_rate, balance, pending_balance,
+            total_earned, created_at, last_login_at, avatar_url, phone, notes
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11, $12,
+            $13, $14, $15, $16, $17, $18, $19, $20
+          ) RETURNING *
+        `;
+        const values = [
+          id,
+          user.username.trim(),
+          user.email.trim().toLowerCase(),
+          user.passwordHash,
+          user.fullName.trim(),
+          user.role,
+          user.subscriptionStatus,
+          user.subscriptionPlan,
+          user.subscriptionExpiresAt,
+          user.referralCode.trim().toUpperCase(),
+          user.referredBy || null,
+          user.commissionRate || 10,
+          user.balance || 0,
+          user.pendingBalance || 0,
+          user.totalEarned || 0,
+          now,
+          now,
+          user.avatarUrl || null,
+          user.phone || null,
+          user.notes || null,
+        ];
+        const res = await p.query(query, values);
+        return mapUserRow(res.rows[0]);
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -572,94 +615,97 @@ export class Database {
   }
 
   static async updateUser(id: string, updates: Partial<UserRecord>): Promise<UserRecord | null> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const fields: string[] = [];
-      const values: any[] = [];
-      let idx = 1;
+      try {
+        const fields: string[] = [];
+        const values: any[] = [];
+        let idx = 1;
 
-      if (updates.username !== undefined) {
-        fields.push(`username = $${idx++}`);
-        values.push(updates.username);
-      }
-      if (updates.email !== undefined) {
-        fields.push(`email = $${idx++}`);
-        values.push(updates.email);
-      }
-      if (updates.passwordHash !== undefined) {
-        fields.push(`password_hash = $${idx++}`);
-        values.push(updates.passwordHash);
-      }
-      if (updates.fullName !== undefined) {
-        fields.push(`full_name = $${idx++}`);
-        values.push(updates.fullName);
-      }
-      if (updates.role !== undefined) {
-        fields.push(`role = $${idx++}`);
-        values.push(updates.role);
-      }
-      if (updates.subscriptionStatus !== undefined) {
-        fields.push(`subscription_status = $${idx++}`);
-        values.push(updates.subscriptionStatus);
-      }
-      if (updates.subscriptionPlan !== undefined) {
-        fields.push(`subscription_plan = $${idx++}`);
-        values.push(updates.subscriptionPlan);
-      }
-      if (updates.subscriptionExpiresAt !== undefined) {
-        fields.push(`subscription_expires_at = $${idx++}`);
-        values.push(updates.subscriptionExpiresAt);
-      }
-      if (updates.referralCode !== undefined) {
-        fields.push(`referral_code = $${idx++}`);
-        values.push(updates.referralCode);
-      }
-      if (updates.referredBy !== undefined) {
-        fields.push(`referred_by = $${idx++}`);
-        values.push(updates.referredBy);
-      }
-      if (updates.commissionRate !== undefined) {
-        fields.push(`commission_rate = $${idx++}`);
-        values.push(updates.commissionRate);
-      }
-      if (updates.balance !== undefined) {
-        fields.push(`balance = $${idx++}`);
-        values.push(updates.balance);
-      }
-      if (updates.pendingBalance !== undefined) {
-        fields.push(`pending_balance = $${idx++}`);
-        values.push(updates.pendingBalance);
-      }
-      if (updates.totalEarned !== undefined) {
-        fields.push(`total_earned = $${idx++}`);
-        values.push(updates.totalEarned);
-      }
-      if (updates.lastLoginAt !== undefined) {
-        fields.push(`last_login_at = $${idx++}`);
-        values.push(updates.lastLoginAt);
-      }
-      if (updates.avatarUrl !== undefined) {
-        fields.push(`avatar_url = $${idx++}`);
-        values.push(updates.avatarUrl);
-      }
-      if (updates.phone !== undefined) {
-        fields.push(`phone = $${idx++}`);
-        values.push(updates.phone);
-      }
-      if (updates.notes !== undefined) {
-        fields.push(`notes = $${idx++}`);
-        values.push(updates.notes);
-      }
+        if (updates.username !== undefined) {
+          fields.push(`username = $${idx++}`);
+          values.push(updates.username);
+        }
+        if (updates.email !== undefined) {
+          fields.push(`email = $${idx++}`);
+          values.push(updates.email);
+        }
+        if (updates.passwordHash !== undefined) {
+          fields.push(`password_hash = $${idx++}`);
+          values.push(updates.passwordHash);
+        }
+        if (updates.fullName !== undefined) {
+          fields.push(`full_name = $${idx++}`);
+          values.push(updates.fullName);
+        }
+        if (updates.role !== undefined) {
+          fields.push(`role = $${idx++}`);
+          values.push(updates.role);
+        }
+        if (updates.subscriptionStatus !== undefined) {
+          fields.push(`subscription_status = $${idx++}`);
+          values.push(updates.subscriptionStatus);
+        }
+        if (updates.subscriptionPlan !== undefined) {
+          fields.push(`subscription_plan = $${idx++}`);
+          values.push(updates.subscriptionPlan);
+        }
+        if (updates.subscriptionExpiresAt !== undefined) {
+          fields.push(`subscription_expires_at = $${idx++}`);
+          values.push(updates.subscriptionExpiresAt);
+        }
+        if (updates.referralCode !== undefined) {
+          fields.push(`referral_code = $${idx++}`);
+          values.push(updates.referralCode);
+        }
+        if (updates.referredBy !== undefined) {
+          fields.push(`referred_by = $${idx++}`);
+          values.push(updates.referredBy);
+        }
+        if (updates.commissionRate !== undefined) {
+          fields.push(`commission_rate = $${idx++}`);
+          values.push(updates.commissionRate);
+        }
+        if (updates.balance !== undefined) {
+          fields.push(`balance = $${idx++}`);
+          values.push(updates.balance);
+        }
+        if (updates.pendingBalance !== undefined) {
+          fields.push(`pending_balance = $${idx++}`);
+          values.push(updates.pendingBalance);
+        }
+        if (updates.totalEarned !== undefined) {
+          fields.push(`total_earned = $${idx++}`);
+          values.push(updates.totalEarned);
+        }
+        if (updates.lastLoginAt !== undefined) {
+          fields.push(`last_login_at = $${idx++}`);
+          values.push(updates.lastLoginAt);
+        }
+        if (updates.avatarUrl !== undefined) {
+          fields.push(`avatar_url = $${idx++}`);
+          values.push(updates.avatarUrl);
+        }
+        if (updates.phone !== undefined) {
+          fields.push(`phone = $${idx++}`);
+          values.push(updates.phone);
+        }
+        if (updates.notes !== undefined) {
+          fields.push(`notes = $${idx++}`);
+          values.push(updates.notes);
+        }
 
-      if (fields.length === 0) {
-        return this.findUserById(id);
-      }
+        if (fields.length === 0) {
+          return this.findUserById(id);
+        }
 
-      values.push(id);
-      const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
-      const res = await p.query(query, values);
-      return res.rows.length > 0 ? mapUserRow(res.rows[0]) : null;
+        values.push(id);
+        const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
+        const res = await p.query(query, values);
+        return res.rows.length > 0 ? mapUserRow(res.rows[0]) : null;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -675,11 +721,14 @@ export class Database {
   }
 
   static async deleteUser(id: string): Promise<boolean> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('DELETE FROM users WHERE id = $1', [id]);
-      return (res.rowCount ?? 0) > 0;
+      try {
+        const res = await p.query('DELETE FROM users WHERE id = $1', [id]);
+        return (res.rowCount ?? 0) > 0;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -694,9 +743,8 @@ export class Database {
 
   // Multi-step Atomic Referral Commission Processing
   static async processReferralCommission(referredUserId: string, saleAmount: number, description: string): Promise<void> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
       const client = await p.connect();
       try {
         await client.query('BEGIN');
@@ -756,14 +804,13 @@ export class Database {
         ]);
 
         await client.query('COMMIT');
+        return;
       } catch (err) {
         await client.query('ROLLBACK');
-        console.error('[PostgreSQL] Error in referral transaction:', err);
-        throw err;
+        console.warn('[PostgreSQL referral commission error, falling back to JSON db]:', err);
       } finally {
         client.release();
       }
-      return;
     }
 
     const db = ensureDbFile();
@@ -806,25 +853,28 @@ export class Database {
     const id = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
 
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query(`
-        INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING *
-      `, [
-        id,
-        tx.userId,
-        tx.username,
-        tx.type,
-        tx.amount,
-        tx.description,
-        tx.status || 'completed',
-        now,
-        tx.metadata ? JSON.stringify(tx.metadata) : null,
-      ]);
-      return mapTransactionRow(res.rows[0]);
+      try {
+        const res = await p.query(`
+          INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          RETURNING *
+        `, [
+          id,
+          tx.userId,
+          tx.username,
+          tx.type,
+          tx.amount,
+          tx.description,
+          tx.status || 'completed',
+          now,
+          tx.metadata ? JSON.stringify(tx.metadata) : null,
+        ]);
+        return mapTransactionRow(res.rows[0]);
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -839,11 +889,14 @@ export class Database {
   }
 
   static async updateTransactionStatus(id: string, status: 'completed' | 'pending' | 'rejected'): Promise<TransactionRecord | null> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('UPDATE transactions SET status = $1 WHERE id = $2 RETURNING *', [status, id]);
-      return res.rows.length > 0 ? mapTransactionRow(res.rows[0]) : null;
+      try {
+        const res = await p.query('UPDATE transactions SET status = $1 WHERE id = $2 RETURNING *', [status, id]);
+        return res.rows.length > 0 ? mapTransactionRow(res.rows[0]) : null;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -855,11 +908,14 @@ export class Database {
   }
 
   static async getTransactionsByUser(userId: string): Promise<TransactionRecord[]> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
-      return res.rows.map(mapTransactionRow);
+      try {
+        const res = await p.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+        return res.rows.map(mapTransactionRow);
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -867,11 +923,14 @@ export class Database {
   }
 
   static async getAllTransactions(): Promise<TransactionRecord[]> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM transactions ORDER BY created_at DESC');
-      return res.rows.map(mapTransactionRow);
+      try {
+        const res = await p.query('SELECT * FROM transactions ORDER BY created_at DESC');
+        return res.rows.map(mapTransactionRow);
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -879,17 +938,20 @@ export class Database {
   }
 
   static async getReferralsForUser(referrerCodeOrId: string): Promise<UserRecord[]> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const user = await this.findUserById(referrerCodeOrId) || await this.findUserByReferralCode(referrerCodeOrId);
-      if (!user) return [];
+      try {
+        const user = await this.findUserById(referrerCodeOrId) || await this.findUserByReferralCode(referrerCodeOrId);
+        if (!user) return [];
 
-      const res = await p.query(
-        'SELECT * FROM users WHERE referred_by = $1 OR UPPER(referred_by) = UPPER($2) ORDER BY created_at DESC',
-        [user.id, user.referralCode]
-      );
-      return res.rows.map(mapUserRow);
+        const res = await p.query(
+          'SELECT * FROM users WHERE referred_by = $1 OR UPPER(referred_by) = UPPER($2) ORDER BY created_at DESC',
+          [user.id, user.referralCode]
+        );
+        return res.rows.map(mapUserRow);
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();
@@ -902,20 +964,23 @@ export class Database {
   }
 
   static async getSystemSettings(): Promise<DatabaseSchema['systemSettings']> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const res = await p.query('SELECT * FROM system_settings WHERE id = 1 LIMIT 1');
-      if (res.rows.length > 0) {
-        const row = res.rows[0];
-        return {
-          defaultClientCommission: parseFloat(row.default_client_commission) || 10,
-          defaultEmployeeCommission: parseFloat(row.default_employee_commission) || 18,
-          defaultAdminCommission: parseFloat(row.default_admin_commission) || 25,
-          siteName: row.site_name || 'SMTrading.pro',
-          youtubeChannelId: row.youtube_channel_id || undefined,
-          youtubeChannelHandle: row.youtube_channel_handle || undefined,
-        };
+      try {
+        const res = await p.query('SELECT * FROM system_settings WHERE id = 1 LIMIT 1');
+        if (res.rows.length > 0) {
+          const row = res.rows[0];
+          return {
+            defaultClientCommission: parseFloat(row.default_client_commission) || 10,
+            defaultEmployeeCommission: parseFloat(row.default_employee_commission) || 18,
+            defaultAdminCommission: parseFloat(row.default_admin_commission) || 25,
+            siteName: row.site_name || 'SMTrading.pro',
+            youtubeChannelId: row.youtube_channel_id || undefined,
+            youtubeChannelHandle: row.youtube_channel_handle || undefined,
+          };
+        }
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
       }
     }
 
@@ -929,34 +994,37 @@ export class Database {
   }
 
   static async updateSystemSettings(settings: Partial<DatabaseSchema['systemSettings']>): Promise<DatabaseSchema['systemSettings']> {
-    const p = getPool();
+    const p = await getActivePg();
     if (p) {
-      await initPostgres();
-      const current = await this.getSystemSettings();
-      const updated = { ...current, ...settings };
+      try {
+        const current = await this.getSystemSettings();
+        const updated = { ...current, ...settings };
 
-      await p.query(`
-        INSERT INTO system_settings (
-          id, default_client_commission, default_employee_commission, default_admin_commission, site_name, youtube_channel_id, youtube_channel_handle
-        ) VALUES (
-          1, $1, $2, $3, $4, $5, $6
-        ) ON CONFLICT (id) DO UPDATE SET
-          default_client_commission = EXCLUDED.default_client_commission,
-          default_employee_commission = EXCLUDED.default_employee_commission,
-          default_admin_commission = EXCLUDED.default_admin_commission,
-          site_name = EXCLUDED.site_name,
-          youtube_channel_id = EXCLUDED.youtube_channel_id,
-          youtube_channel_handle = EXCLUDED.youtube_channel_handle
-      `, [
-        updated.defaultClientCommission,
-        updated.defaultEmployeeCommission,
-        updated.defaultAdminCommission,
-        updated.siteName,
-        updated.youtubeChannelId || null,
-        updated.youtubeChannelHandle || null,
-      ]);
+        await p.query(`
+          INSERT INTO system_settings (
+            id, default_client_commission, default_employee_commission, default_admin_commission, site_name, youtube_channel_id, youtube_channel_handle
+          ) VALUES (
+            1, $1, $2, $3, $4, $5, $6
+          ) ON CONFLICT (id) DO UPDATE SET
+            default_client_commission = EXCLUDED.default_client_commission,
+            default_employee_commission = EXCLUDED.default_employee_commission,
+            default_admin_commission = EXCLUDED.default_admin_commission,
+            site_name = EXCLUDED.site_name,
+            youtube_channel_id = EXCLUDED.youtube_channel_id,
+            youtube_channel_handle = EXCLUDED.youtube_channel_handle
+        `, [
+          updated.defaultClientCommission,
+          updated.defaultEmployeeCommission,
+          updated.defaultAdminCommission,
+          updated.siteName,
+          updated.youtubeChannelId || null,
+          updated.youtubeChannelHandle || null,
+        ]);
 
-      return updated;
+        return updated;
+      } catch (err) {
+        console.warn('[PostgreSQL query error, fallback to JSON db]:', err);
+      }
     }
 
     const db = ensureDbFile();

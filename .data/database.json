@@ -2,9 +2,9 @@
   "users": [
     {
       "id": "usr_admin_01",
-      "username": "admin",
+      "username": "abuasad2299",
       "email": "admin@smtrading.pro",
-      "passwordHash": "$2b$12$.ownt4sYcNwoW9bfJs8XQOwEvv/vn0EWfhuQhHfDRHJb0Ofdz4gwO",
+      "passwordHash": "$2b$10$1nj2foj1RxoiTnWdiSUMGePY5aP5G92IwHfIad5rc0WliaLOCBZJO",
       "fullName": "Abu Asad Almansi (Super Admin)",
       "role": "admin",
       "subscriptionStatus": "active",
@@ -16,7 +16,7 @@
       "pendingBalance": 1200,
       "totalEarned": 48900,
       "createdAt": "2025-01-01T00:00:00.000Z",
-      "lastLoginAt": "2026-08-29T14:06:50.516Z",
+      "lastLoginAt": "2026-08-31T22:00:01.195Z",
       "avatarUrl": "/abu_asad_almansi.jpg",
       "notes": "Main system super administrator with full institutional permissions"
     },
@@ -87,7 +87,7 @@
   "transactions": [
     {
       "userId": "usr_admin_01",
-      "username": "admin",
+      "username": "abuasad2299",
       "type": "manual_adjustment",
       "amount": 0,
       "description": "Security credential update: Password modified by account holder",
@@ -101,7 +101,7 @@
     },
     {
       "userId": "usr_admin_01",
-      "username": "admin",
+      "username": "abuasad2299",
       "type": "manual_adjustment",
       "amount": 0,
       "description": "Security credential update: Password modified by account holder",
@@ -116,7 +116,7 @@
     {
       "id": "tx_seed_01",
       "userId": "usr_admin_01",
-      "username": "admin",
+      "username": "abuasad2299",
       "type": "commission",
       "amount": 500,
       "description": "Tier-1 Referral Commission from VIP Enterprise Enrollment",
