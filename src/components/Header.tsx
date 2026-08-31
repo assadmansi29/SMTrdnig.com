@@ -282,19 +282,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. Institutional Tagline Bar with VIP Button on Left */}
+      {/* 2. Institutional Tagline Bar */}
       <div className="bg-[#080C13] border-b border-slate-800/60 py-1.5 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 sm:gap-2.5 text-center text-xs">
-          {/* VIP Button on the left side */}
-          <button
-            onClick={onOpenNewsletter}
-            className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs transition-all shadow-md shadow-amber-500/20 hover:scale-105 cursor-pointer whitespace-nowrap shrink-0"
-            title={t('navVipAlphaTitle')}
-          >
-            <Sparkles className="w-3 h-3 text-slate-950 shrink-0" />
-            <span>{t('navVipAlpha')}</span>
-          </button>
-
+        <div className="max-w-7xl mx-auto flex items-center justify-center text-center text-xs">
           <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/80 border border-slate-800/80 px-2.5 sm:px-3 py-0.5 rounded-full shadow-inner truncate">
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
