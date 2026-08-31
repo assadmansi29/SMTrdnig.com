@@ -587,7 +587,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
                               <img
-                                src={u.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`}
+                                src={u.avatarUrl || (u.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`)}
                                 alt={u.username}
                                 className="w-8 h-8 rounded-lg bg-slate-800 object-cover shrink-0"
                               />

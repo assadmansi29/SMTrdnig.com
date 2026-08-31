@@ -10,9 +10,9 @@ router.use(authenticateToken);
 router.use(requireRole(['admin']));
 
 // GET /api/admin/stats
-router.get('/stats', (req: AuthRequest, res: Response): void => {
-  const users = Database.getAllUsers();
-  const transactions = Database.getAllTransactions();
+router.get('/stats', async (req: AuthRequest, res: Response): Promise<void> => {
+  const users = await Database.getAllUsers();
+  const transactions = await Database.getAllTransactions();
 
   const totalUsers = users.length;
   const activeSubscribers = users.filter(u => u.subscriptionStatus === 'active').length;
@@ -40,12 +40,17 @@ router.get('/stats', (req: AuthRequest, res: Response): void => {
 });
 
 // GET /api/admin/users
-router.get('/users', (req: AuthRequest, res: Response): void => {
-  const users = Database.getAllUsers();
-  const sanitized = users.map(u => ({
-    ...sanitizeUser(u),
-    referralsCount: Database.getReferralsForUser(u.id).length,
-  }));
+router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
+  const users = await Database.getAllUsers();
+  const sanitized = await Promise.all(
+    users.map(async (u) => {
+      const referrals = await Database.getReferralsForUser(u.id);
+      return {
+        ...sanitizeUser(u),
+        referralsCount: referrals.length,
+      };
+    })
+  );
   res.json({ success: true, users: sanitized });
 });
 
@@ -59,12 +64,12 @@ router.post('/users', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    if (Database.findUserByUsername(username)) {
+    if (await Database.findUserByUsername(username)) {
       res.status(409).json({ error: 'Username already in use.' });
       return;
     }
 
-    if (Database.findUserByEmail(email)) {
+    if (await Database.findUserByEmail(email)) {
       res.status(409).json({ error: 'Email already in use.' });
       return;
     }
@@ -76,7 +81,7 @@ router.post('/users', async (req: AuthRequest, res: Response): Promise<void> => 
     const expDate = new Date();
     expDate.setFullYear(expDate.getFullYear() + 1);
 
-    const newUser = Database.createUser({
+    const newUser = await Database.createUser({
       username: username.trim(),
       email: email.trim().toLowerCase(),
       passwordHash,
@@ -101,7 +106,7 @@ router.post('/users', async (req: AuthRequest, res: Response): Promise<void> => 
 });
 
 // PATCH /api/admin/users/:id/role
-router.patch('/users/:id/role', (req: AuthRequest, res: Response): void => {
+router.patch('/users/:id/role', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { role } = req.body;
 
@@ -116,7 +121,7 @@ router.patch('/users/:id/role', (req: AuthRequest, res: Response): void => {
     return;
   }
 
-  const updated = Database.updateUser(id, { role });
+  const updated = await Database.updateUser(id, { role });
   if (!updated) {
     res.status(404).json({ error: 'User not found.' });
     return;
@@ -126,11 +131,11 @@ router.patch('/users/:id/role', (req: AuthRequest, res: Response): void => {
 });
 
 // PATCH /api/admin/users/:id/subscription
-router.patch('/users/:id/subscription', (req: AuthRequest, res: Response): void => {
+router.patch('/users/:id/subscription', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { status, planName, expiresAt, addMonths } = req.body;
 
-  const targetUser = Database.findUserById(id);
+  const targetUser = await Database.findUserById(id);
   if (!targetUser) {
     res.status(404).json({ error: 'User not found.' });
     return;
@@ -152,16 +157,16 @@ router.patch('/users/:id/subscription', (req: AuthRequest, res: Response): void 
     if (!status) updates.subscriptionStatus = 'active';
   }
 
-  const updated = Database.updateUser(id, updates);
+  const updated = await Database.updateUser(id, updates);
   res.json({ success: true, message: 'Subscription updated successfully', user: sanitizeUser(updated!) });
 });
 
 // PATCH /api/admin/users/:id/balance
-router.patch('/users/:id/balance', (req: AuthRequest, res: Response): void => {
+router.patch('/users/:id/balance', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { amount, action = 'set', reason = 'Admin Balance Adjustment' } = req.body;
 
-  const user = Database.findUserById(id);
+  const user = await Database.findUserById(id);
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
     return;
@@ -183,10 +188,10 @@ router.patch('/users/:id/balance', (req: AuthRequest, res: Response): void => {
     newBalance = Number(numAmount.toFixed(2));
   }
 
-  const updated = Database.updateUser(id, { balance: newBalance });
+  const updated = await Database.updateUser(id, { balance: newBalance });
 
   // Record audit transaction
-  Database.addTransaction({
+  await Database.addTransaction({
     userId: user.id,
     username: user.username,
     type: 'manual_adjustment',
@@ -206,7 +211,7 @@ router.patch('/users/:id/balance', (req: AuthRequest, res: Response): void => {
 });
 
 // PATCH /api/admin/users/:id/commission-rate
-router.patch('/users/:id/commission-rate', (req: AuthRequest, res: Response): void => {
+router.patch('/users/:id/commission-rate', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { rate } = req.body;
 
@@ -216,7 +221,7 @@ router.patch('/users/:id/commission-rate', (req: AuthRequest, res: Response): vo
     return;
   }
 
-  const updated = Database.updateUser(id, { commissionRate: numRate });
+  const updated = await Database.updateUser(id, { commissionRate: numRate });
   if (!updated) {
     res.status(404).json({ error: 'User not found.' });
     return;
@@ -238,7 +243,7 @@ router.patch('/users/:id/reset-password', async (req: AuthRequest, res: Response
   const salt = await bcrypt.genSalt(10);
   const passwordHash = await bcrypt.hash(newPassword, salt);
 
-  const updated = Database.updateUser(id, { passwordHash });
+  const updated = await Database.updateUser(id, { passwordHash });
   if (!updated) {
     res.status(404).json({ error: 'User not found.' });
     return;
@@ -248,7 +253,7 @@ router.patch('/users/:id/reset-password', async (req: AuthRequest, res: Response
 });
 
 // DELETE /api/admin/users/:id
-router.delete('/users/:id', (req: AuthRequest, res: Response): void => {
+router.delete('/users/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
 
   if (id === req.user!.id) {
@@ -256,7 +261,7 @@ router.delete('/users/:id', (req: AuthRequest, res: Response): void => {
     return;
   }
 
-  const deleted = Database.deleteUser(id);
+  const deleted = await Database.deleteUser(id);
   if (!deleted) {
     res.status(404).json({ error: 'User not found.' });
     return;
@@ -266,13 +271,13 @@ router.delete('/users/:id', (req: AuthRequest, res: Response): void => {
 });
 
 // GET /api/admin/transactions
-router.get('/transactions', (req: AuthRequest, res: Response): void => {
-  const transactions = Database.getAllTransactions();
+router.get('/transactions', async (req: AuthRequest, res: Response): Promise<void> => {
+  const transactions = await Database.getAllTransactions();
   res.json({ success: true, transactions });
 });
 
 // PATCH /api/admin/transactions/:id/status
-router.patch('/transactions/:id/status', (req: AuthRequest, res: Response): void => {
+router.patch('/transactions/:id/status', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -281,17 +286,13 @@ router.patch('/transactions/:id/status', (req: AuthRequest, res: Response): void
     return;
   }
 
-  const db = (Database as any).getDB();
-  const txIndex = db.transactions.findIndex((t: any) => t.id === id);
-  if (txIndex === -1) {
+  const updatedTx = await Database.updateTransactionStatus(id, status);
+  if (!updatedTx) {
     res.status(404).json({ error: 'Transaction not found.' });
     return;
   }
 
-  db.transactions[txIndex].status = status;
-  (Database as any).saveDB(db);
-
-  res.json({ success: true, transaction: db.transactions[txIndex] });
+  res.json({ success: true, transaction: updatedTx });
 });
 
 export default router;

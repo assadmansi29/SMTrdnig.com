@@ -2,12 +2,23 @@ import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
+import { initPostgres } from './server/db';
 import authRoutes from './server/routes/authRoutes';
 import userRoutes from './server/routes/userRoutes';
 import adminRoutes from './server/routes/adminRoutes';
 import youtubeRoutes from './server/routes/youtubeRoutes';
 
 async function startServer() {
+  // Initialize database schema if PostgreSQL is configured
+  if (process.env.DATABASE_URL) {
+    try {
+      await initPostgres();
+      console.log('[Database] PostgreSQL connection and schema initialized.');
+    } catch (dbErr) {
+      console.error('[Database] Failed to initialize PostgreSQL on startup:', dbErr);
+    }
+  }
+
   const app = express();
   const PORT = 3000;
 

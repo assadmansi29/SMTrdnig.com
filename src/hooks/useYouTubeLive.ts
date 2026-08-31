@@ -47,10 +47,10 @@ export function useYouTubeLive() {
   useEffect(() => {
     fetchLiveStatus();
 
-    // Auto-update when a new live stream starts or ends
+    // Auto-update when a new live stream starts or ends (every 2 minutes)
     const interval = setInterval(() => {
       fetchLiveStatus();
-    }, 45 * 1000);
+    }, 120 * 1000);
 
     pollTimerRef.current = interval;
 

@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
                     title="View Profile & Account Settings"
                   >
                     <img
-                      src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                      src={user.avatarUrl || (user.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`)}
                       alt={user.username}
                       className="w-5 h-5 rounded-md object-cover bg-slate-800 shrink-0 border border-slate-700 group-hover:border-amber-400/60 transition-colors"
                     />
@@ -218,7 +218,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title="Profile"
                 >
                   <img
-                    src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                    src={user.avatarUrl || (user.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`)}
                     alt={user.username}
                     className="w-6 h-6 rounded-md object-cover bg-slate-800"
                   />

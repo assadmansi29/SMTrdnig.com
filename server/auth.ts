@@ -27,7 +27,7 @@ export function sanitizeUser(user: UserRecord) {
   return safe;
 }
 
-export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function authenticateToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers['authorization'];
   let token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
@@ -42,7 +42,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string; username: string };
-    const user = Database.findUserById(decoded.id);
+    const user = await Database.findUserById(decoded.id);
 
     if (!user) {
       res.status(401).json({ error: 'User no longer exists or session expired.' });
@@ -74,7 +74,7 @@ export function requireRole(roles: UserRole[]) {
   };
 }
 
-export function requireActiveSubscription(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function requireActiveSubscription(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required.' });
     return;
@@ -100,7 +100,7 @@ export function requireActiveSubscription(req: AuthRequest, res: Response, next:
   const expDate = new Date(req.user.subscriptionExpiresAt);
   if (expDate < new Date()) {
     // Automatically update to expired
-    Database.updateUser(req.user.id, { subscriptionStatus: 'expired' });
+    await Database.updateUser(req.user.id, { subscriptionStatus: 'expired' });
     res.status(403).json({
       error: 'Subscription has expired. Please renew your membership.',
       subscriptionStatus: 'expired',

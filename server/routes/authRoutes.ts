@@ -16,7 +16,7 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
     }
 
     // Lookup user by username or email
-    const user = Database.findUserByUsername(username) || Database.findUserByEmail(username);
+    const user = (await Database.findUserByUsername(username)) || (await Database.findUserByEmail(username));
 
     if (!user) {
       res.status(401).json({ error: 'Invalid username or password.' });
@@ -33,13 +33,13 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
     if (user.subscriptionStatus === 'active' && user.role === 'client') {
       const expDate = new Date(user.subscriptionExpiresAt);
       if (expDate < new Date()) {
-        Database.updateUser(user.id, { subscriptionStatus: 'expired' });
+        await Database.updateUser(user.id, { subscriptionStatus: 'expired' });
         user.subscriptionStatus = 'expired';
       }
     }
 
     // Update last login
-    Database.updateUser(user.id, { lastLoginAt: new Date().toISOString() });
+    await Database.updateUser(user.id, { lastLoginAt: new Date().toISOString() });
 
     const token = generateToken(user);
 
@@ -83,12 +83,12 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    if (Database.findUserByUsername(username)) {
+    if (await Database.findUserByUsername(username)) {
       res.status(409).json({ error: 'Username is already taken.' });
       return;
     }
 
-    if (Database.findUserByEmail(email)) {
+    if (await Database.findUserByEmail(email)) {
       res.status(409).json({ error: 'Email address is already registered.' });
       return;
     }
@@ -96,7 +96,7 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
     // Verify referrer if referral code provided
     let verifiedReferrer: UserRecord | undefined;
     if (referralCode && referralCode.trim()) {
-      verifiedReferrer = Database.findUserByReferralCode(referralCode.trim());
+      verifiedReferrer = await Database.findUserByReferralCode(referralCode.trim());
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -108,7 +108,7 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
     const expDate = new Date();
     expDate.setMonth(expDate.getMonth() + 1); // 1 month initial access for new registration
 
-    const newUser = Database.createUser({
+    const newUser = await Database.createUser({
       username: username.trim(),
       email: email.trim().toLowerCase(),
       passwordHash,
@@ -129,7 +129,7 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
 
     // If referred, process initial referral registration attribution
     if (verifiedReferrer) {
-      Database.addTransaction({
+      await Database.addTransaction({
         userId: verifiedReferrer.id,
         username: verifiedReferrer.username,
         type: 'commission',
@@ -142,7 +142,7 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
         }
       });
       // Increment referrer balance
-      Database.updateUser(verifiedReferrer.id, {
+      await Database.updateUser(verifiedReferrer.id, {
         balance: Number((verifiedReferrer.balance + 25.0).toFixed(2)),
         totalEarned: Number((verifiedReferrer.totalEarned + 25.0).toFixed(2))
       });
@@ -170,14 +170,14 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
 });
 
 // GET /api/auth/me
-router.get('/me', authenticateToken, (req: AuthRequest, res: Response): void => {
+router.get('/me', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   if (!req.user) {
     res.status(401).json({ error: 'Unauthorized.' });
     return;
   }
 
   // Refresh and sanitize
-  const freshUser = Database.findUserById(req.user.id);
+  const freshUser = await Database.findUserById(req.user.id);
   if (!freshUser) {
     res.status(404).json({ error: 'User not found.' });
     return;

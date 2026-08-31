@@ -9,8 +9,8 @@ const router = Router();
 router.use(authenticateToken);
 
 // GET /api/user/profile
-router.get('/profile', (req: AuthRequest, res: Response): void => {
-  const user = Database.findUserById(req.user!.id);
+router.get('/profile', async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = await Database.findUserById(req.user!.id);
   if (!user) {
     res.status(404).json({ error: 'User profile not found.' });
     return;
@@ -19,7 +19,7 @@ router.get('/profile', (req: AuthRequest, res: Response): void => {
 });
 
 // PATCH /api/user/profile
-router.patch('/profile', (req: AuthRequest, res: Response): void => {
+router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> => {
   const { fullName, phone, avatarUrl, email, username } = req.body;
   const user = req.user!;
   const updates: any = {};
@@ -36,7 +36,7 @@ router.patch('/profile', (req: AuthRequest, res: Response): void => {
       res.status(400).json({ error: 'Please provide a valid email address.' });
       return;
     }
-    const existingUser = Database.findUserByEmail(cleanEmail);
+    const existingUser = await Database.findUserByEmail(cleanEmail);
     if (existingUser && existingUser.id !== user.id) {
       res.status(400).json({ error: 'This email address is already registered to another account.' });
       return;
@@ -59,7 +59,7 @@ router.patch('/profile', (req: AuthRequest, res: Response): void => {
       res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, dashes, and periods.' });
       return;
     }
-    const existingUser = Database.findUserByUsername(cleanUsername);
+    const existingUser = await Database.findUserByUsername(cleanUsername);
     if (existingUser && existingUser.id !== user.id) {
       res.status(400).json({ error: 'This username is already taken by another account.' });
       return;
@@ -67,7 +67,7 @@ router.patch('/profile', (req: AuthRequest, res: Response): void => {
     updates.username = cleanUsername;
   }
 
-  const updated = Database.updateUser(user.id, updates);
+  const updated = await Database.updateUser(user.id, updates);
   if (!updated) {
     res.status(404).json({ error: 'Failed to update profile.' });
     return;
@@ -77,9 +77,9 @@ router.patch('/profile', (req: AuthRequest, res: Response): void => {
 });
 
 // POST /api/user/change-password
-router.post('/change-password', (req: AuthRequest, res: Response): void => {
+router.post('/change-password', async (req: AuthRequest, res: Response): Promise<void> => {
   const { currentPassword, newPassword } = req.body;
-  const user = Database.findUserById(req.user!.id);
+  const user = await Database.findUserById(req.user!.id);
 
   if (!user) {
     res.status(404).json({ error: 'User account not found.' });
@@ -107,10 +107,10 @@ router.post('/change-password', (req: AuthRequest, res: Response): void => {
   const salt = bcrypt.genSaltSync(12);
   const newPasswordHash = bcrypt.hashSync(newPassword, salt);
 
-  Database.updateUser(user.id, { passwordHash: newPasswordHash });
+  await Database.updateUser(user.id, { passwordHash: newPasswordHash });
 
   // Log password update in transactions/audit
-  Database.addTransaction({
+  await Database.addTransaction({
     userId: user.id,
     username: user.username,
     type: 'manual_adjustment',
@@ -130,15 +130,15 @@ router.post('/change-password', (req: AuthRequest, res: Response): void => {
 });
 
 // GET /api/user/referrals
-router.get('/referrals', (req: AuthRequest, res: Response): void => {
+router.get('/referrals', async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.user!.id;
-  const user = Database.findUserById(userId);
+  const user = await Database.findUserById(userId);
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
     return;
   }
 
-  const referrals = Database.getReferralsForUser(user.id);
+  const referrals = await Database.getReferralsForUser(user.id);
   const sanitizedReferrals = referrals.map(r => ({
     id: r.id,
     username: r.username,
@@ -149,7 +149,8 @@ router.get('/referrals', (req: AuthRequest, res: Response): void => {
     avatarUrl: r.avatarUrl,
   }));
 
-  const transactions = Database.getTransactionsByUser(userId).filter(t => t.type === 'commission');
+  const userTransactions = await Database.getTransactionsByUser(userId);
+  const transactions = userTransactions.filter(t => t.type === 'commission');
 
   res.json({
     success: true,
@@ -165,15 +166,15 @@ router.get('/referrals', (req: AuthRequest, res: Response): void => {
 });
 
 // GET /api/user/transactions
-router.get('/transactions', (req: AuthRequest, res: Response): void => {
-  const transactions = Database.getTransactionsByUser(req.user!.id);
+router.get('/transactions', async (req: AuthRequest, res: Response): Promise<void> => {
+  const transactions = await Database.getTransactionsByUser(req.user!.id);
   res.json({ success: true, transactions });
 });
 
 // POST /api/user/activate-subscription
-router.post('/activate-subscription', (req: AuthRequest, res: Response): void => {
+router.post('/activate-subscription', async (req: AuthRequest, res: Response): Promise<void> => {
   const { durationMonths = 1, planName = 'Pro Institutional Trading Pass' } = req.body;
-  const user = Database.findUserById(req.user!.id);
+  const user = await Database.findUserById(req.user!.id);
 
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
@@ -189,14 +190,14 @@ router.post('/activate-subscription', (req: AuthRequest, res: Response): void =>
   
   baseDate.setMonth(baseDate.getMonth() + Number(durationMonths));
 
-  const updatedUser = Database.updateUser(user.id, {
+  const updatedUser = await Database.updateUser(user.id, {
     subscriptionStatus: 'active',
     subscriptionPlan: planName,
     subscriptionExpiresAt: baseDate.toISOString(),
   });
 
   // Record user subscription transaction
-  Database.addTransaction({
+  await Database.addTransaction({
     userId: user.id,
     username: user.username,
     type: 'subscription_purchase',
@@ -211,7 +212,7 @@ router.post('/activate-subscription', (req: AuthRequest, res: Response): void =>
   });
 
   // Process referral commission for referrer if user was referred
-  Database.processReferralCommission(
+  await Database.processReferralCommission(
     user.id,
     planCost,
     `Commission on ${durationMonths}-month plan renewal`
@@ -225,9 +226,9 @@ router.post('/activate-subscription', (req: AuthRequest, res: Response): void =>
 });
 
 // POST /api/user/request-payout
-router.post('/request-payout', (req: AuthRequest, res: Response): void => {
+router.post('/request-payout', async (req: AuthRequest, res: Response): Promise<void> => {
   const { amount, payoutMethod, payoutAddress } = req.body;
-  const user = Database.findUserById(req.user!.id);
+  const user = await Database.findUserById(req.user!.id);
 
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
@@ -254,12 +255,12 @@ router.post('/request-payout', (req: AuthRequest, res: Response): void => {
   const newBalance = Number((user.balance - requestAmount).toFixed(2));
   const newPending = Number((user.pendingBalance + requestAmount).toFixed(2));
 
-  Database.updateUser(user.id, {
+  await Database.updateUser(user.id, {
     balance: newBalance,
     pendingBalance: newPending,
   });
 
-  const tx = Database.addTransaction({
+  const tx = await Database.addTransaction({
     userId: user.id,
     username: user.username,
     type: 'payout_request',

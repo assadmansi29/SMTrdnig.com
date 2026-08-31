@@ -8,10 +8,12 @@ const router = Router();
 interface CachedStreamData {
   timestamp: number;
   data: any;
+  ttl: number;
 }
 
 let streamCache: CachedStreamData | null = null;
-const CACHE_TTL_MS = 45 * 1000; // 45 seconds
+const DEFAULT_CACHE_TTL_MS = 120 * 1000; // 2 minutes standard
+const RATE_LIMIT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes when rate-limited/429
 
 // Helper to sanitize channel handle
 function cleanHandle(handle: string): string {
@@ -32,21 +34,21 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
   const now = Date.now();
 
   // Return cached result if valid and not force refresh
-  if (!forceRefresh && streamCache && (now - streamCache.timestamp < CACHE_TTL_MS)) {
+  if (!forceRefresh && streamCache && (now - streamCache.timestamp < streamCache.ttl)) {
     res.json({
       ...streamCache.data,
       cached: true,
-      cacheExpiresInSeconds: Math.max(0, Math.round((CACHE_TTL_MS - (now - streamCache.timestamp)) / 1000)),
+      cacheExpiresInSeconds: Math.max(0, Math.round((streamCache.ttl - (now - streamCache.timestamp)) / 1000)),
     });
     return;
   }
 
   const apiKey = process.env.YOUTUBE_API_KEY;
-  const dbSettings = Database.getSystemSettings() as any;
+  const dbSettings = (await Database.getSystemSettings()) as any;
   const channelId = queryChannelId || process.env.YOUTUBE_CHANNEL_ID || dbSettings?.youtubeSettings?.channelId || '';
   const channelHandle = queryHandle || process.env.YOUTUBE_CHANNEL_HANDLE || dbSettings?.youtubeSettings?.channelHandle || '';
 
-  // If no API key is provided, return graceful response
+  // If no API key is provided, return graceful offline response
   if (!apiKey) {
     const fallbackResponse = {
       success: true,
@@ -61,10 +63,10 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       },
       apiKeyConfigured: false,
       checkedAt: new Date().toISOString(),
-      notice: 'YouTube API Key not configured in server environment (.env). Defaulting to offline state.',
+      notice: 'YouTube API Key not configured. Defaulting to offline state.',
     };
 
-    streamCache = { timestamp: now, data: fallbackResponse };
+    streamCache = { timestamp: now, data: fallbackResponse, ttl: DEFAULT_CACHE_TTL_MS };
     res.json(fallbackResponse);
     return;
   }
@@ -123,31 +125,40 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
     if (resolvedChannelId) {
       searchUrl += `&channelId=${encodeURIComponent(resolvedChannelId)}`;
     } else {
-      // Fallback search if no channel ID is explicitly specified
       searchUrl += `&q=SMTrading%20Live`;
     }
 
     const searchRes = await fetch(searchUrl);
     
     if (!searchRes.ok) {
-      const errorText = await searchRes.text();
-      console.error('YouTube Data API Search error:', searchRes.status, errorText);
+      const isRateLimited = searchRes.status === 429 || searchRes.status === 403;
+      if (isRateLimited) {
+        console.warn(`[YouTube API] Rate limit or quota notice (HTTP ${searchRes.status}). Operating in graceful offline standby.`);
+      } else {
+        console.warn(`[YouTube API] Live scanner response HTTP ${searchRes.status}`);
+      }
 
-      const errResponse = {
-        success: false,
+      const safeOfflineResponse = {
+        success: true,
         isLive: false,
         message: 'No Live Stream Currently',
-        status: 'error',
+        status: 'offline',
         stream: null,
         channel: channelInfo || { id: resolvedChannelId || null, title: 'SM Trading Desk' },
         apiKeyConfigured: true,
-        error: `YouTube API returned status ${searchRes.status}`,
+        notice: isRateLimited 
+          ? 'Live stream scan paused due to YouTube API rate limit. Next scan in 10 minutes.' 
+          : `YouTube API returned status ${searchRes.status}`,
         checkedAt: new Date().toISOString(),
       };
 
-      // Cache brief error for 30s to prevent rapid quota depletion
-      streamCache = { timestamp: now, data: errResponse };
-      res.json(errResponse);
+      // Cache for longer period when rate limited to prevent quota hammering
+      streamCache = { 
+        timestamp: now, 
+        data: safeOfflineResponse, 
+        ttl: isRateLimited ? RATE_LIMIT_CACHE_TTL_MS : DEFAULT_CACHE_TTL_MS 
+      };
+      res.json(safeOfflineResponse);
       return;
     }
 
@@ -167,7 +178,7 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
         checkedAt: new Date().toISOString(),
       };
 
-      streamCache = { timestamp: now, data: responseData };
+      streamCache = { timestamp: now, data: responseData, ttl: DEFAULT_CACHE_TTL_MS };
       res.json(responseData);
       return;
     }
@@ -237,7 +248,7 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       checkedAt: new Date().toISOString(),
     };
 
-    streamCache = { timestamp: now, data: liveResponse };
+    streamCache = { timestamp: now, data: liveResponse, ttl: DEFAULT_CACHE_TTL_MS };
     res.json(liveResponse);
   } catch (error: any) {
     console.error('Error querying YouTube Data API:', error);
@@ -274,14 +285,14 @@ router.get('/status', (req: Request, res: Response): void => {
  * POST /api/youtube/settings
  * Admin-only route to update YouTube channel configuration.
  */
-router.post('/settings', authenticateToken, (req: AuthRequest, res: Response): void => {
+router.post('/settings', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   if (req.user?.role !== 'admin') {
     res.status(403).json({ error: 'Access denied. Master Admin privileges required.' });
     return;
   }
 
   const { channelId, channelHandle } = req.body;
-  const currentSettings = Database.getSystemSettings() as any;
+  const currentSettings = (await Database.getSystemSettings()) as any;
 
   const updatedSettings = {
     ...currentSettings,
@@ -293,7 +304,7 @@ router.post('/settings', authenticateToken, (req: AuthRequest, res: Response): v
     }
   };
 
-  Database.updateSystemSettings(updatedSettings);
+  await Database.updateSystemSettings(updatedSettings);
   // Clear cache to reflect new settings immediately
   streamCache = null;
 

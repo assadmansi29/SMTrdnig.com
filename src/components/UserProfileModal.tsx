@@ -276,7 +276,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-700 p-[1px]">
               <img
-                src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                src={user.avatarUrl || (user.role === 'admin' ? '/abu_asad_almansi.jpg' : `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`)}
                 alt={user.username}
                 className="w-full h-full rounded-[11px] object-cover bg-slate-900"
               />
@@ -568,15 +568,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Avatar Image URL</span>
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-slate-400 font-semibold flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Avatar Image URL</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setEditAvatar('/abu_asad_almansi.jpg')}
+                            className="text-[10px] text-amber-400 hover:text-amber-300 underline font-medium cursor-pointer"
+                          >
+                            Set Abu Asad Photo
+                          </button>
+                        </div>
                         <input
                           type="text"
                           value={editAvatar}
                           onChange={(e) => setEditAvatar(e.target.value)}
-                          placeholder="https://..."
+                          placeholder="/abu_asad_almansi.jpg or https://..."
                           className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
                         />
                       </div>
