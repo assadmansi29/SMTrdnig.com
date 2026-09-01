@@ -485,14 +485,26 @@ function saveDbFile(data: DatabaseSchema): void {
 }
 
 async function getActivePg(): Promise<PgPool | null> {
+  const hasDatabaseUrl = !!process.env.DATABASE_URL?.trim();
+
   try {
     const ready = await isPostgresReady();
+
     if (ready && isPostgresHealthy && pool) {
       return pool;
     }
+
+    if (hasDatabaseUrl) {
+      throw new Error('PostgreSQL is configured but currently unavailable.');
+    }
   } catch (err) {
     isPostgresHealthy = false;
+
+    if (hasDatabaseUrl) {
+      throw err;
+    }
   }
+
   return null;
 }
 
