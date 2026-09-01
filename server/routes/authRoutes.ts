@@ -56,7 +56,6 @@ router.post('/send-register-code', async (req: AuthRequest, res: Response): Prom
     res.json({
       success: true,
       message: result.message || `Verification code sent to ${cleanEmail}.`,
-      previewCode: result.previewCode,
     });
   } catch (err: any) {
     console.error('Send register code error:', err);

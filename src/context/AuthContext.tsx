@@ -6,12 +6,12 @@ interface AuthContextType {
   loading: boolean;
   token: string | null;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  sendRegisterVerificationCode: (email: string, username?: string) => Promise<{ success: boolean; error?: string; message?: string; previewCode?: string }>;
+  sendRegisterVerificationCode: (email: string, username?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   register: (data: { username: string; email: string; password: string; fullName?: string; referralCode?: string; plan?: string; verificationCode: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   activateSubscription: (durationMonths: number, planName?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
-  sendProfileVerificationCode: (targetEmail?: string) => Promise<{ success: boolean; error?: string; message?: string; previewCode?: string }>;
+  sendProfileVerificationCode: (targetEmail?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   updateProfile: (data: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string; verificationCode?: string }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>;
   uploadAvatar: (avatarData: string) => Promise<{ success: boolean; avatarUrl?: string; error?: string; message?: string }>;
   removeAvatar: () => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -98,7 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: true,
         message: data.message || 'Verification code sent to your email',
-        previewCode: data.previewCode,
       };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network error while sending verification code' };
@@ -196,7 +195,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: true,
         message: data.message || 'Security code sent to your email',
-        previewCode: data.previewCode,
       };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network error while requesting security code' };

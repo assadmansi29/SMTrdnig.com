@@ -77,7 +77,7 @@ export async function sendEmailVerificationCode(
   email: string,
   purpose: 'register' | 'profile_update' | 'password_change' | 'email_change',
   metadata?: { username?: string; actionDesc?: string }
-): Promise<{ success: boolean; error?: string; previewCode?: string; message?: string }> {
+): Promise<{ success: boolean; error?: string; message?: string }> {
   const cleanEmail = email.trim().toLowerCase();
 
   // Basic email validation
@@ -173,7 +173,7 @@ export async function sendEmailVerificationCode(
 
   if (mailTransporter) {
     try {
-      const fromAddress = process.env.SMTP_FROM || '"SMTrading Security" <smtradingsupprt@gmail.com>';
+      const fromAddress = process.env.SMTP_FROM || `"SMTrading Security" <${process.env.SMTP_USER || 'smtradingsupprt@gmail.com'}>`;
       await mailTransporter.sendMail({
         from: fromAddress,
         to: cleanEmail,
@@ -184,25 +184,20 @@ export async function sendEmailVerificationCode(
       console.log(`[EmailService] Verification email dispatched successfully to ${cleanEmail}`);
       return { 
         success: true, 
-        message: `Verification code sent to ${cleanEmail}. Please check your inbox.`,
-        previewCode: process.env.NODE_ENV !== 'production' ? code : undefined 
+        message: `Verification code sent to ${cleanEmail}. Please check your inbox and spam folder.`,
       };
     } catch (err: any) {
       console.error(`[EmailService] Failed to send email via SMTP to ${cleanEmail}:`, err);
-      // Fallback: Code is still stored in verificationStore, return preview in dev/preview environment
       return {
-        success: true,
-        message: `Verification code generated for ${cleanEmail}. (Code: ${code})`,
-        previewCode: code,
+        success: false,
+        error: `Failed to dispatch verification email: ${err.message || 'SMTP transport error'}. Please check your email or contact support.`,
       };
     }
   } else {
-    // When SMTP credentials are not yet configured in environment, log and return preview code
-    console.log(`\n========================================\n[SMTrading Security] Verification Code for ${cleanEmail} (${purpose}): [ ${code} ]\n========================================\n`);
+    console.error(`[EmailService] SMTP credentials are not configured in process.env (SMTP_HOST: ${process.env.SMTP_HOST ? 'Set' : 'Missing'}, SMTP_USER: ${process.env.SMTP_USER ? 'Set' : 'Missing'}, SMTP_PASS: ${process.env.SMTP_PASS ? 'Set' : 'Missing'})`);
     return {
-      success: true,
-      message: `Verification code sent to ${cleanEmail}.`,
-      previewCode: code,
+      success: false,
+      error: 'Email service is unavailable on the server. Please ensure SMTP credentials (SMTP_HOST, SMTP_USER, SMTP_PASS) are configured on Render.',
     };
   }
 }

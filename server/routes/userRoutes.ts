@@ -53,7 +53,6 @@ router.post('/send-profile-code', async (req: AuthRequest, res: Response): Promi
       success: true,
       email: emailToVerify,
       message: result.message || `Verification code sent to ${emailToVerify}.`,
-      previewCode: result.previewCode,
     });
   } catch (err: any) {
     console.error('Send profile code error:', err);

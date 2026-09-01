@@ -45,7 +45,6 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [verificationCode, setVerificationCode] = useState('');
   const [codeCountdown, setCodeCountdown] = useState(0);
   const [isSendingCode, setIsSendingCode] = useState(false);
-  const [previewCode, setPreviewCode] = useState<string | null>(null);
 
   // Subscription Gate states
   const [renewing, setRenewing] = useState(false);
@@ -109,10 +108,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     } else {
       setRegStep('verify');
       setCodeCountdown(60);
-      setSuccessMsg(t('authCodeSentToast'));
-      if (res.previewCode) {
-        setPreviewCode(res.previewCode);
-      }
+      setSuccessMsg(res.message || t('authCodeSentToast'));
     }
   };
 
@@ -709,13 +705,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                      <span>{t('authVerificationCodeLabel')}</span>
-                      {previewCode && (
-                        <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-1.5 py-0.5 rounded">
-                          Dev Code: {previewCode}
-                        </span>
-                      )}
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      {t('authVerificationCodeLabel')}
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-slate-500">

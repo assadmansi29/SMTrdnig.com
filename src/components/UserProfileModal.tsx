@@ -78,7 +78,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [profileVerifyCode, setProfileVerifyCode] = useState('');
   const [profileCodeCountdown, setProfileCodeCountdown] = useState(0);
   const [isSendingProfileCode, setIsSendingProfileCode] = useState(false);
-  const [profilePreviewCode, setProfilePreviewCode] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   // Change Password state
@@ -194,9 +193,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setVerifyError(res.error || 'Failed to send verification code.');
     } else {
       setProfileCodeCountdown(60);
-      if (res.previewCode) {
-        setProfilePreviewCode(res.previewCode);
-      }
     }
   };
 
@@ -1398,16 +1394,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             <form onSubmit={handleConfirmVerifiedProfileUpdate} className="space-y-4">
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    6-Digit Security Code
-                  </label>
-                  {profilePreviewCode && (
-                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-1.5 py-0.5 rounded">
-                      Dev Code: {profilePreviewCode}
-                    </span>
-                  )}
-                </div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  6-Digit Security Code
+                </label>
 
                 <div className="relative">
                   <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-slate-500">
