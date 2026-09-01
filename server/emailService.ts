@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 interface VerificationEntry {
   email: string;
@@ -23,47 +23,6 @@ setInterval(() => {
 }, 60 * 1000);
 
 /**
- * Configure Nodemailer transporter dynamically from environment variables
- * Reads from process.env:
- * - SMTP_HOST
- * - SMTP_PORT
- * - SMTP_USER
- * - SMTP_PASS
- * - SMTP_SECURE
- * - SMTP_FROM
- */
-function getTransporter(): nodemailer.Transporter | null {
-  const host = process.env.SMTP_HOST?.trim();
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASS?.trim();
-  const rawPort = process.env.SMTP_PORT?.trim();
-  const port = rawPort ? parseInt(rawPort, 10) : 587;
-  const secure = process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1' || port === 465;
-
-  if (host && user && pass) {
-    try {
-      return nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: {
-          user,
-          pass,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
-    } catch (err) {
-      console.error('[EmailService] Failed to create SMTP transporter:', err);
-      return null;
-    }
-  }
-
-  return null;
-}
-
-/**
  * Generate a 6-digit numeric verification code
  */
 export function generateVerificationCode(): string {
@@ -71,7 +30,7 @@ export function generateVerificationCode(): string {
 }
 
 /**
- * Store and send verification code
+ * Store and send verification code via Resend
  */
 export async function sendEmailVerificationCode(
   email: string,
@@ -169,43 +128,46 @@ export async function sendEmailVerificationCode(
     </div>
   `;
 
-  const mailTransporter = getTransporter();
+  const apiKey = process.env.RESEND_API_KEY?.trim();
 
-  if (mailTransporter) {
-    try {
-      const fromAddress = process.env.SMTP_FROM || `"SMTrading Security" <${process.env.SMTP_USER || 'smtradingsupprt@gmail.com'}>`;
-      await mailTransporter.sendMail({
-        from: fromAddress,
-        to: cleanEmail,
-        subject: `[${code}] SMTrading Security Verification Code`,
-        text: `Your SMTrading verification code is: ${code}. This code is valid for 10 minutes. For support: smtradingsupprt@gmail.com`,
-        html: htmlContent,
-      });
-      console.log(`[EmailService] Verification email dispatched successfully to ${cleanEmail}`);
-      return { 
-        success: true, 
-        message: `Verification code sent to ${cleanEmail}. Please check your inbox and spam folder.`,
-      };
-    } catch (err: any) {
-      console.error(`[EmailService] Failed to send email via SMTP to ${cleanEmail}:`, err);
-      let errorDetail = err.message || 'SMTP transport error';
-
-      if (errorDetail.includes('502') || errorDetail.includes('not yet activated') || errorDetail.includes('Your SMTP account is not yet activated')) {
-        errorDetail = 'Your Brevo (Sendinblue) SMTP account is not yet activated. Please log in to Brevo (app.brevo.com), verify your sender email/domain under Senders & IP, and request transactional activation, or use an alternative active SMTP provider (such as Gmail App Password, Resend, or SendGrid).';
-      } else if (errorDetail.includes('535') || errorDetail.includes('Authentication failed')) {
-        errorDetail = 'SMTP Authentication failed. Please check your SMTP_USER and SMTP_PASS (or Brevo Master Key) on Render.';
-      }
-
-      return {
-        success: false,
-        error: `Failed to dispatch verification email: ${errorDetail}`,
-      };
-    }
-  } else {
-    console.error(`[EmailService] SMTP credentials are not configured in process.env (SMTP_HOST: ${process.env.SMTP_HOST ? 'Set' : 'Missing'}, SMTP_USER: ${process.env.SMTP_USER ? 'Set' : 'Missing'}, SMTP_PASS: ${process.env.SMTP_PASS ? 'Set' : 'Missing'})`);
+  if (!apiKey) {
+    console.error('[EmailService] RESEND_API_KEY is not configured in process.env');
     return {
       success: false,
-      error: 'Email service is unavailable on the server. Please ensure SMTP credentials (SMTP_HOST, SMTP_USER, SMTP_PASS) are configured on Render.',
+      error: 'Email service is unavailable on the server. Please ensure RESEND_API_KEY is configured in your Render environment variables.',
+    };
+  }
+
+  try {
+    const resend = new Resend(apiKey);
+    const fromAddress = 'SMTrading Security <noreply@smtrading.pro>';
+
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: cleanEmail,
+      subject: `[${code}] SMTrading Security Verification Code`,
+      text: `Your SMTrading verification code is: ${code}. This code is valid for 10 minutes. For support: smtradingsupprt@gmail.com`,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error(`[EmailService] Resend API error sending email to ${cleanEmail}:`, error);
+      return {
+        success: false,
+        error: `Failed to dispatch verification email via Resend: ${error.message || 'Unknown Resend error'}`,
+      };
+    }
+
+    console.log(`[EmailService] Verification email dispatched successfully via Resend to ${cleanEmail} (ID: ${data?.id})`);
+    return { 
+      success: true, 
+      message: `Verification code sent to ${cleanEmail}. Please check your inbox and spam folder.`,
+    };
+  } catch (err: any) {
+    console.error(`[EmailService] Unexpected error sending email via Resend to ${cleanEmail}:`, err);
+    return {
+      success: false,
+      error: `Failed to dispatch verification email: ${err.message || 'Resend service error'}`,
     };
   }
 }

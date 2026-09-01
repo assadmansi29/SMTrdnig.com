@@ -65,28 +65,32 @@ let isPostgresHealthy = false;
 
 export function getPool(): PgPool | null {
   if (pool) return pool;
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL?.trim();
   if (!connectionString) return null;
 
   const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
 
-  const config: PoolConfig = {
-    connectionString,
-    ssl: isLocal ? false : { rejectUnauthorized: false },
-    max: parseInt(process.env.DB_POOL_MAX || '50', 10),
-    min: parseInt(process.env.DB_POOL_MIN || '5', 10),
-    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '15000', 10),
-    connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT_MS || '5000', 10),
-    maxUses: 7500, // Recycle connections periodically to prevent memory leaks
-  };
+  try {
+    const config: PoolConfig = {
+      connectionString,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+      max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+      min: parseInt(process.env.DB_POOL_MIN || '0', 10),
+      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '15000', 10),
+      connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT_MS || '3000', 10),
+      maxUses: 7500, // Recycle connections periodically to prevent memory leaks
+    };
 
-  pool = new Pool(config);
-  pool.on('error', (err) => {
-    console.error('[PostgreSQL] Unexpected error on idle client:', err);
-    isPostgresHealthy = false;
-  });
+    pool = new Pool(config);
+    pool.on('error', (err) => {
+      // Handle idle client disconnections cleanly without crashing
+      isPostgresHealthy = false;
+    });
 
-  return pool;
+    return pool;
+  } catch (err) {
+    return null;
+  }
 }
 
 function mapUserRow(row: any): UserRecord {
@@ -288,9 +292,13 @@ export async function isPostgresReady(): Promise<boolean> {
       } finally {
         client.release();
       }
-    } catch (err) {
-      console.warn('[PostgreSQL] Database connection failed - using local JSON database storage.');
+    } catch (err: any) {
+      console.log(`[Database] PostgreSQL connection not established (${err.message || 'using local storage'}) — active storage engine: Local Persistent JSON.`);
       isPostgresHealthy = false;
+      if (pool) {
+        try { pool.end(); } catch {}
+        pool = null;
+      }
       return false;
     }
   })();

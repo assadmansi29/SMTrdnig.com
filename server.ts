@@ -14,9 +14,8 @@ async function startServer() {
   if (process.env.DATABASE_URL) {
     try {
       await initPostgres();
-      console.log('[Database] PostgreSQL connection and schema initialized.');
     } catch (dbErr) {
-      console.error('[Database] Failed to initialize PostgreSQL on startup:', dbErr);
+      // Fallback is handled automatically by the Database layer
     }
   }
 
