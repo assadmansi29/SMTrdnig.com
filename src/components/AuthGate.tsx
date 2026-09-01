@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   Lock, 
@@ -14,14 +14,18 @@ import {
   Zap, 
   Gift, 
   RefreshCw,
-  Clock
+  Clock,
+  Mail,
+  KeyRound,
+  Edit2,
+  Send
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
 import { useTranslation } from '../context/LanguageContext';
 
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading, login, register, logout, activateSubscription } = useAuth();
+  const { user, loading, login, sendRegisterVerificationCode, register, logout, activateSubscription } = useAuth();
   const { t, isRTL, language } = useTranslation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
@@ -36,9 +40,25 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Registration Email Verification states
+  const [regStep, setRegStep] = useState<'form' | 'verify'>('form');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [codeCountdown, setCodeCountdown] = useState(0);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [previewCode, setPreviewCode] = useState<string | null>(null);
+
   // Subscription Gate states
   const [renewing, setRenewing] = useState(false);
   const [selectedPlanMonths, setSelectedPlanMonths] = useState<number>(3);
+
+  // Resend countdown timer
+  useEffect(() => {
+    if (codeCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setCodeCountdown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [codeCountdown]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,10 +79,47 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRequestVerificationCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (!username.trim() || !email.trim() || !password) {
       setErrorMsg(t('authErrorCompleteFields'));
+      return;
+    }
+
+    if (username.trim().length < 3) {
+      setErrorMsg(t('authLabelUsernameReq') + ' (min 3 chars)');
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMsg(t('authPlaceholderPasswordReq'));
+      return;
+    }
+
+    setIsSendingCode(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const res = await sendRegisterVerificationCode(email.trim(), username.trim());
+    setIsSendingCode(false);
+
+    if (!res.success) {
+      setErrorMsg(res.error || 'Failed to send verification code.');
+    } else {
+      setRegStep('verify');
+      setCodeCountdown(60);
+      setSuccessMsg(t('authCodeSentToast'));
+      if (res.previewCode) {
+        setPreviewCode(res.previewCode);
+      }
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verificationCode.trim()) {
+      setErrorMsg(t('profileVerifyNeedCode'));
       return;
     }
 
@@ -76,6 +133,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       password,
       fullName: fullName.trim() || username.trim(),
       referralCode: referralCode.trim() || undefined,
+      verificationCode: verificationCode.trim(),
     });
 
     setIsSubmitting(false);
@@ -513,9 +571,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     )}
                   </button>
                 </form>
-              ) : (
-                /* Registration Form */
-                <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+              ) : regStep === 'form' ? (
+                /* Registration Form - Step 1 */
+                <form onSubmit={handleRequestVerificationCode} className="space-y-3.5">
                   <div>
                     <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                       {t('authLabelFullName')}
@@ -600,8 +658,107 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSendingCode}
                     className="w-full mt-2 py-3 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSendingCode ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>{t('authBtnSendingCode')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4" />
+                        <span>{t('authBtnSendCode')}</span>
+                        <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                /* Registration Step 2 - Verification Code Entry */
+                <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                    <div className="flex items-start gap-2.5">
+                      <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400 shrink-0 mt-0.5">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                            {t('authVerificationStep')}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRegStep('form');
+                              setErrorMsg(null);
+                            }}
+                            className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer underline"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            <span>{t('authChangeEmail')}</span>
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                          {t('authVerificationNotice')}{' '}
+                          <span className="text-white font-mono font-bold">{email}</span>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                      <span>{t('authVerificationCodeLabel')}</span>
+                      {previewCode && (
+                        <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-1.5 py-0.5 rounded">
+                          Dev Code: {previewCode}
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-slate-500">
+                        <KeyRound className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        autoFocus
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder={t('authVerificationCodePlaceholder')}
+                        className="w-full bg-[#080B12] border border-amber-500/50 rounded-xl ps-10 pe-4 py-3 text-center text-xl font-mono tracking-widest text-amber-300 placeholder-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                    <span>
+                      {codeCountdown > 0 ? (
+                        <span className="flex items-center gap-1 text-slate-400">
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          {t('authResendIn').replace('{seconds}', codeCountdown.toString())}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleRequestVerificationCode()}
+                          disabled={isSendingCode}
+                          className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>{t('authResendCode')}</span>
+                        </button>
+                      )}
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || verificationCode.length < 6}
+                    className="w-full py-3 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>
@@ -610,8 +767,8 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                       </>
                     ) : (
                       <>
-                        <span>{t('authBtnRegister')}</span>
-                        <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>{t('authBtnVerifyAndRegister')}</span>
                       </>
                     )}
                   </button>

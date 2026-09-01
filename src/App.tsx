@@ -54,7 +54,14 @@ import {
   ArrowRight,
   CheckCircle,
   Camera,
-  Upload
+  Upload,
+  Send,
+  ExternalLink,
+  Radio,
+  Mail,
+  Copy,
+  Headphones,
+  Check
 } from 'lucide-react';
 
 export default function App() {
@@ -81,6 +88,13 @@ export default function App() {
   const [isECommerceOpen, setIsECommerceOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [supportEmailCopied, setSupportEmailCopied] = useState(false);
+
+  const handleCopySupportEmail = () => {
+    navigator.clipboard.writeText('smtradingsupprt@gmail.com');
+    setSupportEmailCopied(true);
+    setTimeout(() => setSupportEmailCopied(false), 2500);
+  };
 
   // Sync localized articles when language changes
   useEffect(() => {
@@ -235,21 +249,115 @@ export default function App() {
 
         {/* Category Header Title when filtering */}
         {activeCategory !== 'All' && (
-          <div className="border-b border-slate-800 pb-4 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-mono-num text-amber-400 font-bold uppercase tracking-wider">
-                {t('filterArchive')}
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-                {getLocalizedCategory(activeCategory, t)}
-              </h2>
+          <div className="space-y-4 border-b border-slate-800 pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-mono-num text-amber-400 font-bold uppercase tracking-wider">
+                  {t('filterArchive')}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+                  {getLocalizedCategory(activeCategory, t)}
+                </h2>
+              </div>
+              <button
+                onClick={() => setActiveCategory('All')}
+                className="text-xs text-slate-400 hover:text-amber-300 underline font-medium cursor-pointer"
+              >
+                {t('filterResetAll')}
+              </button>
             </div>
-            <button
-              onClick={() => setActiveCategory('All')}
-              className="text-xs text-slate-400 hover:text-amber-300 underline font-medium cursor-pointer"
-            >
-              {t('filterResetAll')}
-            </button>
+
+            {/* Dedicated SMTrading VIP Signals Channel Banner Button inside VIP Signals */}
+            {activeCategory === 'VIP Signals' && (
+              <div className="bg-gradient-to-r from-[#0088cc]/20 via-[#0D182E] to-[#121B30] border-2 border-[#0088cc]/50 rounded-2xl p-5 sm:p-6 shadow-2xl shadow-[#0088cc]/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all hover:border-[#0088cc]">
+                <div className="space-y-1.5 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0088cc]/20 border border-[#0088cc]/50 text-[#38bdf8] text-[11px] font-mono-num font-bold uppercase tracking-wider">
+                      <Radio className="w-3 h-3 text-[#38bdf8] animate-pulse" />
+                      Live Feed
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-amber-400 font-bold">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      SMTrading VIP Desk
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                    SMTrading VIP Signals Telegram
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    {t('vipChannelSubtitle')}
+                  </p>
+                </div>
+
+                <a
+                  href="https://t.me/+pv2CVLJeM1ZlMjQ8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full md:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#0088cc] to-[#00a2f5] hover:from-[#0099e6] hover:to-[#1ab2ff] text-white font-black text-sm shadow-lg shadow-[#0088cc]/30 hover:shadow-[#0088cc]/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shrink-0"
+                >
+                  <Send className="w-4 h-4 fill-white" />
+                  <span>{t('vipChannelBtn')}</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                </a>
+              </div>
+            )}
+
+            {/* Dedicated SMTrading Support Desk Banner inside Support category */}
+            {activeCategory === 'Support' && (
+              <div className="bg-gradient-to-r from-amber-500/20 via-[#0D182E] to-[#121B30] border-2 border-amber-500/50 rounded-2xl p-5 sm:p-6 shadow-2xl shadow-amber-500/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all hover:border-amber-400">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[11px] font-mono-num font-bold uppercase tracking-wider">
+                      <Headphones className="w-3 h-3 text-amber-400" />
+                      Official 24/7 Desk
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-mono-num font-bold">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {t('supportResponseTime')}
+                    </span>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                    {t('supportBannerTitle')}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                    {t('supportBannerSubtitle')}
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-xs text-slate-400">Direct Email:</span>
+                    <span className="text-xs sm:text-sm font-mono-num text-amber-400 font-bold bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 select-all">
+                      smtradingsupprt@gmail.com
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
+                  <button
+                    onClick={handleCopySupportEmail}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                  >
+                    {supportEmailCopied ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span className="text-emerald-400">{t('supportEmailCopied')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 text-slate-400" />
+                        <span>{t('supportCopyEmail')}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <a
+                    href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"
+                    className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <Mail className="w-4 h-4 text-slate-950" />
+                    <span>{t('supportEmailBtn')}</span>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

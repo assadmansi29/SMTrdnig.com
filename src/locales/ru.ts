@@ -99,6 +99,15 @@ export const ru: Record<TranslationKey, string> = {
   filterClearAll: 'Сбросить все фильтры',
   filterArchive: 'Архив исследований',
   filterResetAll: 'Вернуться ко всем секторам',
+  vipChannelBtn: 'SMTrading VIP Signals в Telegram',
+  vipChannelSubtitle: 'Прямые институциональные сигналы, алерты на вход и разборы рынка',
+  supportBannerTitle: 'Официальная служба поддержки SMTrading',
+  supportBannerSubtitle: 'Нужна помощь с подпиской, терминалом, VIP-сигналами или балансом? Наша служба поддержки работает 24/7.',
+  supportEmailBtn: 'Написать в поддержку',
+  supportCopyEmail: 'Скопировать Email',
+  supportEmailCopied: 'Email скопирован!',
+  supportResponseTime: 'Среднее время ответа: < 2 часов | 24/7',
+  supportDirectEmail: 'smtradingsupprt@gmail.com',
 
   // Article Card
   cardReadTimeSuffix: 'чтения',
@@ -471,6 +480,26 @@ export const ru: Record<TranslationKey, string> = {
   authErrorCompleteFields: 'Пожалуйста, заполните все обязательные поля.',
   authSuccessRegistered: 'Аккаунт успешно зарегистрирован! Перенаправление...',
   authFailedGeneral: 'Ошибка авторизации. Проверьте введенные данные.',
+
+  // Verification
+  authVerificationStep: 'Подтверждение Email',
+  authVerificationNotice: 'Мы отправили 6-значный код безопасности на',
+  authVerificationCodeLabel: '6-значный код подтверждения *',
+  authVerificationCodePlaceholder: '6 цифр (например, 582914)',
+  authBtnSendCode: 'Подтвердить Email и продолжить',
+  authBtnSendingCode: 'Отправка кода на email...',
+  authBtnVerifyAndRegister: 'Подтвердить код и создать аккаунт',
+  authResendCode: 'Отправить код повторно',
+  authResendIn: 'Повторная отправка через {seconds}с',
+  authChangeEmail: 'Изменить Email / данные',
+  authCodeSentToast: 'Код подтверждения успешно отправлен на вашу почту.',
+  profileVerifyModalTitle: 'Требуется подтверждение безопасности',
+  profileVerifyModalDesc: 'Для защиты персональных данных введите 6-значный код, отправленный на',
+  profileVerifySendBtn: 'Отправить код безопасности',
+  profileVerifySendingBtn: 'Отправка кода...',
+  profileVerifyConfirmBtn: 'Подтвердить и сохранить данные',
+  profileVerifyCodePlaceholder: 'Введите 6-значный код',
+  profileVerifyNeedCode: 'Для изменения личных данных требуется код подтверждения с email.',
 
   // Subscription Renewal Gate
   authSubMembership: 'Членство',

@@ -6,11 +6,13 @@ interface AuthContextType {
   loading: boolean;
   token: string | null;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: { username: string; email: string; password: string; fullName?: string; referralCode?: string; plan?: string }) => Promise<{ success: boolean; error?: string }>;
+  sendRegisterVerificationCode: (email: string, username?: string) => Promise<{ success: boolean; error?: string; message?: string; previewCode?: string }>;
+  register: (data: { username: string; email: string; password: string; fullName?: string; referralCode?: string; plan?: string; verificationCode: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   activateSubscription: (durationMonths: number, planName?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
-  updateProfile: (data: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string }) => Promise<{ success: boolean; error?: string }>;
+  sendProfileVerificationCode: (targetEmail?: string) => Promise<{ success: boolean; error?: string; message?: string; previewCode?: string }>;
+  updateProfile: (data: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string; verificationCode?: string }) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>;
   uploadAvatar: (avatarData: string) => Promise<{ success: boolean; avatarUrl?: string; error?: string; message?: string }>;
   removeAvatar: () => Promise<{ success: boolean; error?: string; message?: string }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -80,6 +82,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const sendRegisterVerificationCode = async (email: string, username?: string) => {
+    try {
+      const res = await fetch('/api/auth/send-register-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, username }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to send verification code' };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Verification code sent to your email',
+        previewCode: data.previewCode,
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error while sending verification code' };
+    }
+  };
+
   const register = async (regData: {
     username: string;
     email: string;
@@ -87,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fullName?: string;
     referralCode?: string;
     plan?: string;
+    verificationCode: string;
   }) => {
     try {
       const res = await fetch('/api/auth/register', {
@@ -149,7 +175,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updateProfile = async (profileUpdates: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string }) => {
+  const sendProfileVerificationCode = async (targetEmail?: string) => {
+    if (!token) return { success: false, error: 'Not authenticated' };
+
+    try {
+      const res = await fetch('/api/user/send-profile-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetEmail }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to send security code' };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Security code sent to your email',
+        previewCode: data.previewCode,
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error while requesting security code' };
+    }
+  };
+
+  const updateProfile = async (profileUpdates: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    avatarUrl?: string;
+    username?: string;
+    verificationCode?: string;
+  }) => {
     if (!token) return { success: false, error: 'Not authenticated' };
 
     try {
@@ -164,7 +225,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await res.json();
       if (!res.ok) {
-        return { success: false, error: data.error || 'Failed to update profile' };
+        return { 
+          success: false, 
+          error: data.error || 'Failed to update profile',
+          requiresVerification: data.requiresVerification,
+        };
       }
 
       setUser(data.profile);
@@ -257,10 +322,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         token,
         login,
+        sendRegisterVerificationCode,
         register,
         logout,
         refreshUser,
         activateSubscription,
+        sendProfileVerificationCode,
         updateProfile,
         uploadAvatar,
         removeAvatar,

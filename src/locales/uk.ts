@@ -99,6 +99,15 @@ export const uk: Record<TranslationKey, string> = {
   filterClearAll: 'Скинути всі фільтри',
   filterArchive: 'Архів досліджень',
   filterResetAll: 'Повернутися до всіх секторів',
+  vipChannelBtn: 'SMTrading VIP Signals у Telegram',
+  vipChannelSubtitle: 'Прямі інституційні сигнали, алерти на вхід та розбори ринку',
+  supportBannerTitle: 'Офіційна служба підтримки SMTrading',
+  supportBannerSubtitle: 'Потрібна допомога з підпискою, терміналом, VIP-сигналами чи балансом? Наша служба підтримки працює 24/7.',
+  supportEmailBtn: 'Написати у підтримку',
+  supportCopyEmail: 'Скопіювати Email',
+  supportEmailCopied: 'Email скопійовано!',
+  supportResponseTime: 'Середній час відповіді: < 2 годин | 24/7',
+  supportDirectEmail: 'smtradingsupprt@gmail.com',
 
   // Article Card
   cardReadTimeSuffix: 'читання',
@@ -471,6 +480,26 @@ export const uk: Record<TranslationKey, string> = {
   authErrorCompleteFields: 'Будь ласка, заповніть усі обов’язкові поля.',
   authSuccessRegistered: 'Акаунт успішно зареєстровано! Перенаправлення...',
   authFailedGeneral: 'Помилка авторизації. Перевірте введені дані.',
+
+  // Verification
+  authVerificationStep: 'Підтвердження Email',
+  authVerificationNotice: 'Ми відправили 6-значний код безпеки на',
+  authVerificationCodeLabel: '6-значний код підтвердження *',
+  authVerificationCodePlaceholder: '6 цифр (наприклад, 582914)',
+  authBtnSendCode: 'Підтвердити Email та продовжити',
+  authBtnSendingCode: 'Відправка коду на email...',
+  authBtnVerifyAndRegister: 'Підтвердити код та створити акаунт',
+  authResendCode: 'Надіслати код повторно',
+  authResendIn: 'Повторна відправка через {seconds}с',
+  authChangeEmail: 'Змінити Email / дані',
+  authCodeSentToast: 'Код підтвердження успішно надіслано на вашу пошту.',
+  profileVerifyModalTitle: 'Потрібне підтвердження безпеки',
+  profileVerifyModalDesc: 'Для захисту персональних даних введіть 6-значний код, надісланий на',
+  profileVerifySendBtn: 'Надіслати код безпеки',
+  profileVerifySendingBtn: 'Відправка коду...',
+  profileVerifyConfirmBtn: 'Підтвердити та зберегти дані',
+  profileVerifyCodePlaceholder: 'Введіть 6-значний код',
+  profileVerifyNeedCode: 'Для зміни особистих даних потрібен код підтвердження з email.',
 
   // Subscription Renewal Gate
   authSubMembership: 'Членство',

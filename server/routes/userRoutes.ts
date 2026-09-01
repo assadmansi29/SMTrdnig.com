@@ -2,11 +2,64 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { Database } from '../db';
 import { authenticateToken, sanitizeUser, AuthRequest } from '../auth';
+import { sendEmailVerificationCode, verifyEmailCode } from '../emailService';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+
+// POST /api/user/send-profile-code (Send email verification code before updating personal info)
+router.post('/send-profile-code', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = await Database.findUserById(req.user!.id);
+    if (!user) {
+      res.status(404).json({ error: 'User profile not found.' });
+      return;
+    }
+
+    const { targetEmail } = req.body;
+    // If updating email, send verification to either target email or current email
+    const emailToVerify = (targetEmail && typeof targetEmail === 'string' && targetEmail.trim()) 
+      ? targetEmail.trim().toLowerCase() 
+      : user.email;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailToVerify)) {
+      res.status(400).json({ error: 'Invalid email address provided.' });
+      return;
+    }
+
+    // If target email is changing to a new one, check if it's already used by someone else
+    if (emailToVerify !== user.email) {
+      const existingUser = await Database.findUserByEmail(emailToVerify);
+      if (existingUser && existingUser.id !== user.id) {
+        res.status(409).json({ error: 'This email address is already in use by another account.' });
+        return;
+      }
+    }
+
+    const result = await sendEmailVerificationCode(emailToVerify, 'profile_update', {
+      username: user.username,
+      actionDesc: 'Profile Information Update',
+    });
+
+    if (!result.success) {
+      res.status(400).json({ error: result.error || 'Failed to send security code.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      email: emailToVerify,
+      message: result.message || `Verification code sent to ${emailToVerify}.`,
+      previewCode: result.previewCode,
+    });
+  } catch (err: any) {
+    console.error('Send profile code error:', err);
+    res.status(500).json({ error: 'Internal server error while sending profile verification code.' });
+  }
+});
 
 // GET /api/user/profile
 router.get('/profile', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -20,16 +73,33 @@ router.get('/profile', async (req: AuthRequest, res: Response): Promise<void> =>
 
 // PATCH /api/user/profile
 router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> => {
-  const { fullName, phone, avatarUrl, email, username } = req.body;
-  const user = req.user!;
-  const updates: any = {};
+  const { fullName, phone, avatarUrl, email, username, verificationCode } = req.body;
+  const user = await Database.findUserById(req.user!.id);
+  if (!user) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
 
-  if (fullName !== undefined) updates.fullName = fullName.trim();
-  if (phone !== undefined) updates.phone = phone.trim();
-  if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl.trim();
+  const updates: any = {};
+  let isPersonalInfoChanging = false;
+
+  if (fullName !== undefined && fullName.trim() !== (user.fullName || '')) {
+    updates.fullName = fullName.trim();
+    isPersonalInfoChanging = true;
+  }
+
+  if (phone !== undefined && phone.trim() !== (user.phone || '')) {
+    updates.phone = phone.trim();
+    isPersonalInfoChanging = true;
+  }
+
+  if (avatarUrl !== undefined) {
+    updates.avatarUrl = avatarUrl.trim();
+  }
 
   // Email update validation
-  if (email !== undefined) {
+  let targetEmail = user.email;
+  if (email !== undefined && email.trim().toLowerCase() !== user.email.toLowerCase()) {
     const cleanEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!cleanEmail || !emailRegex.test(cleanEmail)) {
@@ -42,10 +112,12 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
     updates.email = cleanEmail;
+    targetEmail = cleanEmail;
+    isPersonalInfoChanging = true;
   }
 
   // Username update validation (Admin / Super Admin privilege only)
-  if (username !== undefined) {
+  if (username !== undefined && username.trim() !== user.username) {
     const cleanUsername = username.trim();
     if (user.role !== 'admin') {
       res.status(403).json({ error: 'Changing username is restricted to Super Admin only.' });
@@ -65,6 +137,37 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
     updates.username = cleanUsername;
+    isPersonalInfoChanging = true;
+  }
+
+  // If personal details (name, email, phone, or username) are being modified, require verification code!
+  if (isPersonalInfoChanging) {
+    if (!verificationCode || typeof verificationCode !== 'string' || !verificationCode.trim()) {
+      res.status(400).json({ 
+        error: 'Email verification code is required to update personal profile information.',
+        requiresVerification: true,
+      });
+      return;
+    }
+
+    // Try verifying against targetEmail first, then existing user email
+    let verification = verifyEmailCode(targetEmail, verificationCode.trim(), 'profile_update');
+    if (!verification.valid && targetEmail !== user.email) {
+      verification = verifyEmailCode(user.email, verificationCode.trim(), 'profile_update');
+    }
+
+    if (!verification.valid) {
+      res.status(400).json({ 
+        error: verification.error || 'Invalid or expired security code. Please request a new code.',
+        requiresVerification: true,
+      });
+      return;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    res.json({ success: true, profile: sanitizeUser(user), message: 'No changes detected.' });
+    return;
   }
 
   const updated = await Database.updateUser(user.id, updates);
@@ -73,7 +176,7 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
     return;
   }
 
-  res.json({ success: true, profile: sanitizeUser(updated) });
+  res.json({ success: true, profile: sanitizeUser(updated), message: 'Profile updated successfully.' });
 });
 
 // POST /api/user/avatar (Upload & Link Profile Picture)

@@ -33,7 +33,9 @@ import {
   CheckCircle2,
   Camera,
   Upload,
-  ImageIcon
+  ImageIcon,
+  Send,
+  RefreshCw
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { UserAvatar } from './UserAvatar';
@@ -50,7 +52,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   onOpenAdmin,
 }) => {
-  const { user, token, logout, updateProfile, activateSubscription, changePassword } = useAuth();
+  const { user, token, logout, updateProfile, activateSubscription, changePassword, sendProfileVerificationCode } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'referrals' | 'transactions' | 'subscription'>('profile');
 
   // Referral data state
@@ -70,6 +72,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [editAvatar, setEditAvatar] = useState(user?.avatarUrl || '');
   const [editUsername, setEditUsername] = useState(user?.username || '');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // Profile Email Verification state
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [profileVerifyCode, setProfileVerifyCode] = useState('');
+  const [profileCodeCountdown, setProfileCodeCountdown] = useState(0);
+  const [isSendingProfileCode, setIsSendingProfileCode] = useState(false);
+  const [profilePreviewCode, setProfilePreviewCode] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   // Change Password state
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -105,6 +115,15 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setEditUsername(user.username || '');
     }
   }, [user]);
+
+  // Profile verification code countdown
+  useEffect(() => {
+    if (profileCodeCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setProfileCodeCountdown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [profileCodeCountdown]);
 
   // Fetch referrals when modal opens or tab changes
   useEffect(() => {
@@ -164,7 +183,40 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleRequestProfileCode = async () => {
+    setIsSendingProfileCode(true);
+    setVerifyError(null);
+    const targetEmail = editEmail.trim() !== user.email ? editEmail.trim() : undefined;
+    const res = await sendProfileVerificationCode(targetEmail);
+    setIsSendingProfileCode(false);
+
+    if (!res.success) {
+      setVerifyError(res.error || 'Failed to send verification code.');
+    } else {
+      setProfileCodeCountdown(60);
+      if (res.previewCode) {
+        setProfilePreviewCode(res.previewCode);
+      }
+    }
+  };
+
   const handleSaveProfile = async () => {
+    const hasPersonalChanges = 
+      editName.trim() !== (user.fullName || '') ||
+      editEmail.trim().toLowerCase() !== (user.email || '').toLowerCase() ||
+      editPhone.trim() !== (user.phone || '') ||
+      (user.role === 'admin' && editUsername.trim() !== (user.username || ''));
+
+    // If personal info changed, require security verification code
+    if (hasPersonalChanges) {
+      setShowVerifyModal(true);
+      setProfileVerifyCode('');
+      setVerifyError(null);
+      handleRequestProfileCode();
+      return;
+    }
+
+    // Only avatar changed
     setSaveStatus('Saving changes...');
     const payload: { fullName?: string; email?: string; phone?: string; avatarUrl?: string; username?: string } = {
       fullName: editName,
@@ -182,6 +234,48 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setTimeout(() => setSaveStatus(null), 2500);
     } else {
       setSaveStatus(`Failed: ${res.error}`);
+    }
+  };
+
+  const handleConfirmVerifiedProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileVerifyCode.trim()) {
+      setVerifyError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+
+    setIsSendingProfileCode(true);
+    setVerifyError(null);
+
+    const payload: { 
+      fullName?: string; 
+      email?: string; 
+      phone?: string; 
+      avatarUrl?: string; 
+      username?: string;
+      verificationCode?: string;
+    } = {
+      fullName: editName.trim(),
+      email: editEmail.trim(),
+      phone: editPhone.trim(),
+      avatarUrl: editAvatar.trim(),
+      verificationCode: profileVerifyCode.trim(),
+    };
+
+    if (user.role === 'admin') {
+      payload.username = editUsername.trim();
+    }
+
+    const res = await updateProfile(payload);
+    setIsSendingProfileCode(false);
+
+    if (res.success) {
+      setShowVerifyModal(false);
+      setIsEditing(false);
+      setSaveStatus('Personal profile updated and verified successfully!');
+      setTimeout(() => setSaveStatus(null), 3000);
+    } else {
+      setVerifyError(res.error || 'Failed to verify and update profile.');
     }
   };
 
@@ -1252,6 +1346,134 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-lg transition-all cursor-pointer"
                 >
                   Submit Payout Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Security Verification Sub-Dialog for Profile Edits */}
+      {showVerifyModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="w-full max-w-md bg-[#0D121F] border border-amber-500/40 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Security Verification Required</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setShowVerifyModal(false);
+                  setVerifyError(null);
+                }}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
+              <div className="flex items-start gap-2.5">
+                <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400 shrink-0 mt-0.5">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    To authorize modifying your personal details, a 6-digit security code was dispatched to:
+                  </p>
+                  <span className="text-xs font-mono font-bold text-amber-300 block mt-1 break-all">
+                    {editEmail.trim() !== user.email ? editEmail.trim() : user.email}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {verifyError && (
+              <div className="p-3 bg-rose-950/70 border border-rose-800 text-rose-200 text-xs rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{verifyError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmVerifiedProfileUpdate} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    6-Digit Security Code
+                  </label>
+                  {profilePreviewCode && (
+                    <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-1.5 py-0.5 rounded">
+                      Dev Code: {profilePreviewCode}
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 start-0 ps-3.5 flex items-center pointer-events-none text-slate-500">
+                    <KeyRound className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    autoFocus
+                    value={profileVerifyCode}
+                    onChange={(e) => setProfileVerifyCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 582914"
+                    className="w-full bg-slate-950 border border-amber-500/50 rounded-xl ps-10 pe-4 py-2.5 text-center text-lg font-mono tracking-widest text-amber-300 placeholder-slate-600 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>
+                  {profileCodeCountdown > 0 ? (
+                    <span className="flex items-center gap-1 text-slate-400">
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      Resend in {profileCodeCountdown}s
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleRequestProfileCode}
+                      disabled={isSendingProfileCode}
+                      className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Resend Code</span>
+                    </button>
+                  )}
+                </span>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowVerifyModal(false);
+                    setVerifyError(null);
+                  }}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingProfileCode || profileVerifyCode.length < 6}
+                  className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-lg transition-all cursor-pointer shadow-md shadow-amber-500/20 flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isSendingProfileCode ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Confirm & Save</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

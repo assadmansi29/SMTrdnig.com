@@ -158,6 +158,15 @@ export const Footer: React.FC<FooterProps> = ({
             <li>Elena Rostova (Macro & FX)</li>
             <li>Marcus Sterling, CFA (Derivatives)</li>
             <li>Dr. Sarah Chen (Risk Neuroscience)</li>
+            <li className="pt-2 border-t border-slate-800/80">
+              <a 
+                href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"
+                className="text-slate-400 hover:text-amber-400 flex items-center gap-1.5 transition-colors"
+              >
+                <Mail className="w-3 h-3 text-amber-400" />
+                <span className="font-mono-num text-[11px]">smtradingsupprt@gmail.com</span>
+              </a>
+            </li>
           </ul>
         </div>
       </div>

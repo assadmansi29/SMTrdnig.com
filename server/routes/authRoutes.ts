@@ -2,8 +2,67 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { Database, UserRecord } from '../db';
 import { generateToken, sanitizeUser, authenticateToken, AuthRequest } from '../auth';
+import { sendEmailVerificationCode, verifyEmailCode } from '../emailService';
 
 const router = Router();
+
+// POST /api/auth/send-register-code
+router.post('/send-register-code', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { email, username } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ error: 'Email address is required.' });
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      res.status(400).json({ error: 'Please enter a valid email address.' });
+      return;
+    }
+
+    // Check if email already registered
+    const existingEmailUser = await Database.findUserByEmail(cleanEmail);
+    if (existingEmailUser) {
+      res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
+      return;
+    }
+
+    // Check username if provided
+    if (username && typeof username === 'string') {
+      const cleanUsername = username.trim();
+      if (cleanUsername.length < 3) {
+        res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+        return;
+      }
+      const existingUsernameUser = await Database.findUserByUsername(cleanUsername);
+      if (existingUsernameUser) {
+        res.status(409).json({ error: 'This username is already taken. Please choose another.' });
+        return;
+      }
+    }
+
+    const result = await sendEmailVerificationCode(cleanEmail, 'register', {
+      username: username ? String(username).trim() : undefined,
+    });
+
+    if (!result.success) {
+      res.status(400).json({ error: result.error || 'Failed to send verification code.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: result.message || `Verification code sent to ${cleanEmail}.`,
+      previewCode: result.previewCode,
+    });
+  } catch (err: any) {
+    console.error('Send register code error:', err);
+    res.status(500).json({ error: 'Internal server error while sending verification code.' });
+  }
+});
 
 // POST /api/auth/login
 router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => {
@@ -71,14 +130,29 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
 // POST /api/auth/register
 router.post('/register', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { username, email, password, fullName, referralCode, plan } = req.body;
+    const { username, email, password, fullName, referralCode, plan, verificationCode } = req.body;
 
     if (!username || !email || !password) {
       res.status(400).json({ error: 'Username, email, and password are required.' });
       return;
     }
 
-    if (username.length < 3) {
+    if (!verificationCode || typeof verificationCode !== 'string' || !verificationCode.trim()) {
+      res.status(400).json({ error: 'Email verification code is required. Please check your inbox for the 6-digit code.' });
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username.trim();
+
+    // Verify 6-digit email confirmation code
+    const verificationResult = verifyEmailCode(cleanEmail, verificationCode.trim(), 'register');
+    if (!verificationResult.valid) {
+      res.status(400).json({ error: verificationResult.error || 'Invalid or expired email verification code.' });
+      return;
+    }
+
+    if (cleanUsername.length < 3) {
       res.status(400).json({ error: 'Username must be at least 3 characters long.' });
       return;
     }
@@ -88,12 +162,12 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    if (await Database.findUserByUsername(username)) {
+    if (await Database.findUserByUsername(cleanUsername)) {
       res.status(409).json({ error: 'Username is already taken.' });
       return;
     }
 
-    if (await Database.findUserByEmail(email)) {
+    if (await Database.findUserByEmail(cleanEmail)) {
       res.status(409).json({ error: 'Email address is already registered.' });
       return;
     }

@@ -73,9 +73,11 @@ export function getPool(): PgPool | null {
   const config: PoolConfig = {
     connectionString,
     ssl: isLocal ? false : { rejectUnauthorized: false },
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 3000,
+    max: parseInt(process.env.DB_POOL_MAX || '50', 10),
+    min: parseInt(process.env.DB_POOL_MIN || '5', 10),
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '15000', 10),
+    connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT_MS || '5000', 10),
+    maxUses: 7500, // Recycle connections periodically to prevent memory leaks
   };
 
   pool = new Pool(config);
@@ -186,7 +188,12 @@ export async function isPostgresReady(): Promise<boolean> {
           CREATE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username));
           CREATE INDEX IF NOT EXISTS idx_users_email ON users(LOWER(email));
           CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(UPPER(referral_code));
+          CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);
+          CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, subscription_status);
+          CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
           CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+          CREATE INDEX IF NOT EXISTS idx_transactions_user_created ON transactions(user_id, created_at DESC);
+          CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(type, status);
           CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
         `);
 
@@ -456,7 +463,17 @@ function saveDbFile(data: DatabaseSchema): void {
   if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  const tempFile = `${DB_FILE}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tempFile, DB_FILE);
+  } catch (err) {
+    if (fs.existsSync(tempFile)) {
+      try { fs.unlinkSync(tempFile); } catch {}
+    }
+    // Direct write fallback
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  }
 }
 
 async function getActivePg(): Promise<PgPool | null> {

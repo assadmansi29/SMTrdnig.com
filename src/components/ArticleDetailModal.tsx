@@ -20,7 +20,11 @@ import {
   Copy,
   ArrowRight,
   BookOpen,
-  Camera
+  Camera,
+  ExternalLink,
+  Radio,
+  Mail,
+  Headphones
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
@@ -275,6 +279,74 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               ))}
             </ul>
           </div>
+
+          {/* Dedicated SMTrading VIP Signals Telegram Banner Button inside VIP Signals modal */}
+          {article.category === 'VIP Signals' && (
+            <div className="bg-gradient-to-r from-[#0088cc]/20 via-[#0D182E] to-[#121B30] border-2 border-[#0088cc]/50 rounded-2xl p-5 sm:p-6 shadow-2xl shadow-[#0088cc]/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all hover:border-[#0088cc]">
+              <div className="space-y-1 max-w-xl">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0088cc]/20 border border-[#0088cc]/50 text-[#38bdf8] text-[11px] font-mono-num font-bold uppercase tracking-wider">
+                    <Radio className="w-3 h-3 text-[#38bdf8] animate-pulse" />
+                    Official VIP Desk
+                  </span>
+                  <span className="text-xs text-amber-400 font-bold">
+                    SMTrading.pro
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  SMTrading VIP Signals Telegram
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {t('vipChannelSubtitle')}
+                </p>
+              </div>
+
+              <a
+                href="https://t.me/+pv2CVLJeM1ZlMjQ8"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#0088cc] to-[#00a2f5] hover:from-[#0099e6] hover:to-[#1ab2ff] text-white font-black text-xs sm:text-sm shadow-lg shadow-[#0088cc]/30 hover:shadow-[#0088cc]/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shrink-0"
+              >
+                <Send className="w-4 h-4 fill-white" />
+                <span>{t('vipChannelBtn')}</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </a>
+            </div>
+          )}
+
+          {/* Dedicated SMTrading Support Desk Banner inside Support category modal */}
+          {article.category === 'Support' && (
+            <div className="bg-gradient-to-r from-amber-500/20 via-[#0D182E] to-[#121B30] border-2 border-amber-500/50 rounded-2xl p-5 sm:p-6 shadow-2xl shadow-amber-500/15 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all hover:border-amber-400">
+              <div className="space-y-1 max-w-xl">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[11px] font-mono-num font-bold uppercase tracking-wider">
+                    <Headphones className="w-3 h-3 text-amber-400" />
+                    24/7 Desk Help
+                  </span>
+                  <span className="text-xs text-emerald-400 font-mono-num font-bold">
+                    {t('supportResponseTime')}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white">
+                  {t('supportBannerTitle')}
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {t('supportBannerSubtitle')}
+                </p>
+                <div className="font-mono-num text-amber-400 font-bold text-xs pt-1">
+                  smtradingsupprt@gmail.com
+                </div>
+              </div>
+
+              <a
+                href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shrink-0"
+              >
+                <Mail className="w-4 h-4 text-slate-950" />
+                <span>{t('supportEmailBtn')}</span>
+              </a>
+            </div>
+          )}
 
           {/* Interactive Trade Setup Component (If Available) */}
           {article.tradeSetup && (

@@ -97,6 +97,15 @@ export const en = {
   filterClearAll: 'Clear All Filters',
   filterArchive: 'Research Archive',
   filterResetAll: 'Reset to All Sectors',
+  vipChannelBtn: 'Join SMTrading VIP Signals Telegram',
+  vipChannelSubtitle: 'Direct institutional setups, execution alerts & live market breakdowns',
+  supportBannerTitle: 'SMTrading Official Support Desk',
+  supportBannerSubtitle: 'Need assistance with your subscription, terminal access, VIP signals, or billing? Our dedicated support desk is here 24/7.',
+  supportEmailBtn: 'Email Support',
+  supportCopyEmail: 'Copy Email',
+  supportEmailCopied: 'Email Copied!',
+  supportResponseTime: 'Average response: < 2 hours | 24/7 Desk',
+  supportDirectEmail: 'smtradingsupprt@gmail.com',
 
   // Article Card
   cardReadTimeSuffix: 'read',
@@ -469,6 +478,26 @@ export const en = {
   authErrorCompleteFields: 'Please complete all required fields.',
   authSuccessRegistered: 'Account registered successfully! Redirecting...',
   authFailedGeneral: 'Authentication failed. Please check credentials.',
+
+  // Verification
+  authVerificationStep: 'Email Security Verification',
+  authVerificationNotice: 'We sent a 6-digit verification code to',
+  authVerificationCodeLabel: '6-Digit Email Verification Code *',
+  authVerificationCodePlaceholder: '6-digit code (e.g. 582914)',
+  authBtnSendCode: 'Verify Email & Continue',
+  authBtnSendingCode: 'Sending Code to Email...',
+  authBtnVerifyAndRegister: 'Verify Code & Create Account',
+  authResendCode: 'Resend Code',
+  authResendIn: 'Resend code in {seconds}s',
+  authChangeEmail: 'Edit Email / Details',
+  authCodeSentToast: 'Security verification code dispatched to your email.',
+  profileVerifyModalTitle: 'Security Verification Required',
+  profileVerifyModalDesc: 'To protect your personal data, enter the 6-digit verification code sent to',
+  profileVerifySendBtn: 'Send Security Code',
+  profileVerifySendingBtn: 'Sending Code...',
+  profileVerifyConfirmBtn: 'Confirm & Save Personal Info',
+  profileVerifyCodePlaceholder: 'Enter 6-digit security code',
+  profileVerifyNeedCode: 'Email verification code is required to modify personal credentials.',
 
   // Subscription Renewal Gate
   authSubMembership: 'Membership',

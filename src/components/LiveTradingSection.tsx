@@ -90,13 +90,13 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
 
   const events = localizedEvents || getEconomicEventsByLanguage(language);
 
-  // When inside "Support", completely hide live trading terminal, catalysts, tools, and live stream
-  if (activeCategory === 'Support') {
+  // When inside "Support" or "VIP Signals", completely hide the entire Live Trading Section (including live stream and terminal)
+  if (activeCategory === 'Support' || activeCategory === 'VIP Signals') {
     return null;
   }
 
-  // When inside "LIVE Trade" or "VIP Signals", hide LIVE TERMINAL, Catalysts, and Proprietary Trading Tools
-  const hideTerminalAndTools = activeCategory === 'LIVE Trade' || activeCategory === 'VIP Signals';
+  // When inside "LIVE Trade", hide LIVE TERMINAL, Catalysts, and Proprietary Trading Tools
+  const hideTerminalAndTools = activeCategory === 'LIVE Trade';
 
   return (
     <section id="live-tradingview-terminal" className="space-y-4">

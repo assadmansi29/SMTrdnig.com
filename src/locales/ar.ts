@@ -99,6 +99,15 @@ export const ar: Record<TranslationKey, string> = {
   filterClearAll: 'مسح جميع الفلاتر',
   filterArchive: 'أرشيف الأبحاث',
   filterResetAll: 'إعادة تعيين لكافة القطاعات',
+  vipChannelBtn: 'انضم إلى قناة SMTrading VIP Signals على تليجرام',
+  vipChannelSubtitle: 'توصيات مؤسسية مباشرة، تنبيهات صفقات دقيقة وتحليلات حصرية',
+  supportBannerTitle: 'مكتب الدعم الفني الرسمي SMTrading',
+  supportBannerSubtitle: 'هل تحتاج إلى مساعدة بشأن اشتراكك، الوصول إلى المنصة، توصيات VIP، أو المدفوعات؟ فريق الدعم متاح 24/7.',
+  supportEmailBtn: 'مراسلة الدعم الفني',
+  supportCopyEmail: 'نسخ البريد الإلكتروني',
+  supportEmailCopied: 'تم نسخ البريد!',
+  supportResponseTime: 'متوسط سرعة الاستجابة: أقل من ساعتين | متاح 24/7',
+  supportDirectEmail: 'smtradingsupprt@gmail.com',
 
   // Article Card
   cardReadTimeSuffix: 'قراءة',
@@ -471,6 +480,26 @@ export const ar: Record<TranslationKey, string> = {
   authErrorCompleteFields: 'يرجى إكمال جميع الحقول المطلوبة.',
   authSuccessRegistered: 'تم إنشاء الحساب بنجاح! جاري تحويلك...',
   authFailedGeneral: 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.',
+
+  // Verification
+  authVerificationStep: 'التحقق الأمني من البريد الإلكتروني',
+  authVerificationNotice: 'لقد أرسلنا رمز تحقق أمني مكون من 6 أرقام إلى',
+  authVerificationCodeLabel: 'رمز التحقق المكون من 6 أرقام *',
+  authVerificationCodePlaceholder: 'رمز من 6 أرقام (مثال: 582914)',
+  authBtnSendCode: 'تأكيد البريد الإلكتروني والمتابعة',
+  authBtnSendingCode: 'جاري إرسال الرمز للبريد...',
+  authBtnVerifyAndRegister: 'تأكيد الرمز وإنشاء الحساب',
+  authResendCode: 'إعادة إرسال الرمز',
+  authResendIn: 'إعادة الإرسال بعد {seconds} ثانية',
+  authChangeEmail: 'تعديل البريد / البيانات',
+  authCodeSentToast: 'تم إرسال رمز التحقق الأمني إلى بريدك الإلكتروني بنجاح.',
+  profileVerifyModalTitle: 'مطلوب تأكيد أمني',
+  profileVerifyModalDesc: 'لحماية بياناتك الشخصية، يرجى إدخال رمز التحقق المكون من 6 أرقام المرسل إلى',
+  profileVerifySendBtn: 'إرسال رمز الأمان',
+  profileVerifySendingBtn: 'جاري إرسال الرمز...',
+  profileVerifyConfirmBtn: 'تأكيد وحفظ البيانات الشخصية',
+  profileVerifyCodePlaceholder: 'أدخل الرمز المكون من 6 أرقام',
+  profileVerifyNeedCode: 'مطلوب رمز التحقق من البريد لتعديل البيانات الشخصية.',
 
   // Subscription Renewal Gate
   authSubMembership: 'حالة العضوية',

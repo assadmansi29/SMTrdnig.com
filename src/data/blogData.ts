@@ -416,6 +416,19 @@ def test_pair_cointegration(asset_a_prices, asset_b_prices):
         paragraphs: [
           'A 50% win rate strategy with a 1:2 risk-to-reward ratio will print consistent long-term wealth, provided you never risk more than 1-2% per trade. When you risk 5% or 10% per trade, standard statistical variance guarantees eventual account ruin.'
         ]
+      },
+      {
+        sectionId: 'sec-3',
+        sectionTitle: '24/7 Desk Support & Executive Assistance',
+        paragraphs: [
+          'For direct trader inquiries, account synchronization, VIP signal inquiries, or billing support, connect directly with our global desk team at smtradingsupprt@gmail.com.',
+          'Our risk technicians and quantitative support specialists maintain active 24/7 desk coverage to ensure uninterrupted execution.'
+        ],
+        callout: {
+          type: 'alpha',
+          title: 'Direct Support Channel',
+          text: 'Official Support Desk Email: smtradingsupprt@gmail.com (Average response time: < 2 hours).'
+        }
       }
     ]
   },
