@@ -104,7 +104,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     setIsSendingCode(false);
 
     if (!res.success) {
-      setErrorMsg(res.error || 'Failed to send verification code.');
+      setErrorMsg(res.error || t('authFailedGeneral'));
     } else {
       setRegStep('verify');
       setCodeCountdown(60);
@@ -193,7 +193,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           </div>
 
           <div className="flex items-center gap-3">
-            <LanguageSelector />
+            <div className="w-[86px] sm:w-[94px] shrink-0">
+              <LanguageSelector />
+            </div>
             <div className="text-right rtl:text-left hidden sm:block">
               <div className="text-xs font-semibold text-white">@{user.username}</div>
               <div className="text-[10px] text-slate-400">{user.email}</div>
@@ -388,7 +390,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         </div>
 
         <div className="flex items-center gap-3">
-          <LanguageSelector />
+          <div className="w-[86px] sm:w-[94px] shrink-0">
+            <LanguageSelector />
+          </div>
         </div>
       </header>
 

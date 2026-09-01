@@ -40,6 +40,8 @@ import {
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { UserAvatar } from './UserAvatar';
 import { AvatarUploadModal } from './AvatarUploadModal';
+import { LanguageSelector } from './LanguageSelector';
+import { useTranslation } from '../context/LanguageContext';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -52,6 +54,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   onOpenAdmin,
 }) => {
+  const { t } = useTranslation();
   const { user, token, logout, updateProfile, activateSubscription, changePassword, sendProfileVerificationCode } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'referrals' | 'transactions' | 'subscription'>('profile');
 
@@ -395,17 +398,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 {isRoleAdmin ? (
                   <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/40 flex items-center gap-1">
                     <Crown className="w-3 h-3 text-amber-400" />
-                    <span>Master Admin</span>
+                    <span>{t('profileRoleSuperAdmin')}</span>
                   </span>
                 ) : isRoleEmployee ? (
                   <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/40 flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3 text-blue-400" />
-                    <span>Desk Employee</span>
+                    <span>{t('profileRoleEmployee')}</span>
                   </span>
                 ) : (
                   <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/40 flex items-center gap-1">
                     <BlueVerifiedBadge size="sm" />
-                    <span>Pro Client</span>
+                    <span>{t('profileRoleClient')}</span>
                   </span>
                 )}
               </div>
@@ -415,7 +418,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <span className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400'}`} />
                   <span className={isExpired ? 'text-rose-400 font-bold' : 'text-emerald-300 font-medium'}>
-                    {isRoleAdmin || isRoleEmployee ? 'Permanent Desk Access' : (isExpired ? 'Subscription Expired' : `Active (${formattedExpiry})`)}
+                    {isRoleAdmin || isRoleEmployee ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
                   </span>
                 </span>
               </div>
@@ -423,6 +426,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="w-[84px] shrink-0">
+              <LanguageSelector />
+            </div>
+
             {isRoleAdmin && onOpenAdmin && (
               <button
                 onClick={() => {
@@ -456,7 +463,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Profile & Account</span>
+            <span>{t('profileTabAccount')}</span>
           </button>
 
           <button
@@ -468,7 +475,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             }`}
           >
             <Share2 className="w-3.5 h-3.5" />
-            <span>Referrals & Commissions</span>
+            <span>{t('profileTabReferrals')}</span>
             <span className="ml-1 bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded-full text-[10px] font-mono">
               ${user.balance.toFixed(2)}
             </span>
@@ -483,7 +490,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             }`}
           >
             <Wallet className="w-3.5 h-3.5" />
-            <span>Transactions</span>
+            <span>{t('profileTabTransactions')}</span>
           </button>
 
           <button
@@ -495,7 +502,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>Subscription Plan</span>
+            <span>{t('profileTabSubscription')}</span>
           </button>
         </div>
 
@@ -510,46 +517,46 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/15 via-slate-900 to-slate-900 border border-amber-500/30">
                   <div className="flex items-center justify-between text-xs text-amber-400 font-bold uppercase tracking-wider">
-                    <span>Available Commission</span>
+                    <span>{t('profileAvailCommission')}</span>
                     <DollarSign className="w-4 h-4" />
                   </div>
                   <div className="mt-2 text-2xl sm:text-3xl font-black text-white">
                     ${user.balance.toFixed(2)}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">Rate: {user.commissionRate}% per sale</span>
+                    <span className="text-[11px] text-slate-400">{t('profileRateLabel')}: {user.commissionRate}%</span>
                     <button
                       onClick={() => setShowPayoutModal(true)}
                       className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-md transition-all cursor-pointer"
                     >
-                      Withdraw
+                      {t('profileWithdrawBtn')}
                     </button>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
                   <div className="flex items-center justify-between text-xs text-slate-400 font-bold uppercase tracking-wider">
-                    <span>Pending Payout</span>
+                    <span>{t('profilePendingPayout')}</span>
                     <Clock className="w-4 h-4 text-slate-500" />
                   </div>
                   <div className="mt-2 text-2xl font-black text-slate-200">
                     ${user.pendingBalance.toFixed(2)}
                   </div>
                   <div className="mt-2 text-[11px] text-slate-500">
-                    Under admin review
+                    {t('profileUnderReview')}
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
                   <div className="flex items-center justify-between text-xs text-emerald-400 font-bold uppercase tracking-wider">
-                    <span>Lifetime Earned</span>
+                    <span>{t('profileLifetimeEarned')}</span>
                     <TrendingUp className="w-4 h-4" />
                   </div>
                   <div className="mt-2 text-2xl font-black text-emerald-300">
                     ${user.totalEarned.toFixed(2)}
                   </div>
                   <div className="mt-2 text-[11px] text-slate-400">
-                    Total commissions earned
+                    {t('profileTotalEarnedDesc')}
                   </div>
                 </div>
               </div>
@@ -573,13 +580,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-white">Profile Photo</h3>
+                        <h3 className="text-sm font-bold text-white">{t('profilePhotoTitle')}</h3>
                         <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-                          {user.avatarUrl ? 'Custom Image' : 'Default Avatar'}
+                          {user.avatarUrl ? t('profileCustomImage') : t('profileDefaultAvatar')}
                         </span>
                       </div>
                       <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                        Click your photo or tap the button to choose an image from Gallery Photos or Files (JPG, PNG, WEBP).
+                        {t('profilePhotoDesc')}
                       </p>
                     </div>
                   </div>
@@ -591,7 +598,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-md shadow-amber-400/20"
                     >
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Upload Photo</span>
+                      <span>{t('profileUploadPhoto')}</span>
                     </button>
 
                     {user.avatarUrl && (
@@ -601,7 +608,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-all cursor-pointer"
                       >
                         <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Manage</span>
+                        <span>{t('profileManagePhoto')}</span>
                       </button>
                     )}
                   </div>
@@ -612,14 +619,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Member Credentials & Information
+                    {t('profileMemberCredentials')}
                   </h3>
                   <button
                     onClick={() => setIsEditing(!isEditing)}
                     className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>{isEditing ? 'Cancel Edit' : 'Edit Profile'}</span>
+                    <span>{isEditing ? t('profileCancelEdit') : t('profileEditProfile')}</span>
                   </button>
                 </div>
 
@@ -826,13 +833,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <span>Account Security & Password</span>
+                        <span>{t('profileSecTitle')}</span>
                         <span className="text-[10px] bg-slate-800 text-slate-400 font-mono px-2 py-0.5 rounded border border-slate-700">
                           Bcrypt 12-Rounds
                         </span>
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Change your account password with end-to-end cryptographic hashing.
+                        {t('profileSecDesc')}
                       </p>
                     </div>
                   </div>
@@ -853,7 +860,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     }`}
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    <span>{showPasswordChange ? 'Close Form' : 'Change Password'}</span>
+                    <span>{showPasswordChange ? t('profileCloseFormBtn') : t('profileChangePassBtn')}</span>
                   </button>
                 </div>
 
@@ -876,13 +883,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                       {/* Current Password */}
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-semibold">Current Password</label>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold">{t('profileCurrentPass')}</label>
                         <div className="relative">
                           <input
                             type={showCurrentPass ? 'text' : 'password'}
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="Enter current password"
+                            placeholder={t('profileCurrentPass')}
                             required
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
                           />
@@ -898,13 +905,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                       {/* New Password */}
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-semibold">New Password</label>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold">{t('profileNewPass')}</label>
                         <div className="relative">
                           <input
                             type={showNewPass ? 'text' : 'password'}
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Min 6 characters"
+                            placeholder={t('profileNewPass')}
                             required
                             minLength={6}
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
@@ -921,13 +928,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                       {/* Confirm New Password */}
                       <div>
-                        <label className="block text-xs text-slate-400 mb-1 font-semibold">Confirm New Password</label>
+                        <label className="block text-xs text-slate-400 mb-1 font-semibold">{t('profileConfirmNewPass')}</label>
                         <div className="relative">
                           <input
                             type={showConfirmPass ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Re-type new password"
+                            placeholder={t('profileConfirmNewPass')}
                             required
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-9 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-400"
                           />
@@ -967,7 +974,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm shadow-amber-500/20"
                       >
                         <Lock className="w-3.5 h-3.5" />
-                        <span>{passwordStatus?.type === 'loading' ? 'Updating...' : 'Save New Password'}</span>
+                        <span>{passwordStatus?.type === 'loading' ? 'Updating...' : t('profileSaveNewPass')}</span>
                       </button>
                     </div>
                   </form>
@@ -976,7 +983,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
               {/* Logout Bar */}
               <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                <span className="text-xs text-slate-500">Need to switch accounts or end session?</span>
+                <span className="text-xs text-slate-500">{t('profileLogoutPrompt')}</span>
                 <button
                   onClick={() => {
                     onClose();
@@ -985,7 +992,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 text-xs font-bold transition-all cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Log Out</span>
+                  <span>{t('profileLogoutBtn')}</span>
                 </button>
               </div>
 
@@ -1001,18 +1008,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Your Institutional Referral Engine
+                    {t('profileRefEngine')}
                   </h3>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
-                  Share your personal link with fellow traders. Every time a member registers and activates a trading pass using your referral code, you automatically earn a <strong className="text-amber-300 font-bold">{user.commissionRate}% instant cash commission</strong> credited directly to your balance!
+                  {t('profileRefEngineDesc')}
                 </p>
 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Referral Code */}
                   <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Referral Code</span>
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">{t('profileRefCodeLabel')}</span>
                       <span className="text-sm font-mono font-black text-amber-300">{user.referralCode}</span>
                     </div>
                     <button
@@ -1020,14 +1027,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                      <span>{copiedCode ? t('profileCopied') : t('profileCopy')}</span>
                     </button>
                   </div>
 
                   {/* Referral Link */}
                   <div className="p-3 bg-slate-950/80 rounded-lg border border-slate-800 flex items-center justify-between">
                     <div className="min-w-0 pr-2">
-                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">Shareable Invite Link</span>
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">{t('profileRefShareLink')}</span>
                       <span className="text-xs font-mono text-slate-300 truncate block">{referralLink}</span>
                     </div>
                     <button
@@ -1035,7 +1042,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-md text-xs font-bold flex items-center gap-1 transition-colors shrink-0 cursor-pointer"
                     >
                       {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                      <span>{copiedLink ? t('profileCopied') : t('profileCopyLink')}</span>
                     </button>
                   </div>
                 </div>
@@ -1047,14 +1054,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-amber-400" />
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Referred Traders ({referralData?.totalReferredCount || 0})
+                      {t('profileReferredTraders')} ({referralData?.totalReferredCount || 0})
                     </h3>
                   </div>
-                  <span className="text-xs text-slate-400">Commission Rate: <strong className="text-emerald-400">{user.commissionRate}%</strong></span>
+                  <span className="text-xs text-slate-400">{t('profileCommissionRate')}: <strong className="text-emerald-400">{user.commissionRate}%</strong></span>
                 </div>
 
                 {loadingRef ? (
-                  <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading referral tree...</div>
+                  <div className="py-8 text-center text-xs text-slate-500 font-mono">{t('profileLoadingTree')}</div>
                 ) : referralData && referralData.referrals.length > 0 ? (
                   <div className="divide-y divide-slate-800/80">
                     {referralData.referrals.map((refUser) => (
@@ -1078,7 +1085,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                           }`}>
                             {refUser.subscriptionStatus}
                           </span>
-                          <span className="font-bold text-emerald-400 text-xs">+ Commission Active</span>
+                          <span className="font-bold text-emerald-400 text-xs">+ {t('profileActiveCommission')}</span>
                         </div>
                       </div>
                     ))}
@@ -1086,8 +1093,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 ) : (
                   <div className="py-8 text-center text-xs text-slate-400 bg-slate-950/40 rounded-lg border border-dashed border-slate-800">
                     <Share2 className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                    <p className="font-semibold text-slate-300">No referred traders yet.</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Share your referral link above to start generating automatic commission balances.</p>
+                    <p className="font-semibold text-slate-300">{t('profileNoRefYet')}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{t('profileNoRefDesc')}</p>
                   </div>
                 )}
               </div>
@@ -1100,18 +1107,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                  Account Ledger & Financial Activity
+                  {t('profileAccountLedger')}
                 </h3>
                 <button
                   onClick={() => setShowPayoutModal(true)}
                   className="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer"
                 >
-                  Request Payout ($)
+                  {t('profileRequestPayout')} ($)
                 </button>
               </div>
 
               {loadingTx ? (
-                <div className="py-8 text-center text-xs text-slate-500 font-mono">Loading transaction records...</div>
+                <div className="py-8 text-center text-xs text-slate-500 font-mono">{t('profileLoadingTx')}</div>
               ) : transactions.length > 0 ? (
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/80">
                   {transactions.map((tx) => (
@@ -1141,8 +1148,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               ) : (
                 <div className="py-12 text-center text-xs text-slate-500 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
                   <Wallet className="w-6 h-6 text-slate-600 mx-auto mb-2" />
-                  <p className="font-semibold text-slate-300">No transaction records found.</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Commission earnings and subscription receipts will be logged here.</p>
+                  <p className="font-semibold text-slate-300">{t('profileNoTx')}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{t('profileNoTxDesc')}</p>
                 </div>
               )}
             </div>
@@ -1155,24 +1162,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               {/* Current Active Plan Status */}
               <div className="p-5 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Current Membership Plan</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">{t('profileCurrentPlan')}</span>
                   <h3 className="text-lg font-black text-white">{user.subscriptionPlan || 'Pro Order Flow SMC'}</h3>
                   <div className="mt-1 flex items-center gap-2 text-xs">
                     <span className={`inline-flex items-center gap-1 font-bold ${isExpired ? 'text-rose-400' : 'text-emerald-400'}`}>
                       <span className={`w-2 h-2 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
-                      <span>{isExpired ? 'Expired' : 'Active Status'}</span>
+                      <span>{isExpired ? t('profileSubExpiredStatus') : t('profileSubActiveStatus')}</span>
                     </span>
                     <span className="text-slate-600">•</span>
                     <span className="text-slate-400">
-                      {isRoleAdmin || isRoleEmployee ? 'Internal Permanent Access' : `Expires on ${formattedExpiry}`}
+                      {isRoleAdmin || isRoleEmployee ? t('profilePermanentDeskAccess') : `Expires on ${formattedExpiry}`}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-left sm:text-right">
-                  <span className="text-[10px] text-slate-500 block uppercase">Permissions</span>
+                  <span className="text-[10px] text-slate-500 block uppercase">{t('profilePermissions')}</span>
                   <span className="text-xs font-bold text-amber-300 uppercase">
-                    Full Quantitative Alpha Access
+                    {t('profileFullAlphaAccess')}
                   </span>
                 </div>
               </div>
@@ -1187,55 +1194,55 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               {/* Renewal Options */}
               <div>
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
-                  Extend or Upgrade Membership
+                  {t('profileExtendUpgrade')}
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between">
                     <div>
-                      <div className="text-xs font-bold text-white">Monthly SMC Pass</div>
+                      <div className="text-xs font-bold text-white">{t('pricingPlanMonthly')}</div>
                       <div className="text-xl font-black text-amber-400 mt-1">$120 <span className="text-xs text-slate-400 font-normal">/ 30 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">Single month extension.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{t('profileSingleMonthExt')}</p>
                     </div>
                     <button
                       disabled={renewing}
                       onClick={() => handleRenewSubscription(1, 'Pro Monthly SMC Pass')}
                       className="mt-4 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
                     >
-                      {renewing ? 'Updating...' : 'Extend 1 Month'}
+                      {renewing ? 'Updating...' : `${t('profileExtendBtn')} 1 Month`}
                     </button>
                   </div>
 
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-400/60 flex flex-col justify-between relative">
                     <span className="absolute -top-2 right-3 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.2 rounded-full">
-                      Best Value
+                      {t('profileBestValue')}
                     </span>
                     <div>
-                      <div className="text-xs font-bold text-amber-300">Quarterly VIP Pass</div>
+                      <div className="text-xs font-bold text-amber-300">{t('pricingPlanQuarterly')}</div>
                       <div className="text-xl font-black text-white mt-1">$290 <span className="text-xs text-slate-400 font-normal">/ 90 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">90 days access + priority signals.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{t('profileQuarterlyDesc')}</p>
                     </div>
                     <button
                       disabled={renewing}
                       onClick={() => handleRenewSubscription(3, 'Pro Quarterly VIP Pass')}
                       className="mt-4 w-full py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-lg transition-all cursor-pointer shadow-md shadow-amber-500/20"
                     >
-                      {renewing ? 'Updating...' : 'Extend 3 Months ($290)'}
+                      {renewing ? 'Updating...' : `${t('profileExtendBtn')} 3 Months ($290)`}
                     </button>
                   </div>
 
                   <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between">
                     <div>
-                      <div className="text-xs font-bold text-emerald-300">Annual Institutional</div>
+                      <div className="text-xs font-bold text-emerald-300">{t('pricingPlanAnnual')}</div>
                       <div className="text-xl font-black text-white mt-1">$990 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">Full 1-year institutional tier.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{t('profileAnnualDesc')}</p>
                     </div>
                     <button
                       disabled={renewing}
                       onClick={() => handleRenewSubscription(12, 'Annual Institutional Elite')}
                       className="mt-4 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
                     >
-                      {renewing ? 'Updating...' : 'Extend 1 Year ($990)'}
+                      {renewing ? 'Updating...' : `${t('profileExtendBtn')} 1 Year ($990)`}
                     </button>
                   </div>
                 </div>
@@ -1248,12 +1255,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-slate-800/80 bg-[#080C14] flex items-center justify-between text-xs text-slate-500">
-          <span>Logged in as @{user.username} ({user.role})</span>
+          <span>{t('profileLoggedInAs')} @{user.username} ({user.role})</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer"
           >
-            Close
+            {t('profileCloseModalBtn')}
           </button>
         </div>
 
@@ -1266,7 +1273,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="font-bold text-white text-sm flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-amber-400" />
-                <span>Request Commission Payout</span>
+                <span>{t('profilePayoutModalTitle')}</span>
               </h3>
               <button
                 onClick={() => setShowPayoutModal(false)}
@@ -1277,7 +1284,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
 
             <div className="p-3 bg-amber-500/10 border border-amber-400/30 rounded-xl text-xs flex items-center justify-between">
-              <span className="text-slate-300">Available Balance:</span>
+              <span className="text-slate-300">{t('profileAvailCommission')}:</span>
               <span className="text-base font-black text-amber-300 font-mono">${user.balance.toFixed(2)}</span>
             </div>
 
@@ -1289,7 +1296,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             <form onSubmit={handlePayoutSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-semibold">Payout Amount ($ USD)</label>
+                <label className="block text-xs text-slate-400 mb-1 font-semibold">{t('profilePayoutAmountLabel')}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -1304,7 +1311,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-semibold">Payout Method</label>
+                <label className="block text-xs text-slate-400 mb-1 font-semibold">{t('profilePayoutMethodLabel')}</label>
                 <select
                   value={payoutMethod}
                   onChange={(e) => setPayoutMethod(e.target.value)}
@@ -1318,7 +1325,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1 font-semibold">Wallet Address or Bank Details</label>
+                <label className="block text-xs text-slate-400 mb-1 font-semibold">{t('profilePayoutAddressLabel')}</label>
                 <input
                   type="text"
                   required
@@ -1335,13 +1342,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   onClick={() => setShowPayoutModal(false)}
                   className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg cursor-pointer"
                 >
-                  Cancel
+                  {t('profileCancelEdit')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-lg transition-all cursor-pointer"
                 >
-                  Submit Payout Request
+                  {t('profileSubmitPayout')}
                 </button>
               </div>
             </form>
@@ -1356,7 +1363,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="font-bold text-white text-sm flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Security Verification Required</span>
+                <span>{t('profileSecModalTitle')}</span>
               </h3>
               <button
                 onClick={() => {
@@ -1376,7 +1383,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    To authorize modifying your personal details, a 6-digit security code was dispatched to:
+                    {t('profileSecModalDesc')}
                   </p>
                   <span className="text-xs font-mono font-bold text-amber-300 block mt-1 break-all">
                     {editEmail.trim() !== user.email ? editEmail.trim() : user.email}
@@ -1395,7 +1402,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <form onSubmit={handleConfirmVerifiedProfileUpdate} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  6-Digit Security Code
+                  {t('profileDigitCodeLabel')}
                 </label>
 
                 <div className="relative">
@@ -1420,7 +1427,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   {profileCodeCountdown > 0 ? (
                     <span className="flex items-center gap-1 text-slate-400">
                       <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      Resend in {profileCodeCountdown}s
+                      {t('profileResendIn')} {profileCodeCountdown}s
                     </span>
                   ) : (
                     <button
@@ -1430,7 +1437,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1 disabled:opacity-50"
                     >
                       <Send className="w-3 h-3" />
-                      <span>Resend Code</span>
+                      <span>{t('profileResendCodeBtn')}</span>
                     </button>
                   )}
                 </span>
@@ -1445,7 +1452,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   }}
                   className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg cursor-pointer transition-all"
                 >
-                  Cancel
+                  {t('profileCancelEdit')}
                 </button>
                 <button
                   type="submit"
@@ -1460,7 +1467,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   ) : (
                     <>
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Confirm & Save</span>
+                      <span>{t('profileConfirmSaveBtn')}</span>
                     </>
                   )}
                 </button>
