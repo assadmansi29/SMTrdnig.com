@@ -188,9 +188,17 @@ export async function sendEmailVerificationCode(
       };
     } catch (err: any) {
       console.error(`[EmailService] Failed to send email via SMTP to ${cleanEmail}:`, err);
+      let errorDetail = err.message || 'SMTP transport error';
+
+      if (errorDetail.includes('502') || errorDetail.includes('not yet activated') || errorDetail.includes('Your SMTP account is not yet activated')) {
+        errorDetail = 'Your Brevo (Sendinblue) SMTP account is not yet activated. Please log in to Brevo (app.brevo.com), verify your sender email/domain under Senders & IP, and request transactional activation, or use an alternative active SMTP provider (such as Gmail App Password, Resend, or SendGrid).';
+      } else if (errorDetail.includes('535') || errorDetail.includes('Authentication failed')) {
+        errorDetail = 'SMTP Authentication failed. Please check your SMTP_USER and SMTP_PASS (or Brevo Master Key) on Render.';
+      }
+
       return {
         success: false,
-        error: `Failed to dispatch verification email: ${err.message || 'SMTP transport error'}. Please check your email or contact support.`,
+        error: `Failed to dispatch verification email: ${errorDetail}`,
       };
     }
   } else {
