@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { Database } from '../db';
 import { authenticateToken, requireActiveSubscription, sanitizeUser, AuthRequest } from '../auth';
 import { sendEmailVerificationCode, verifyEmailCode } from '../emailService';
+import { payoutRateLimiter } from '../middleware/security';
 
 const router = Router();
 
@@ -516,7 +517,7 @@ router.post('/activate-subscription', async (req: AuthRequest, res: Response): P
 });
 
 // POST /api/user/request-payout
-router.post('/request-payout', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/request-payout', payoutRateLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   const { amount, payoutMethod, payoutAddress } = req.body;
 
   const requestAmount = Number(amount);

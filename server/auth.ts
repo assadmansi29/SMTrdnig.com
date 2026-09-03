@@ -1,13 +1,32 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { Database, UserRecord, UserRole, RolePermissions, DEFAULT_ROLE_PERMISSIONS } from './db';
+
+// Cryptographically secure ephemeral session key for non-production development environments
+let ephemeralDevSecret: string | null = null;
 
 export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
-  if (secret && secret.trim().length > 0) {
+  if (secret && secret.trim().length >= 32) {
     return secret.trim();
   }
-  return 'smtrading_jwt_secure_session_key_europe_west2_2026_prod';
+
+  // In production, strictly enforce strong environment secret (fail-closed)
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[Security Exception] JWT_SECRET environment variable is missing or shorter than 32 characters in production. A cryptographically secure secret must be configured in environment settings.'
+    );
+  }
+
+  // In development / preview: Generate an unpredictable, ephemeral 256-bit cryptographic secret in memory
+  if (!ephemeralDevSecret) {
+    ephemeralDevSecret = crypto.randomBytes(32).toString('hex');
+    console.warn(
+      '[Security Warning] JWT_SECRET not configured or too short. Using ephemeral 256-bit in-memory cryptographic secret for this development session.'
+    );
+  }
+  return ephemeralDevSecret;
 }
 
 const TOKEN_EXPIRY = '7d';

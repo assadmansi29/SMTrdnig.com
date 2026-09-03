@@ -3,11 +3,12 @@ import bcrypt from 'bcryptjs';
 import { Database, UserRecord } from '../db';
 import { generateToken, sanitizeUser, authenticateToken, AuthRequest } from '../auth';
 import { sendEmailVerificationCode, verifyEmailCode } from '../emailService';
+import { loginRateLimiter, verificationCodeLimiter } from '../middleware/security';
 
 const router = Router();
 
 // POST /api/auth/send-register-code
-router.post('/send-register-code', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/send-register-code', verificationCodeLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { email, username } = req.body;
 
@@ -65,7 +66,7 @@ router.post('/send-register-code', async (req: AuthRequest, res: Response): Prom
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/login', loginRateLimiter, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { username, password } = req.body;
 
