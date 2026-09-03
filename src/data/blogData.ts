@@ -1,4 +1,5 @@
 import { Article, Author, EconomicEvent, MarketTickerItem } from '../types';
+import { getMajorEconomicEvents } from './majorEconomicNews';
 import heroImg from '../assets/images/hero_trading_floor_1787615744296.jpg';
 import cryptoMacroImg from '../assets/images/crypto_macro_chart_1787615755280.jpg';
 import algoImg from '../assets/images/algorithmic_trading_1787615766945.jpg';
@@ -608,53 +609,4 @@ export const INITIAL_MARKET_TICKERS: MarketTickerItem[] = [
   }
 ];
 
-export const INITIAL_ECONOMIC_EVENTS: EconomicEvent[] = [
-  {
-    id: 'eco-1',
-    date: 'Wednesday, May 27',
-    time: '14:00 EDT',
-    country: 'United States',
-    countryCode: 'US',
-    event: 'FOMC Monetary Policy Statement & Rate Decision',
-    impact: 'High',
-    forecast: '4.50%',
-    previous: '4.50%',
-    actual: undefined
-  },
-  {
-    id: 'eco-2',
-    date: 'Thursday, May 28',
-    time: '08:30 EDT',
-    country: 'United States',
-    countryCode: 'US',
-    event: 'Core CPI Inflation Index (YoY)',
-    impact: 'High',
-    forecast: '2.7%',
-    previous: '2.8%',
-    actual: undefined
-  },
-  {
-    id: 'eco-3',
-    date: 'Thursday, May 28',
-    time: '09:15 EDT',
-    country: 'Eurozone',
-    countryCode: 'EU',
-    event: 'ECB Main Refinancing Rate Decision',
-    impact: 'High',
-    forecast: '3.00%',
-    previous: '3.25%',
-    actual: undefined
-  },
-  {
-    id: 'eco-4',
-    date: 'Friday, May 29',
-    time: '08:30 EDT',
-    country: 'United States',
-    countryCode: 'US',
-    event: 'Non-Farm Payrolls (NFP) & Unemployment Rate',
-    impact: 'High',
-    forecast: '175K',
-    previous: '188K',
-    actual: undefined
-  }
-];
+export const INITIAL_ECONOMIC_EVENTS: EconomicEvent[] = getMajorEconomicEvents('en');

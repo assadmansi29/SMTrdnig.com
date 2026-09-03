@@ -3,6 +3,7 @@ import { Activity, Maximize2, Sparkles, TrendingUp, BarChart2, Calendar, Chevron
 import { TradingViewWidget } from './TradingViewWidget';
 import { FearGreedGauge } from './FearGreedGauge';
 import { YouTubeLivePlayer } from './YouTubeLivePlayer';
+import { EconomicNewsSection } from './EconomicNewsSection';
 import { useYouTubeLive } from '../hooks/useYouTubeLive';
 import { useTranslation } from '../context/LanguageContext';
 import { TranslationKey } from '../locales';
@@ -195,49 +196,16 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
 
           {/* Under Chart: Upcoming High-Impact Catalysts, Risk Sentiment & Proprietary Trading Tools */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-[800px] mx-auto w-full items-start">
-            {/* Column 1: UPCOMING HIGH-IMPACT CATALYSTS & SMTRADING RISK SENTIMENT */}
+            {/* Column 1: MAJOR ECONOMIC NEWS & SMTRADING RISK SENTIMENT */}
             <div className="space-y-4 flex flex-col">
-              {/* 1. UPCOMING HIGH-IMPACT CATALYSTS */}
-              <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-lg">
-                <div>
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-emerald-400" />
-                      <h4 className="font-bold text-xs text-white uppercase tracking-wider">
-                        {t('widgetCatalystsTitle')}
-                      </h4>
-                    </div>
-                    <button
-                      onClick={onOpenCalendar}
-                      className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center cursor-pointer transition-colors"
-                    >
-                      {t('widgetViewAll')} <ChevronRight className="w-3 h-3 ml-0.5 rtl:rotate-180" />
-                    </button>
-                  </div>
+              {/* 1. MAJOR MARKET-MOVING ECONOMIC NEWS */}
+              <EconomicNewsSection
+                events={events}
+                onOpenCalendar={onOpenCalendar}
+                onOpenChartModal={onOpenChartModal}
+              />
 
-                  <div className="space-y-2 mt-3">
-                    {events.slice(0, 3).map(evt => (
-                      <div
-                        key={evt.id}
-                        onClick={onOpenCalendar}
-                        className="p-2.5 bg-[#090D17] hover:bg-slate-800/50 rounded-xl border border-slate-800/80 cursor-pointer transition-colors space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-mono-num">
-                          <span className="text-amber-400 font-semibold">{evt.countryCode} • {evt.time}</span>
-                          <span className="bg-rose-500/20 text-rose-300 px-1.5 py-0.2 rounded uppercase font-bold text-[9px]">
-                            {evt.impact === 'High' ? t('ecoImpactHigh') : evt.impact === 'Medium' ? t('ecoImpactMedium') : t('ecoImpactLow')}
-                          </span>
-                        </div>
-                        <h5 className="font-semibold text-xs text-slate-200 line-clamp-1">
-                          {evt.event}
-                        </h5>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* SMTrading Risk Sentiment (Positioned under Upcoming High-Impact Catalysts) */}
+              {/* SMTrading Risk Sentiment (Positioned under Economic News) */}
               <FearGreedGauge />
             </div>
 

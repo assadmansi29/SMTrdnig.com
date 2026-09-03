@@ -90,17 +90,25 @@ export interface MarketTickerItem {
   sparkline: number[];
 }
 
+export type EventImpact = 'Extreme' | 'High' | 'Medium' | 'Low';
+export type EventStatus = 'upcoming' | 'approaching' | 'live' | 'released';
+
 export interface EconomicEvent {
   id: string;
+  timestamp?: number;
   date: string;
   time: string;
   country: string;
   countryCode: string;
   event: string;
-  impact: 'High' | 'Medium' | 'Low';
+  category?: 'Central Bank' | 'Inflation' | 'Employment' | 'Growth' | 'Macro';
+  impact: EventImpact;
   forecast: string;
   previous: string;
   actual?: string;
+  whyItMatters?: string;
+  affectedAssets?: string[];
+  statusOverride?: EventStatus;
 }
 
 export type UserRole = 'super_admin' | 'admin' | 'employee' | 'coach' | 'client';
