@@ -8,24 +8,32 @@ export const LanguageSelector: React.FC = () => {
   const { language, setLanguage, availableLanguages, currentLanguage, isRTL } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   // Detect mobile screen for optimal touch UX
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
+      setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Close dropdown on outside click/touch on desktop
+  // Close dropdown on outside click/touch on desktop & mobile
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+      const target = event.target as Node;
+      // Do not close if clicking inside the dropdown button or desktop menu
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        return;
       }
+      // Do not close if clicking inside the mobile drawer content
+      if (drawerRef.current && drawerRef.current.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,8 +67,12 @@ export const LanguageSelector: React.FC = () => {
       onClick={() => setIsOpen(false)}
     >
       <div
+        ref={drawerRef}
         className="w-full bg-[#0D121F] border-t border-slate-700/90 rounded-t-3xl shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Handle Bar */}
@@ -80,6 +92,10 @@ export const LanguageSelector: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsOpen(false)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              setIsOpen(false);
+            }}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
             aria-label="Close language selector"
           >
@@ -96,10 +112,14 @@ export const LanguageSelector: React.FC = () => {
                 key={lang.code}
                 type="button"
                 onClick={() => handleSelect(lang.code)}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  handleSelect(lang.code);
+                }}
                 className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer min-h-[52px] ${
                   isSelected
                     ? 'bg-amber-400/15 border-amber-400 text-amber-300 shadow-md shadow-amber-400/10'
-                    : 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-800 text-slate-200'
+                    : 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-800 text-slate-200 active:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">

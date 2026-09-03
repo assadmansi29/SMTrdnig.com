@@ -18,7 +18,8 @@ import {
   Mail,
   KeyRound,
   Edit2,
-  Send
+  Send,
+  Globe
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
@@ -26,7 +27,7 @@ import { useTranslation } from '../context/LanguageContext';
 
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading, login, sendRegisterVerificationCode, register, logout, activateSubscription } = useAuth();
-  const { t, isRTL, language } = useTranslation();
+  const { t, isRTL, language, setLanguage, availableLanguages } = useTranslation();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
   // Form states
@@ -87,7 +88,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     }
 
     if (username.trim().length < 3) {
-      setErrorMsg(t('authLabelUsernameReq') + ' (min 3 chars)');
+      setErrorMsg(t('authErrorUsernameMinChars'));
       return;
     }
 
@@ -176,7 +177,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       : 'N/A';
 
     return (
-      <div className="min-h-screen bg-[#070A11] text-slate-100 flex flex-col justify-between relative overflow-hidden">
+      <div className="min-h-screen bg-[#070A11] text-slate-100 flex flex-col justify-between relative overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Ambient background glows */}
         <div className="absolute top-[-15%] left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[350px] bg-rose-500/10 rounded-full blur-[120px] pointer-events-none" />
@@ -358,7 +359,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
   // 4. Pre-Dashboard Login / Register Gatekeeper Screen
   return (
-    <div className="min-h-screen bg-[#070A11] text-slate-100 flex flex-col justify-between relative overflow-hidden">
+    <div className="min-h-screen bg-[#070A11] text-slate-100 flex flex-col justify-between relative overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Background ambient lighting */}
       <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-gradient-to-b from-amber-500/15 to-transparent rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[350px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" />
@@ -390,7 +391,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-[74px] sm:w-[94px] shrink-0">
+          <div className="w-[84px] sm:w-[94px] shrink-0">
             <LanguageSelector />
           </div>
         </div>
@@ -458,6 +459,32 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           <div className="lg:col-span-6 w-full max-w-md mx-auto">
             <div className="bg-[#0D121F]/95 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative">
               
+              {/* Mobile Direct Language Switcher */}
+              <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-800/80 sm:hidden">
+                <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Language / اللغة:</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  {availableLanguages.map((lang) => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => setLanguage(lang.code)}
+                      className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        lang.code === language
+                          ? 'bg-amber-400 text-slate-950 shadow-sm font-black'
+                          : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                      aria-label={`Switch language to ${lang.name}`}
+                    >
+                      <span className="text-xs leading-none">{lang.flag}</span>
+                      <span className="uppercase text-[10px]">{lang.code}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Tab Selector */}
               <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800/80 mb-6">
                 <button

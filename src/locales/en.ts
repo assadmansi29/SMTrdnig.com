@@ -508,6 +508,7 @@ export const en = {
   authFooterRoleGuarded: 'Role Guarded (RBAC)',
   authErrorProvideCreds: 'Please provide both username and password.',
   authErrorCompleteFields: 'Please complete all required fields.',
+  authErrorUsernameMinChars: 'Username must be at least 3 characters.',
   authSuccessRegistered: 'Account registered successfully! Redirecting...',
   authFailedGeneral: 'Authentication failed. Please check credentials.',
 

@@ -510,6 +510,7 @@ export const ar: Record<TranslationKey, string> = {
   authFooterRoleGuarded: 'حماية الصلاحيات (RBAC)',
   authErrorProvideCreds: 'يرجى إدخال اسم المستخدم وكلمة المرور.',
   authErrorCompleteFields: 'يرجى إكمال جميع الحقول المطلوبة.',
+  authErrorUsernameMinChars: 'يجب أن يتكون اسم المستخدم من 3 أحرف على الأقل.',
   authSuccessRegistered: 'تم إنشاء الحساب بنجاح! جاري تحويلك...',
   authFailedGeneral: 'فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.',
 

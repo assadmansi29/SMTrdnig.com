@@ -510,6 +510,7 @@ export const ru: Record<TranslationKey, string> = {
   authFooterRoleGuarded: 'Контроль доступа (RBAC)',
   authErrorProvideCreds: 'Пожалуйста, укажите имя пользователя и пароль.',
   authErrorCompleteFields: 'Пожалуйста, заполните все обязательные поля.',
+  authErrorUsernameMinChars: 'Имя пользователя должно содержать не менее 3 символов.',
   authSuccessRegistered: 'Аккаунт успешно зарегистрирован! Перенаправление...',
   authFailedGeneral: 'Ошибка авторизации. Проверьте введенные данные.',
 

@@ -510,6 +510,7 @@ export const uk: Record<TranslationKey, string> = {
   authFooterRoleGuarded: 'Контроль доступу (RBAC)',
   authErrorProvideCreds: 'Будь ласка, вкажіть ім’я користувача та пароль.',
   authErrorCompleteFields: 'Будь ласка, заповніть усі обов’язкові поля.',
+  authErrorUsernameMinChars: 'Імʼя користувача має містити щонайменше 3 символи.',
   authSuccessRegistered: 'Акаунт успішно зареєстровано! Перенаправлення...',
   authFailedGeneral: 'Помилка авторизації. Перевірте введені дані.',
 
