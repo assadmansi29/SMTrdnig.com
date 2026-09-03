@@ -118,8 +118,8 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
   // Username update validation (Admin / Super Admin privilege only)
   if (username !== undefined && username.trim() !== user.username) {
     const cleanUsername = username.trim();
-    if (user.role !== 'admin') {
-      res.status(403).json({ error: 'Changing username is restricted to Super Admin only.' });
+    if (user.role !== 'super_admin' && user.role !== 'admin') {
+      res.status(403).json({ error: 'Changing username is restricted to Super Admin or Admin only.' });
       return;
     }
     if (!cleanUsername || cleanUsername.length < 3) {

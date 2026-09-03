@@ -22,8 +22,39 @@ export function generateToken(user: UserRecord): string {
   );
 }
 
-export function sanitizeUser(user: UserRecord) {
+export function sanitizeUser(user: UserRecord, viewerRole?: UserRole) {
   const { passwordHash, ...safe } = user;
+
+  // Coach viewing: strict sanitization (no financials, no email, no phone)
+  if (viewerRole === 'coach') {
+    return {
+      id: safe.id,
+      username: safe.username,
+      fullName: safe.fullName,
+      avatarUrl: safe.avatarUrl,
+      role: safe.role,
+      assignedCoachId: safe.assignedCoachId,
+      coachSpecialty: safe.coachSpecialty,
+      trainingStatus: safe.trainingStatus || 'active_training',
+      trainingProgress: safe.trainingProgress || [],
+      notes: safe.notes,
+      createdAt: safe.createdAt,
+    };
+  }
+
+  // Employee viewing: operational sanitization (no financials, no private email/phone)
+  if (viewerRole === 'employee') {
+    return {
+      id: safe.id,
+      username: safe.username,
+      fullName: safe.fullName,
+      avatarUrl: safe.avatarUrl,
+      role: safe.role,
+      subscriptionPlan: safe.subscriptionPlan,
+      createdAt: safe.createdAt,
+    };
+  }
+
   return safe;
 }
 
@@ -63,14 +94,20 @@ export function requireRole(roles: UserRole[]) {
       return;
     }
 
-    if (!roles.includes(req.user.role)) {
-      res.status(403).json({
-        error: `Access denied. Requires one of [${roles.join(', ')}] permissions. Your current role is '${req.user.role}'.`
-      });
+    // Super Admin has full and unrestricted control over all role gates
+    if (req.user.role === 'super_admin') {
+      next();
       return;
     }
 
-    next();
+    if (roles.includes(req.user.role)) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      error: `Access denied. Requires one of [${roles.join(', ')}] permissions. Your current role is '${req.user.role}'.`
+    });
   };
 }
 
@@ -80,8 +117,8 @@ export async function requireActiveSubscription(req: AuthRequest, res: Response,
     return;
   }
 
-  // Admins and Employees have permanent internal access
-  if (req.user.role === 'admin' || req.user.role === 'employee') {
+  // Super Admins, Admins, Employees, and Coaches have permanent institutional staff access
+  if (['super_admin', 'admin', 'employee', 'coach'].includes(req.user.role)) {
     next();
     return;
   }

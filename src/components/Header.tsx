@@ -5,7 +5,10 @@ import {
   Bookmark, 
   Sparkles, 
   ShoppingBag,
-  Crown
+  Crown,
+  GraduationCap,
+  Briefcase,
+  ShieldCheck
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
@@ -130,15 +133,33 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="h-4 w-px bg-slate-800 mx-0.5" />
 
-                {/* 3. Master Admin Desk Button (When Admin) */}
-                {user && user.role === 'admin' && (
+                {/* 3. Master Staff Desk Button (When Super Admin, Admin, Employee, Coach) */}
+                {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
                   <button
                     onClick={onOpenAdmin}
-                    className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500/25 via-amber-500/15 to-amber-600/20 hover:from-amber-500/35 hover:to-amber-600/30 border border-amber-400/70 text-amber-300 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm shadow-amber-500/15 shrink-0"
-                    title="Master Admin Management Desk"
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm shrink-0 ${
+                      user.role === 'super_admin'
+                        ? 'bg-gradient-to-r from-amber-500/25 via-amber-500/15 to-amber-600/20 hover:from-amber-500/35 hover:to-amber-600/30 border border-amber-400/70 text-amber-300 shadow-amber-500/15'
+                        : user.role === 'coach'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/60 text-emerald-300'
+                        : user.role === 'employee'
+                        ? 'bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/60 text-blue-300'
+                        : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/60 text-purple-300'
+                    }`}
+                    title={user.role === 'super_admin' ? 'Super Admin Desk' : user.role === 'coach' ? 'Coaching Desk' : user.role === 'employee' ? 'Operations Desk' : 'Admin Desk'}
                   >
-                    <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>Admin Desk</span>
+                    {user.role === 'super_admin' ? (
+                      <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    ) : user.role === 'coach' ? (
+                      <GraduationCap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    ) : user.role === 'employee' ? (
+                      <Briefcase className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    ) : (
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    )}
+                    <span>
+                      {user.role === 'super_admin' ? 'Super Admin' : user.role === 'coach' ? 'Coaching Desk' : user.role === 'employee' ? 'Operations' : 'Admin Desk'}
+                    </span>
                   </button>
                 )}
 
@@ -202,13 +223,21 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Top Right Utilities (< md) */}
             <div className="flex md:hidden items-center gap-1.5 shrink-0">
-              {user && user.role === 'admin' && (
+              {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
                 <button
                   onClick={onOpenAdmin}
                   className="p-1.5 bg-amber-500/20 border border-amber-400/60 text-amber-300 rounded-lg text-xs font-bold cursor-pointer"
-                  title="Admin Desk"
+                  title="Staff Management Desk"
                 >
-                  <Crown className="w-4 h-4 text-amber-400" />
+                  {user.role === 'super_admin' ? (
+                    <Crown className="w-4 h-4 text-amber-400" />
+                  ) : user.role === 'coach' ? (
+                    <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  ) : user.role === 'employee' ? (
+                    <Briefcase className="w-4 h-4 text-blue-400" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4 text-purple-400" />
+                  )}
                 </button>
               )}
 
@@ -253,7 +282,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="w-full flex items-center justify-center gap-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer"
           >
             <Search className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="truncate">Search</span>
+            <span className="truncate">{t('navSearchPlaceholder').replace('...', '')}</span>
           </button>
 
           <div className="w-full">

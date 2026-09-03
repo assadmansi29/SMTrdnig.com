@@ -29,6 +29,7 @@ import {
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
 import { useTranslation, getLocalizedCategory, getLocalizedDifficulty, getLocalizedDirection } from '../locales';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface ArticleDetailModalProps {
   article: Article | null;
@@ -103,14 +104,14 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
     setUserVote(type);
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const handleShare = async () => {
+    await copyToClipboard(window.location.href);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const handleCopyCode = (code: string, index: number) => {
-    navigator.clipboard.writeText(code);
+  const handleCopyCode = async (code: string, index: number) => {
+    await copyToClipboard(code);
     setCopiedCodeIndex(index);
     setTimeout(() => setCopiedCodeIndex(null), 2000);
   };

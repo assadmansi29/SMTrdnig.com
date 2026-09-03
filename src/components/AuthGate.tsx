@@ -182,18 +182,18 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[350px] bg-rose-500/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Top bar */}
-        <div className="max-w-6xl mx-auto w-full px-4 py-4 flex items-center justify-between z-10 border-b border-slate-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-700 p-[1px]">
+        <div className="max-w-6xl mx-auto w-full px-4 py-3 sm:py-4 flex items-center justify-between gap-2 z-10 border-b border-slate-800/80">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-700 p-[1px] shrink-0">
               <div className="w-full h-full bg-[#0E131F] rounded-[7px] flex items-center justify-center">
                 <span className="font-bold text-sm text-amber-300">SM</span>
               </div>
             </div>
-            <span className="font-black text-lg text-white">SMTrading<span className="text-amber-400">.pro</span></span>
+            <span className="font-black text-base sm:text-lg text-white truncate">SMTrading<span className="text-amber-400">.pro</span></span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-[86px] sm:w-[94px] shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="w-[74px] sm:w-[94px] shrink-0">
               <LanguageSelector />
             </div>
             <div className="text-right rtl:text-left hidden sm:block">
@@ -202,10 +202,10 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </div>
             <button
               onClick={() => logout()}
-              className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/50 px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer shrink-0"
             >
               <LogOut className="w-3.5 h-3.5 rtl:rotate-180" />
-              <span>{t('authSubLogOut')}</span>
+              <span className="hidden xs:inline">{t('authSubLogOut')}</span>
             </button>
           </div>
         </div>
@@ -364,33 +364,33 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
       <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[350px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none" />
 
       {/* Top Header */}
-      <header className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 flex items-center justify-between z-10 border-b border-slate-800/60">
-        <div className="flex items-center gap-3">
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 p-[1px] shadow-lg shadow-amber-500/20">
+      <header className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 z-10 border-b border-slate-800/60">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 p-[1px] shadow-lg shadow-amber-500/20 shrink-0">
             <div className="w-full h-full bg-[#0E131F] rounded-[11px] flex items-center justify-center">
-              <span className="font-black text-base bg-gradient-to-r from-amber-200 to-amber-400 bg-clip-text text-transparent">
+              <span className="font-black text-sm sm:text-base bg-gradient-to-r from-amber-200 to-amber-400 bg-clip-text text-transparent">
                 SM
               </span>
             </div>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-xl text-white tracking-tight">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-black text-base sm:text-xl text-white tracking-tight shrink-0">
                 SMTrading<span className="text-amber-400">.pro</span>
               </span>
-              <div className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/40">
-                <span>{t('authAuthor')}</span>
+              <div className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-400/40 shrink-0">
+                <span className="hidden xs:inline">{t('authAuthor')}</span>
                 <BlueVerifiedBadge size="sm" />
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate hidden sm:block">
               {t('authHeaderTagline')}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="w-[86px] sm:w-[94px] shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-[74px] sm:w-[94px] shrink-0">
             <LanguageSelector />
           </div>
         </div>

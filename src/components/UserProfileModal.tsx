@@ -35,13 +35,16 @@ import {
   Upload,
   ImageIcon,
   Send,
-  RefreshCw
+  RefreshCw,
+  GraduationCap,
+  Briefcase
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { UserAvatar } from './UserAvatar';
 import { AvatarUploadModal } from './AvatarUploadModal';
 import { LanguageSelector } from './LanguageSelector';
 import { useTranslation } from '../context/LanguageContext';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -173,14 +176,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const referralLink = `${window.location.origin}/?ref=${user.referralCode}`;
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(user.referralCode);
+  const handleCopyCode = async () => {
+    await copyToClipboard(user.referralCode);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(referralLink);
+  const handleCopyLink = async () => {
+    await copyToClipboard(referralLink);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -204,7 +207,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       editName.trim() !== (user.fullName || '') ||
       editEmail.trim().toLowerCase() !== (user.email || '').toLowerCase() ||
       editPhone.trim() !== (user.phone || '') ||
-      (user.role === 'admin' && editUsername.trim() !== (user.username || ''));
+      ((user.role === 'admin' || user.role === 'super_admin') && editUsername.trim() !== (user.username || ''));
 
     // If personal info changed, require security verification code
     if (hasPersonalChanges) {
@@ -223,7 +226,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       phone: editPhone,
       avatarUrl: editAvatar,
     };
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'super_admin') {
       payload.username = editUsername;
     }
     const res = await updateProfile(payload);
@@ -261,7 +264,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       verificationCode: profileVerifyCode.trim(),
     };
 
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'super_admin') {
       payload.username = editUsername.trim();
     }
 
@@ -362,8 +365,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   };
 
+  const isRoleSuperAdmin = user.role === 'super_admin';
   const isRoleAdmin = user.role === 'admin';
   const isRoleEmployee = user.role === 'employee';
+  const isRoleCoach = user.role === 'coach';
+  const isStaffRole = isRoleSuperAdmin || isRoleAdmin || isRoleEmployee || isRoleCoach;
   const expiresDate = new Date(user.subscriptionExpiresAt);
   const formattedExpiry = expiresDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const isExpired = user.subscriptionStatus === 'expired' || (user.role === 'client' && expiresDate < new Date());
@@ -395,14 +401,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <span className="text-xs text-slate-400 font-mono">(@{user.username})</span>
                 
                 {/* Role Badge */}
-                {isRoleAdmin ? (
-                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/40 flex items-center gap-1">
+                {isRoleSuperAdmin ? (
+                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1 shadow-sm">
                     <Crown className="w-3 h-3 text-amber-400" />
                     <span>{t('profileRoleSuperAdmin')}</span>
                   </span>
+                ) : isRoleAdmin ? (
+                  <span className="bg-purple-400/20 text-purple-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-purple-400/50 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-purple-400" />
+                    <span>{t('profileRoleAdmin')}</span>
+                  </span>
+                ) : isRoleCoach ? (
+                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/50 flex items-center gap-1">
+                    <GraduationCap className="w-3 h-3 text-emerald-400" />
+                    <span>{t('profileRoleCoach')}</span>
+                  </span>
                 ) : isRoleEmployee ? (
-                  <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/40 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 text-blue-400" />
+                  <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/50 flex items-center gap-1">
+                    <Briefcase className="w-3 h-3 text-blue-400" />
                     <span>{t('profileRoleEmployee')}</span>
                   </span>
                 ) : (
@@ -418,7 +434,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <span className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400'}`} />
                   <span className={isExpired ? 'text-rose-400 font-bold' : 'text-emerald-300 font-medium'}>
-                    {isRoleAdmin || isRoleEmployee ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
+                    {isStaffRole ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
                   </span>
                 </span>
               </div>
@@ -430,7 +446,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <LanguageSelector />
             </div>
 
-            {isRoleAdmin && onOpenAdmin && (
+            {isStaffRole && onOpenAdmin && (
               <button
                 onClick={() => {
                   onClose();
@@ -438,8 +454,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 }}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20"
               >
-                <Crown className="w-3.5 h-3.5" />
-                <span>Admin Panel</span>
+                {isRoleSuperAdmin ? <Crown className="w-3.5 h-3.5" /> : isRoleCoach ? <GraduationCap className="w-3.5 h-3.5" /> : isRoleEmployee ? <Briefcase className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                <span>{isRoleSuperAdmin ? 'Super Admin Desk' : isRoleCoach ? 'Coaching Desk' : isRoleEmployee ? 'Operations Desk' : 'Admin Desk'}</span>
               </button>
             )}
 
@@ -638,16 +654,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                 {isEditing ? (
                   <div className="space-y-4">
-                    {/* Username Field (Editable ONLY for Super Admin) */}
-                    {user.role === 'admin' ? (
+                    {/* Username Field (Editable for Super Admin and Admin) */}
+                    {(user.role === 'super_admin' || user.role === 'admin') ? (
                       <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-1.5">
                         <div className="flex items-center justify-between">
                           <label className="text-xs text-amber-300 font-bold flex items-center gap-1.5">
-                            <ShieldCheck className="w-4 h-4 text-amber-400" />
-                            <span>Super Admin Username</span>
+                            {user.role === 'super_admin' ? <Crown className="w-4 h-4 text-amber-400" /> : <ShieldCheck className="w-4 h-4 text-purple-400" />}
+                            <span>{user.role === 'super_admin' ? 'Super Admin Username' : 'Admin Username'}</span>
                           </label>
                           <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
-                            Super Admin Privilege
+                            {user.role === 'super_admin' ? 'Super Admin Authority' : 'Admin Authority'}
                           </span>
                         </div>
                         <div className="relative">
@@ -663,7 +679,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                           />
                         </div>
                         <p className="text-[11px] text-amber-300/80">
-                          As Super Admin, you can change your system-wide handle/username.
+                          {user.role === 'super_admin' ? 'As Super Admin, you can change your system-wide handle/username.' : 'As Admin, you can update your administrative handle/username.'}
                         </p>
                       </div>
                     ) : (
@@ -674,7 +690,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             <span>Username</span>
                           </label>
                           <span className="text-[10px] text-slate-500">
-                            Locked (Super Admin Only)
+                            Locked (Administrative Privilege Required)
                           </span>
                         </div>
                         <input
@@ -746,7 +762,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                               <Upload className="w-3 h-3" />
                               <span>Upload File</span>
                             </button>
-                            {user.role === 'admin' && (
+                            {(user.role === 'super_admin' || user.role === 'admin') && (
                               <button
                                 type="button"
                                 onClick={() => setEditAvatar('/abu_asad_almansi.jpg')}
@@ -785,9 +801,28 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <span className="text-slate-500 block mb-0.5">Username</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-slate-200 font-bold">@{user.username}</span>
-                        {user.role === 'admin' && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-400/10 text-amber-400 border border-amber-400/20">
-                            Super Admin
+                        {isRoleSuperAdmin && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-400/10 text-amber-400 border border-amber-400/20 flex items-center gap-1">
+                            <Crown className="w-2.5 h-2.5" />
+                            <span>{t('profileRoleSuperAdmin')}</span>
+                          </span>
+                        )}
+                        {isRoleAdmin && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-400/10 text-purple-400 border border-purple-400/20 flex items-center gap-1">
+                            <ShieldCheck className="w-2.5 h-2.5" />
+                            <span>{t('profileRoleAdmin')}</span>
+                          </span>
+                        )}
+                        {isRoleCoach && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-400/10 text-emerald-400 border border-emerald-400/20 flex items-center gap-1">
+                            <GraduationCap className="w-2.5 h-2.5" />
+                            <span>{t('profileRoleCoach')}</span>
+                          </span>
+                        )}
+                        {isRoleEmployee && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-400/10 text-blue-400 border border-blue-400/20 flex items-center gap-1">
+                            <Briefcase className="w-2.5 h-2.5" />
+                            <span>{t('profileRoleEmployee')}</span>
                           </span>
                         )}
                       </div>

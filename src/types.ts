@@ -103,8 +103,81 @@ export interface EconomicEvent {
   actual?: string;
 }
 
-export type UserRole = 'client' | 'employee' | 'admin';
+export type UserRole = 'super_admin' | 'admin' | 'employee' | 'coach' | 'client';
 export type SubscriptionStatus = 'active' | 'expired' | 'inactive';
+
+export interface RolePermissions {
+  canManageSuperAdmins: boolean;
+  canManageAdmins: boolean;
+  canManageEmployees: boolean;
+  canManageCoaches: boolean;
+  canManageClients: boolean;
+  canCreateUsers: boolean;
+  canDeleteUsers: boolean;
+  canResetPasswords: boolean;
+  canAdjustBalances: boolean;
+  canSetCommissionRates: boolean;
+  canManageSubscriptions: boolean;
+  canViewTransactions: boolean;
+  canManageRBAC: boolean;
+  canManageSystemSettings: boolean;
+  canManageSecurity: boolean;
+  canViewAuditLogs: boolean;
+  canAccessOperations: boolean;
+  canManageContent: boolean;
+  canManageLiveStream: boolean;
+  canAccessCoachingDesk: boolean;
+  canManageLessons: boolean;
+}
+
+export interface TrainingMilestone {
+  id: string;
+  courseId: string;
+  courseName: string;
+  completedLessons: number;
+  totalLessons: number;
+  status: 'in_progress' | 'completed' | 'on_hold';
+  lastSessionAt?: string;
+  coachNotes?: string;
+}
+
+export interface CoachingStudent {
+  id: string;
+  username: string;
+  fullName: string;
+  avatarUrl?: string;
+  assignedCoachId?: string;
+  coachSpecialty?: string;
+  trainingStatus: 'active_training' | 'mentorship_pending' | 'graduated' | 'paused';
+  trainingProgress: TrainingMilestone[];
+  coachingNotes?: string;
+  joinedDate: string;
+}
+
+export interface OperationalItem {
+  id: string;
+  title: string;
+  type: 'market_brief' | 'content_review' | 'live_stream_prep' | 'support_ticket';
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'in_progress' | 'resolved';
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+  notes?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  actorUsername: string;
+  actorRole: UserRole;
+  action: string;
+  targetId?: string;
+  targetUsername?: string;
+  details: string;
+  timestamp: string;
+  metadata?: Record<string, any>;
+}
 
 export interface UserProfile {
   id: string;
@@ -127,6 +200,10 @@ export interface UserProfile {
   phone?: string;
   notes?: string;
   referralsCount?: number;
+  assignedCoachId?: string;
+  coachSpecialty?: string;
+  permissions?: Partial<RolePermissions>;
+  trainingProgress?: TrainingMilestone[];
 }
 
 export interface Transaction {

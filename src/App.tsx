@@ -39,6 +39,7 @@ import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
 import { getArticlesByLanguage, getEconomicEventsByLanguage, getAuthorsByLanguage } from './data/localizedData';
 import { getLocalizedCategory } from './locales';
+import { copyToClipboard } from './utils/clipboard';
 import { 
   TrendingUp, 
   Sparkles, 
@@ -90,8 +91,8 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [supportEmailCopied, setSupportEmailCopied] = useState(false);
 
-  const handleCopySupportEmail = () => {
-    navigator.clipboard.writeText('smtradingsupprt@gmail.com');
+  const handleCopySupportEmail = async () => {
+    await copyToClipboard('smtradingsupprt@gmail.com');
     setSupportEmailCopied(true);
     setTimeout(() => setSupportEmailCopied(false), 2500);
   };

@@ -1,44 +1,134 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Globe, ChevronDown, Check } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Globe, ChevronDown, Check, X } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
 import { LanguageCode } from '../locales';
 
 export const LanguageSelector: React.FC = () => {
-  const { language, setLanguage, availableLanguages, currentLanguage } = useTranslation();
+  const { language, setLanguage, availableLanguages, currentLanguage, isRTL } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Close dropdown when clicking outside
+  // Detect mobile screen for optimal touch UX
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close dropdown on outside click/touch on desktop
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // Handle keyboard escape
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handlePointerDown);
+      document.addEventListener('touchstart', handlePointerDown, { passive: true });
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen]);
 
   const handleSelect = (code: LanguageCode) => {
     setLanguage(code);
     setIsOpen(false);
   };
+
+  // Mobile Bottom Sheet Modal (rendered into document.body to avoid clipping / overflow bugs on mobile)
+  const mobileDrawer = isMobile && isOpen && typeof document !== 'undefined' ? (
+    <div
+      id="mobile-language-drawer-overlay"
+      className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex flex-col justify-end p-0 animate-in fade-in duration-150"
+      onClick={() => setIsOpen(false)}
+    >
+      <div
+        className="w-full bg-[#0D121F] border-t border-slate-700/90 rounded-t-3xl shadow-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200"
+        onClick={(e) => e.stopPropagation()}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        {/* Handle Bar */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-1" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Select Language / اختر اللغة</h3>
+              <p className="text-[11px] text-slate-400 font-mono">SMTrading International Desk</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+            aria-label="Close language selector"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Language Options Grid */}
+        <div className="space-y-2 py-1">
+          {availableLanguages.map((lang) => {
+            const isSelected = lang.code === language;
+            return (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => handleSelect(lang.code)}
+                className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer min-h-[52px] ${
+                  isSelected
+                    ? 'bg-amber-400/15 border-amber-400 text-amber-300 shadow-md shadow-amber-400/10'
+                    : 'bg-slate-900/80 hover:bg-slate-800/80 border-slate-800 text-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl leading-none shrink-0">{lang.flag}</span>
+                  <div className="text-start">
+                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>{lang.nativeName}</span>
+                      <span className="text-[10px] font-mono uppercase text-slate-400 font-normal">
+                        ({lang.code})
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">{lang.name}</div>
+                  </div>
+                </div>
+
+                {isSelected ? (
+                  <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-full border border-slate-700 shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="relative inline-block w-full text-start" ref={dropdownRef}>
@@ -50,9 +140,9 @@ export const LanguageSelector: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="Select language"
-        className="w-full flex items-center justify-between gap-1.5 px-2 py-1 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[30px]"
+        className="w-full flex items-center justify-between gap-1 sm:gap-1.5 px-2 py-1 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[30px]"
       >
-        <span className="flex items-center gap-1.5 min-w-0">
+        <span className="flex items-center gap-1 sm:gap-1.5 min-w-0">
           <span className="text-sm leading-none shrink-0">{currentLanguage.flag}</span>
           <span className="font-mono uppercase font-bold tracking-wider text-[11px] truncate">
             {currentLanguage.code}
@@ -65,13 +155,13 @@ export const LanguageSelector: React.FC = () => {
         />
       </button>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
+      {/* Desktop Floating Dropdown Menu (hidden on mobile, uses Portal on mobile instead) */}
+      {!isMobile && isOpen && (
         <div
           role="menu"
           aria-orientation="vertical"
           aria-labelledby="language-selector-btn"
-          className="absolute end-0 mt-1.5 w-48 rounded-xl bg-[#0D121F] border border-slate-700/90 shadow-2xl shadow-black/95 backdrop-blur-xl py-1.5 z-[9999] animate-fadeIn divide-y divide-slate-800/60 focus:outline-none"
+          className="absolute right-0 rtl:right-auto rtl:left-0 mt-1.5 w-52 rounded-xl bg-[#0D121F] border border-slate-700/90 shadow-2xl shadow-black/95 backdrop-blur-xl py-1.5 z-[9999] animate-fadeIn divide-y divide-slate-800/60 focus:outline-none"
         >
           <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
@@ -107,6 +197,9 @@ export const LanguageSelector: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Portal Mobile Bottom Sheet */}
+      {mobileDrawer && createPortal(mobileDrawer, document.body)}
     </div>
   );
 };

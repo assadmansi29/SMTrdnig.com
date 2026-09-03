@@ -1,26 +1,32 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import cookieParser from "cookie-parser";
 import compression from "compression";
 import { createServer as createViteServer } from "vite";
-import { initPostgres, getPool } from './server/db';
+import { initPostgres, getPool, isDatabaseHealthy } from './server/db';
+import { requireDatabaseReady } from './server/middleware/dbGuard';
 import authRoutes from './server/routes/authRoutes';
 import userRoutes from './server/routes/userRoutes';
 import adminRoutes from './server/routes/adminRoutes';
 import youtubeRoutes from './server/routes/youtubeRoutes';
 
 async function startServer() {
-  // Initialize database schema if PostgreSQL is configured
-  if (process.env.DATABASE_URL) {
-    try {
-      await initPostgres();
-    } catch (dbErr) {
-      // Fallback is handled automatically by the Database layer
-    }
-  }
-
   const app = express();
   const PORT = 3000;
+
+  // Initialize PostgreSQL schema in background to ensure port 3000 binds immediately
+  if (process.env.DATABASE_URL) {
+    initPostgres()
+      .then(() => {
+        console.log("[Database] Connected to PostgreSQL successfully.");
+      })
+      .catch((err: any) => {
+        console.error("[Database Notice] PostgreSQL initialization attempt:", err.message);
+      });
+  } else {
+    console.warn("[Database Warning] DATABASE_URL environment variable is not configured.");
+  }
 
   // 1. Enable HTTP Compression (Gzip / Deflate) for high bandwidth efficiency
   app.use(compression({
@@ -45,19 +51,21 @@ async function startServer() {
     next();
   });
 
-  // 4. Mount API routes FIRST
-  app.use('/api/auth', authRoutes);
-  app.use('/api/user', userRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use('/api/youtube', youtubeRoutes);
+  // 4. Mount API routes FIRST (Enforced PostgreSQL guard: database-dependent requests fail with 503 if DB is offline/initializing)
+  app.use('/api/auth', requireDatabaseReady, authRoutes);
+  app.use('/api/user', requireDatabaseReady, userRoutes);
+  app.use('/api/admin', requireDatabaseReady, adminRoutes);
+  app.use('/api/youtube', requireDatabaseReady, youtubeRoutes);
 
   // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)
   app.get("/api/health", (req, res) => {
-    const isPg = !!getPool();
-    res.json({
-      status: "ok",
+    const dbHealthy = isDatabaseHealthy();
+    const statusCode = dbHealthy ? 200 : 503;
+    res.status(statusCode).json({
+      status: dbHealthy ? "ok" : "unavailable",
       server: "SMTrading Pro Engine",
-      storageEngine: isPg ? "PostgreSQL (Pooled)" : "Local Persistent JSON",
+      storageEngine: "PostgreSQL (Sole Engine - No Fallback)",
+      databaseConnected: dbHealthy,
       time: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
       memoryUsageMB: Math.round(process.memoryUsage().rss / (1024 * 1024))
