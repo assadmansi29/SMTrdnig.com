@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { Database, UserRecord, UserRole, SubscriptionStatus, RolePermissions } from '../db';
-import { authenticateToken, requireRole, sanitizeUser, AuthRequest } from '../auth';
+import { authenticateToken, requireRole, requirePermission, sanitizeUser, AuthRequest } from '../auth';
 
 const router = Router();
 
@@ -11,7 +11,7 @@ router.use(authenticateToken);
 // ====================================================
 // 1. STATS OVERVIEW (Super Admin & Admin)
 // ====================================================
-router.get('/stats', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/stats', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
   const users = await Database.getAllUsers();
   const transactions = await Database.getAllTransactions();
 
@@ -52,25 +52,32 @@ router.get('/stats', requireRole(['super_admin', 'admin']), async (req: AuthRequ
 // 2. USER MANAGEMENT (Super Admin & Admin)
 // ====================================================
 // GET /api/admin/users
-router.get('/users', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/users', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   const users = await Database.getAllUsers();
 
-  const sanitized = await Promise.all(
-    users.map(async (u) => {
-      const referrals = await Database.getReferralsForUser(u.id);
-      return {
-        ...sanitizeUser(u, callerRole),
-        referralsCount: referrals.length,
-      };
-    })
-  );
+  // Aggregate referral counts across in-memory user list
+  const referralCounts: Record<string, number> = {};
+  for (const u of users) {
+    if (u.referredBy) {
+      referralCounts[u.referredBy] = (referralCounts[u.referredBy] || 0) + 1;
+    }
+  }
+
+  const sanitized = users.map((u) => {
+    const byIdCount = referralCounts[u.id] || 0;
+    const byCodeCount = u.referralCode ? (referralCounts[u.referralCode] || referralCounts[u.referralCode.toUpperCase()] || 0) : 0;
+    return {
+      ...sanitizeUser(u, callerRole),
+      referralsCount: Math.max(byIdCount, byCodeCount, (byIdCount + byCodeCount)),
+    };
+  });
 
   res.json({ success: true, users: sanitized });
 });
 
 // POST /api/admin/users (Create User)
-router.post('/users', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/users', requirePermission('canCreateUsers'), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const callerRole = req.user!.role;
     const {
@@ -159,7 +166,7 @@ router.post('/users', requireRole(['super_admin', 'admin']), async (req: AuthReq
 });
 
 // PATCH /api/admin/users/:id/role (SUPER ADMIN ONLY)
-router.patch('/users/:id/role', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/users/:id/role', requirePermission('canManageAdmins'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   const { id } = req.params;
   const { role } = req.body;
@@ -208,7 +215,7 @@ router.patch('/users/:id/role', requireRole(['super_admin', 'admin']), async (re
 });
 
 // PATCH /api/admin/users/:id/subscription (Super Admin & Admin)
-router.patch('/users/:id/subscription', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/users/:id/subscription', requirePermission('canManageSubscriptions'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   const { id } = req.params;
   const { status, planName, expiresAt, addMonths } = req.body;
@@ -219,9 +226,11 @@ router.patch('/users/:id/subscription', requireRole(['super_admin', 'admin']), a
     return;
   }
 
-  // Admin cannot modify Super Admin subscriptions
-  if (callerRole === 'admin' && targetUser.role === 'super_admin') {
-    res.status(403).json({ error: 'Admins cannot modify Super Admin account subscriptions.' });
+  // Admin can ONLY modify subscriptions for normal 'client' accounts
+  if (callerRole === 'admin' && targetUser.role !== 'client') {
+    res.status(403).json({
+      error: 'Access denied. Administrators are strictly restricted to managing subscriptions for Client accounts only. Modifying staff or higher-privilege accounts requires Super Admin authorization.',
+    });
     return;
   }
 
@@ -259,7 +268,7 @@ router.patch('/users/:id/subscription', requireRole(['super_admin', 'admin']), a
 });
 
 // PATCH /api/admin/users/:id/balance (SUPER ADMIN ONLY)
-router.patch('/users/:id/balance', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/users/:id/balance', requirePermission('canAdjustBalances'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   if (callerRole !== 'super_admin') {
     res.status(403).json({
@@ -271,63 +280,58 @@ router.patch('/users/:id/balance', requireRole(['super_admin', 'admin']), async 
   const { id } = req.params;
   const { amount, action = 'set', reason = 'Super Admin Balance Adjustment' } = req.body;
 
+  const validActions = ['add', 'deduct', 'set'];
+  if (!validActions.includes(action)) {
+    res.status(400).json({ error: `Invalid action '${action}'. Allowed actions: add, deduct, set.` });
+    return;
+  }
+
+  const numAmount = Number(amount);
+  if (amount === undefined || isNaN(numAmount) || !Number.isFinite(numAmount) || numAmount < 0) {
+    res.status(400).json({ error: 'Amount must be a non-negative, finite number.' });
+    return;
+  }
+
+  if (numAmount > 10000000) {
+    res.status(400).json({ error: 'Amount exceeds maximum allowable threshold ($10,000,000).' });
+    return;
+  }
+
   const user = await Database.findUserById(id);
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
     return;
   }
 
-  const numAmount = Number(amount);
-  if (isNaN(numAmount)) {
-    res.status(400).json({ error: 'Invalid amount.' });
+  if (action === 'deduct' && numAmount > user.balance) {
+    res.status(400).json({
+      error: `Cannot deduct $${numAmount.toFixed(2)} from available balance of $${user.balance.toFixed(2)}. Balances cannot be negative.`,
+    });
     return;
   }
 
-  let newBalance = user.balance;
-  if (action === 'add') {
-    newBalance = Number((user.balance + numAmount).toFixed(2));
-  } else if (action === 'deduct') {
-    newBalance = Number((user.balance - numAmount).toFixed(2));
-  } else {
-    newBalance = Number(numAmount.toFixed(2));
-  }
-
-  const updated = await Database.updateUser(id, { balance: newBalance });
-
-  // Record transaction
-  await Database.addTransaction({
-    userId: user.id,
-    username: user.username,
-    type: 'manual_adjustment',
-    amount: action === 'deduct' ? -numAmount : numAmount,
-    description: `Super Admin Adjustment (@${req.user!.username}): ${reason}`,
-    status: 'completed',
-    metadata: {
-      adminId: req.user!.id,
-      adminUsername: req.user!.username,
-      previousBalance: user.balance,
-      newBalance,
+  try {
+    const result = await Database.adjustUserBalanceAtomic(
+      id,
+      numAmount,
       action,
-    }
-  });
+      String(reason).trim() || 'Super Admin Balance Adjustment',
+      req.user!
+    );
 
-  // Record Audit Log
-  await Database.addAuditLog({
-    actorId: req.user!.id,
-    actorUsername: req.user!.username,
-    actorRole: req.user!.role,
-    action: 'BALANCE_ADJUST',
-    targetId: user.id,
-    targetUsername: user.username,
-    details: `Adjusted balance for @${user.username} from $${user.balance} to $${newBalance} (${action}: $${numAmount})`,
-    metadata: { previousBalance: user.balance, newBalance, reason },
-  });
-
-  res.json({ success: true, message: `Balance updated to $${newBalance.toFixed(2)}`, user: sanitizeUser(updated!, callerRole) });
+    res.json({
+      success: true,
+      message: `Balance updated to $${result.user.balance.toFixed(2)}`,
+      user: sanitizeUser(result.user, callerRole),
+      transaction: result.transaction,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to adjust balance.' });
+  }
 });
 
 // PATCH /api/admin/users/:id/commission-rate (SUPER ADMIN ONLY)
-router.patch('/users/:id/commission-rate', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/users/:id/commission-rate', requirePermission('canSetCommissionRates'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   if (callerRole !== 'super_admin') {
     res.status(403).json({ error: 'Setting referral commission rates requires Super Admin authorization.' });
@@ -367,7 +371,7 @@ router.patch('/users/:id/commission-rate', requireRole(['super_admin', 'admin'])
 });
 
 // PATCH /api/admin/users/:id/reset-password (Super Admin & Admin)
-router.patch('/users/:id/reset-password', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/users/:id/reset-password', requirePermission('canResetPasswords'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   const { id } = req.params;
   const { newPassword } = req.body;
@@ -412,7 +416,7 @@ router.patch('/users/:id/reset-password', requireRole(['super_admin', 'admin']),
 });
 
 // DELETE /api/admin/users/:id (SUPER ADMIN ONLY)
-router.delete('/users/:id', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete('/users/:id', requirePermission('canDeleteUsers'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   if (callerRole !== 'super_admin') {
     res.status(403).json({ error: 'Account deletion is permanently restricted to Super Admin only.' });
@@ -456,12 +460,12 @@ router.delete('/users/:id', requireRole(['super_admin', 'admin']), async (req: A
 // ====================================================
 // 3. TRANSACTIONS (Super Admin & Admin)
 // ====================================================
-router.get('/transactions', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/transactions', requirePermission('canViewTransactions'), async (req: AuthRequest, res: Response): Promise<void> => {
   const transactions = await Database.getAllTransactions();
   res.json({ success: true, transactions });
 });
 
-router.patch('/transactions/:id/status', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/transactions/:id/status', requirePermission('canViewTransactions'), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -470,30 +474,67 @@ router.patch('/transactions/:id/status', requireRole(['super_admin', 'admin']), 
     return;
   }
 
-  const updatedTx = await Database.updateTransactionStatus(id, status);
-  if (!updatedTx) {
+  const existingTx = await Database.findTransactionById(id);
+  if (!existingTx) {
     res.status(404).json({ error: 'Transaction not found.' });
     return;
   }
 
-  // Record Audit Log
-  await Database.addAuditLog({
-    actorId: req.user!.id,
-    actorUsername: req.user!.username,
-    actorRole: req.user!.role,
-    action: 'TRANSACTION_STATUS_UPDATE',
-    targetId: updatedTx.id,
-    details: `Updated transaction #${updatedTx.id} status to '${status}'`,
-    metadata: { transactionId: updatedTx.id, status, amount: updatedTx.amount },
-  });
+  // Prevent Admin (and any non-super admin) self-approval or modification of own payout transactions
+  if ((req.user!.role === 'admin' || req.user!.role !== 'super_admin') && existingTx.userId === req.user!.id) {
+    res.status(403).json({
+      error: 'Segregation of duties violation: Administrators are strictly prohibited from approving or modifying their own payout transactions.',
+    });
+    return;
+  }
 
-  res.json({ success: true, transaction: updatedTx });
+  // Double execution & replay protection: transactions are immutable once finalized
+  if (existingTx.status === status) {
+    res.status(400).json({ error: `Transaction #${id} is already in status '${status}'.` });
+    return;
+  }
+
+  if (existingTx.status !== 'pending') {
+    res.status(400).json({
+      error: `Transaction #${id} has already been finalized as '${existingTx.status}' and cannot be modified again.`,
+    });
+    return;
+  }
+
+  try {
+    if (existingTx.type === 'payout_request') {
+      const result = await Database.finalizePayoutTransactionAtomic(id, status, req.user!);
+      res.json({
+        success: true,
+        transaction: result.transaction,
+        user: result.user ? sanitizeUser(result.user, req.user!.role) : undefined,
+      });
+      return;
+    }
+
+    const updatedTx = await Database.updateTransactionStatus(id, status);
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'TRANSACTION_STATUS_UPDATE',
+      targetId: updatedTx!.id,
+      details: `Updated transaction #${updatedTx!.id} status to '${status}'`,
+      metadata: { transactionId: updatedTx!.id, status, amount: updatedTx!.amount },
+    });
+
+    res.json({ success: true, transaction: updatedTx });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to update transaction status.' });
+  }
 });
 
 // ====================================================
 // 4. AUDIT LOGS (SUPER ADMIN ONLY)
 // ====================================================
-router.get('/audit-logs', requireRole(['super_admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/audit-logs', requirePermission('canViewAuditLogs'), async (req: AuthRequest, res: Response): Promise<void> => {
   const limit = parseInt(req.query.limit as string, 10) || 100;
   const logs = await Database.getAuditLogs(limit);
   res.json({ success: true, logs });
@@ -502,12 +543,45 @@ router.get('/audit-logs', requireRole(['super_admin']), async (req: AuthRequest,
 // ====================================================
 // 5. RBAC DYNAMIC PERMISSION MATRIX (SUPER ADMIN ONLY)
 // ====================================================
-router.get('/rbac', requireRole(['super_admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get(['/rbac', '/rbac-settings'], requirePermission('canManageRBAC'), async (req: AuthRequest, res: Response): Promise<void> => {
   const settings = await Database.getRBACSettings();
-  res.json({ success: true, rbac: settings });
+  res.json({ success: true, rbac: settings, rbacSettings: settings });
 });
 
-router.patch('/rbac/:role', requireRole(['super_admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch('/rbac-settings', requirePermission('canManageRBAC'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { role, permission, value, permissions } = req.body;
+
+  if (!role || !['admin', 'employee', 'coach', 'client'].includes(role)) {
+    res.status(400).json({ error: 'Valid configurable role (admin, employee, coach, client) is required.' });
+    return;
+  }
+
+  let permsToUpdate: Partial<RolePermissions> = {};
+  if (permission && typeof value === 'boolean') {
+    permsToUpdate = { [permission]: value };
+  } else if (permissions && typeof permissions === 'object') {
+    permsToUpdate = permissions;
+  } else {
+    res.status(400).json({ error: 'Invalid permission payload provided.' });
+    return;
+  }
+
+  const updated = await Database.updateRBACSettings(role as UserRole, permsToUpdate, req.user!.username);
+  const allSettings = await Database.getRBACSettings();
+
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'RBAC_CONFIG_UPDATE',
+    details: `Updated RBAC permissions for role '${role}': ${JSON.stringify(permsToUpdate)}`,
+    metadata: { role, updates: permsToUpdate },
+  });
+
+  res.json({ success: true, message: `RBAC permissions updated for role ${role}`, rbacSettings: allSettings, permissions: updated });
+});
+
+router.patch('/rbac/:role', requirePermission('canManageRBAC'), async (req: AuthRequest, res: Response): Promise<void> => {
   const { role } = req.params;
   const permissions = req.body.permissions as Partial<RolePermissions>;
 
@@ -522,6 +596,7 @@ router.patch('/rbac/:role', requireRole(['super_admin']), async (req: AuthReques
   }
 
   const updated = await Database.updateRBACSettings(role as UserRole, permissions, req.user!.username);
+  const allSettings = await Database.getRBACSettings();
 
   // Record Audit Log
   await Database.addAuditLog({
@@ -533,13 +608,13 @@ router.patch('/rbac/:role', requireRole(['super_admin']), async (req: AuthReques
     metadata: { role, permissions },
   });
 
-  res.json({ success: true, message: `RBAC permissions updated for role ${role}`, permissions: updated });
+  res.json({ success: true, message: `RBAC permissions updated for role ${role}`, permissions: updated, rbacSettings: allSettings });
 });
 
 // ====================================================
 // 6. COACHING DESK (Coach, Admin, Super Admin)
 // ====================================================
-router.get('/coaching/students', requireRole(['super_admin', 'admin', 'coach']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get(['/coaching/students', '/coaching-students'], requirePermission('canAccessCoachingDesk'), async (req: AuthRequest, res: Response): Promise<void> => {
   const callerRole = req.user!.role;
   const coachFilter = callerRole === 'coach' ? req.user!.id : (req.query.coachId as string | undefined);
 
@@ -549,9 +624,9 @@ router.get('/coaching/students', requireRole(['super_admin', 'admin', 'coach']),
   res.json({ success: true, students: sanitized });
 });
 
-router.patch('/coaching/students/:id/progress', requireRole(['super_admin', 'admin', 'coach']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch(['/coaching/students/:id/progress', '/coaching-students/:id'], requirePermission('canAccessCoachingDesk'), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { progress, trainingStatus, coachNotes } = req.body;
+  const { progress, trainingProgress, trainingStatus, coachNotes, coachingNotes } = req.body;
 
   const targetStudent = await Database.findUserById(id);
   if (!targetStudent) {
@@ -559,13 +634,21 @@ router.patch('/coaching/students/:id/progress', requireRole(['super_admin', 'adm
     return;
   }
 
-  // If caller is coach, verify they are assigned to this student or have permission
-  if (req.user!.role === 'coach' && targetStudent.assignedCoachId && targetStudent.assignedCoachId !== req.user!.id) {
-    res.status(403).json({ error: 'You are not assigned to coach this student.' });
+  if (targetStudent.role !== 'client') {
+    res.status(400).json({ error: 'Coaching training milestones can only be updated for student accounts.' });
     return;
   }
 
-  const updated = await Database.updateStudentTrainingProgress(id, progress, trainingStatus, coachNotes);
+  // If caller is coach, verify they are assigned to this student
+  if (req.user!.role === 'coach' && targetStudent.assignedCoachId !== req.user!.id) {
+    res.status(403).json({ error: 'Access denied. You can only update training milestones for your personally assigned students.' });
+    return;
+  }
+
+  const updatedMilestones = trainingProgress || progress;
+  const updatedNotes = coachingNotes || coachNotes;
+
+  const updated = await Database.updateStudentTrainingProgress(id, updatedMilestones, trainingStatus, updatedNotes);
 
   // Record Audit Log
   await Database.addAuditLog({
@@ -582,13 +665,23 @@ router.patch('/coaching/students/:id/progress', requireRole(['super_admin', 'adm
   res.json({ success: true, message: 'Coaching progress updated', student: sanitizeUser(updated!, req.user!.role) });
 });
 
-router.patch('/coaching/students/:id/assign-coach', requireRole(['super_admin', 'admin']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch(['/coaching/students/:id/assign-coach', '/coaching-students/:id/assign-coach'], requirePermission('canAccessCoachingDesk'), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { coachId } = req.body;
+
+  if (req.user!.role === 'coach') {
+    res.status(403).json({ error: 'Coaches cannot assign or reassign student accounts. Admin or Super Admin privileges required.' });
+    return;
+  }
 
   const student = await Database.findUserById(id);
   if (!student) {
     res.status(404).json({ error: 'Student not found.' });
+    return;
+  }
+
+  if (student.role !== 'client') {
+    res.status(400).json({ error: 'Coaches can only be assigned to Client student accounts.' });
     return;
   }
 
@@ -618,12 +711,12 @@ router.patch('/coaching/students/:id/assign-coach', requireRole(['super_admin', 
 // ====================================================
 // 7. OPERATIONS QUEUE (Employee, Admin, Super Admin)
 // ====================================================
-router.get('/operations/queue', requireRole(['super_admin', 'admin', 'employee']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.get(['/operations/queue', '/operations-queue'], requirePermission('canAccessOperations'), async (req: AuthRequest, res: Response): Promise<void> => {
   const items = await Database.getOperationalItems();
   res.json({ success: true, items });
 });
 
-router.post('/operations/queue', requireRole(['super_admin', 'admin', 'employee']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post(['/operations/queue', '/operations-queue'], requirePermission('canAccessOperations'), async (req: AuthRequest, res: Response): Promise<void> => {
   const { title, type, priority = 'medium', status = 'pending', assignedTo, notes } = req.body;
 
   if (!title || !type) {
@@ -643,7 +736,7 @@ router.post('/operations/queue', requireRole(['super_admin', 'admin', 'employee'
   res.status(201).json({ success: true, item: newItem });
 });
 
-router.patch('/operations/queue/:id', requireRole(['super_admin', 'admin', 'employee']), async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch(['/operations/queue/:id', '/operations-queue/:id'], requirePermission('canAccessOperations'), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { title, type, priority, status, assignedTo, notes } = req.body;
 

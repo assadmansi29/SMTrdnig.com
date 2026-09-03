@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { Database } from '../db';
-import { authenticateToken, sanitizeUser, AuthRequest } from '../auth';
+import { authenticateToken, requireActiveSubscription, sanitizeUser, AuthRequest } from '../auth';
 import { sendEmailVerificationCode, verifyEmailCode } from '../emailService';
 
 const router = Router();
@@ -346,23 +346,107 @@ router.get('/transactions', async (req: AuthRequest, res: Response): Promise<voi
 });
 
 // POST /api/user/activate-subscription
+// Strictly guarded: Users cannot self-activate or generate referral commissions without verified payment or Admin/Super Admin authorization
 router.post('/activate-subscription', async (req: AuthRequest, res: Response): Promise<void> => {
-  const { durationMonths = 1, planName = 'Pro Institutional Trading Pass' } = req.body;
-  const user = await Database.findUserById(req.user!.id);
+  const {
+    durationMonths = 1,
+    planName = 'Pro Institutional Trading Pass',
+    paymentVerification,
+    adminApprovalCode,
+    targetUserId,
+    processCommission,
+  } = req.body;
+
+  const caller = req.user;
+  if (!caller) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+
+  // Security Verification:
+  // 1. Super Admins and Admins are authorized staff who can approve/activate subscriptions.
+  // 2. Regular clients, coaches, or staff cannot self-activate without verified payment gateway proof or authorized admin approval.
+  const isStaffAdmin = caller.role === 'super_admin' || caller.role === 'admin';
+
+  // IDOR Guard: Non-admin users cannot activate on behalf of others
+  if (targetUserId && targetUserId !== caller.id && !isStaffAdmin) {
+    res.status(403).json({
+      error: 'IDOR violation: Standard accounts are prohibited from activating subscriptions for other users.',
+    });
+    return;
+  }
+
+  const effectiveUserId = (isStaffAdmin && targetUserId) ? targetUserId : caller.id;
+  const user = await Database.findUserById(effectiveUserId);
 
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
     return;
   }
 
-  const planCost = durationMonths === 12 ? 990 : durationMonths === 3 ? 290 : 120;
+  // Restrict Admin activation strictly to Client accounts; Admins cannot modify staff or higher-privilege accounts
+  if (caller.role === 'admin' && user.role !== 'client') {
+    res.status(403).json({
+      error: 'Access denied. Administrators are strictly restricted to activating subscriptions for Client accounts only.',
+    });
+    return;
+  }
+
+  const monthsNum = Math.max(1, Math.min(36, parseInt(String(durationMonths), 10) || 1));
+  const planCost = monthsNum === 12 ? 990 : monthsNum === 3 ? 290 : 120;
+
+  // Option A: Pay with Commission Balance
+  const { payWithBalance } = req.body;
+  if (payWithBalance === true) {
+    if (user.balance < planCost) {
+      res.status(400).json({
+        error: `Insufficient commission balance ($${user.balance.toFixed(2)}) to activate ${planName} ($${planCost.toFixed(2)}).`,
+      });
+      return;
+    }
+
+    try {
+      const result = await Database.activateSubscriptionWithBalanceAtomic(user.id, monthsNum, planName, planCost);
+      res.json({
+        success: true,
+        message: `Subscription successfully activated with commission balance until ${new Date(result.user.subscriptionExpiresAt).toLocaleDateString()}`,
+        user: sanitizeUser(result.user, caller.role),
+        transaction: result.transaction,
+      });
+      return;
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Failed to activate subscription with balance.' });
+      return;
+    }
+  }
+
+  // Option B: Staff Admin Approval or Verified Payment Gateway
+  const hasVerifiedPayment = paymentVerification &&
+    typeof paymentVerification === 'object' &&
+    paymentVerification.verified === true &&
+    typeof paymentVerification.transactionId === 'string' &&
+    paymentVerification.transactionId.trim().length >= 6;
+
+  const expectedAdminKey = process.env.ADMIN_APPROVAL_KEY || process.env.ADMIN_OVERRIDE_KEY || process.env.JWT_SECRET;
+  const hasAdminApproval = adminApprovalCode &&
+    typeof adminApprovalCode === 'string' &&
+    adminApprovalCode.trim().length > 0 &&
+    adminApprovalCode === expectedAdminKey;
+
+  if (!isStaffAdmin && !hasVerifiedPayment && !hasAdminApproval) {
+    res.status(403).json({
+      error: 'Direct self-activation is prohibited. Subscriptions require verified payment processing, commission balance deduction, or Admin/Super Admin approval.',
+      code: 'SUBSCRIPTION_PAYMENT_REQUIRED',
+    });
+    return;
+  }
   
   // Calculate new expiration date
   const baseDate = user.subscriptionStatus === 'active' && new Date(user.subscriptionExpiresAt) > new Date()
     ? new Date(user.subscriptionExpiresAt)
     : new Date();
   
-  baseDate.setMonth(baseDate.getMonth() + Number(durationMonths));
+  baseDate.setMonth(baseDate.getMonth() + monthsNum);
 
   const updatedUser = await Database.updateUser(user.id, {
     subscriptionStatus: 'active',
@@ -370,53 +454,69 @@ router.post('/activate-subscription', async (req: AuthRequest, res: Response): P
     subscriptionExpiresAt: baseDate.toISOString(),
   });
 
-  // Record user subscription transaction
+  // Record user subscription transaction with authorization metadata
   await Database.addTransaction({
     userId: user.id,
     username: user.username,
     type: 'subscription_purchase',
     amount: planCost,
-    description: `Subscription activated: ${planName} (${durationMonths} Month${durationMonths > 1 ? 's' : ''})`,
+    description: `Subscription activated: ${planName} (${monthsNum} Month${monthsNum > 1 ? 's' : ''})`,
     status: 'completed',
     metadata: {
-      durationMonths,
+      durationMonths: monthsNum,
       planName,
       expiresAt: baseDate.toISOString(),
+      verifiedPayment: Boolean(hasVerifiedPayment),
+      authorizedBy: isStaffAdmin ? caller.username : (hasAdminApproval ? 'admin_approval_code' : 'payment_gateway'),
+      paymentReference: hasVerifiedPayment ? paymentVerification.transactionId : (isStaffAdmin ? 'admin_granted' : 'approved'),
     }
   });
 
-  // Process referral commission for referrer if user was referred
-  await Database.processReferralCommission(
-    user.id,
-    planCost,
-    `Commission on ${durationMonths}-month plan renewal`
-  );
+  // Process referral commission ONLY if verified payment exists or explicitly authorized by admin
+  if (hasVerifiedPayment || (isStaffAdmin && processCommission === true)) {
+    await Database.processReferralCommission(
+      user.id,
+      planCost,
+      `Commission on verified ${monthsNum}-month plan for @${user.username}`
+    );
+  }
+
+  // Log administrative audit entry
+  await Database.addAuditLog({
+    actorId: caller.id,
+    actorUsername: caller.username,
+    actorRole: caller.role,
+    action: 'SUBSCRIPTION_ACTIVATION',
+    targetId: user.id,
+    targetUsername: user.username,
+    details: `Subscription activated for @${user.username} (${monthsNum} mos, ${planName}) by @${caller.username} [${caller.role}]`,
+    metadata: {
+      months: monthsNum,
+      planName,
+      verifiedPayment: Boolean(hasVerifiedPayment),
+      authorizedByAdmin: Boolean(isStaffAdmin || hasAdminApproval),
+    }
+  });
 
   res.json({
     success: true,
     message: `Subscription successfully activated until ${baseDate.toLocaleDateString()}`,
-    user: sanitizeUser(updatedUser!),
+    user: sanitizeUser(updatedUser!, caller.role),
   });
 });
 
 // POST /api/user/request-payout
 router.post('/request-payout', async (req: AuthRequest, res: Response): Promise<void> => {
   const { amount, payoutMethod, payoutAddress } = req.body;
-  const user = await Database.findUserById(req.user!.id);
-
-  if (!user) {
-    res.status(404).json({ error: 'User not found.' });
-    return;
-  }
 
   const requestAmount = Number(amount);
-  if (!requestAmount || isNaN(requestAmount) || requestAmount <= 0) {
+  if (
+    amount === undefined ||
+    isNaN(requestAmount) ||
+    !Number.isFinite(requestAmount) ||
+    requestAmount <= 0
+  ) {
     res.status(400).json({ error: 'Invalid payout amount.' });
-    return;
-  }
-
-  if (requestAmount > user.balance) {
-    res.status(400).json({ error: `Insufficient commission balance. Current available balance is $${user.balance.toFixed(2)}.` });
     return;
   }
 
@@ -425,35 +525,242 @@ router.post('/request-payout', async (req: AuthRequest, res: Response): Promise<
     return;
   }
 
-  // Deduct balance and move to pending
-  const newBalance = Number((user.balance - requestAmount).toFixed(2));
-  const newPending = Number((user.pendingBalance + requestAmount).toFixed(2));
+  if (requestAmount > 1000000) {
+    res.status(400).json({ error: 'Payout amount exceeds maximum allowable limit ($1,000,000).' });
+    return;
+  }
 
-  await Database.updateUser(user.id, {
-    balance: newBalance,
-    pendingBalance: newPending,
-  });
+  // Decimal precision check (maximum 2 decimal places)
+  if (Number(requestAmount.toFixed(2)) !== requestAmount) {
+    res.status(400).json({ error: 'Payout amount cannot have more than 2 decimal places.' });
+    return;
+  }
 
-  const tx = await Database.addTransaction({
-    userId: user.id,
-    username: user.username,
-    type: 'payout_request',
-    amount: requestAmount,
-    description: `Payout Request: $${requestAmount.toFixed(2)} via ${payoutMethod || 'USDT/Crypto'} (${payoutAddress || 'Standard Wallet'})`,
-    status: 'pending',
-    metadata: {
-      payoutMethod,
-      payoutAddress,
-      requestedAt: new Date().toISOString(),
+  try {
+    const result = await Database.requestPayoutAtomic(
+      req.user!.id,
+      requestAmount,
+      typeof payoutMethod === 'string' ? payoutMethod.trim() : 'USDT/Crypto',
+      typeof payoutAddress === 'string' ? payoutAddress.trim() : 'Standard Wallet'
+    );
+
+    res.json({
+      success: true,
+      message: `Payout request of $${requestAmount.toFixed(2)} submitted to administrator.`,
+      transaction: result.transaction,
+      newBalance: result.user.balance,
+      newPending: result.user.pendingBalance,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to process payout request.' });
+  }
+});
+
+// ====================================================
+// PROPRIETARY CLIENT/STUDENT TRADING & COURSE CONTENT
+// (Protected by requireActiveSubscription)
+// ====================================================
+
+// GET /api/user/signals (Proprietary Institutional VIP Signals & Setups)
+router.get('/signals', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
+  const proprietarySignals = [
+    {
+      id: 'sig_xau_01',
+      ticker: 'XAUUSD',
+      asset: 'Gold / US Dollar',
+      direction: 'BUY',
+      orderType: 'LIMIT',
+      entryPrice: 2884.50,
+      stopLoss: 2871.00,
+      takeProfit1: 2905.00,
+      takeProfit2: 2928.00,
+      takeProfit3: 2960.00,
+      riskRewardRatio: '1:3.8',
+      confluence: ['London Session Low Sweep', 'H4 Fair Value Gap (FVG) Tap', 'CVD Institutional Bullish Divergence'],
+      status: 'active',
+      publishedAt: new Date(Date.now() - 3600000).toISOString(),
+      deskAnalyst: 'Chief Institutional Desk',
+      confidenceScore: 94,
+    },
+    {
+      id: 'sig_nas_02',
+      ticker: 'NAS100',
+      asset: 'Nasdaq 100 E-mini',
+      direction: 'SELL',
+      orderType: 'STOP',
+      entryPrice: 21820.00,
+      stopLoss: 21960.00,
+      takeProfit1: 21650.00,
+      takeProfit2: 21480.00,
+      riskRewardRatio: '1:2.4',
+      confluence: ['Asian High Liquidity Purge', 'M15 Market Structure Break (MSB)', 'Delta Absorption Cluster'],
+      status: 'active',
+      publishedAt: new Date(Date.now() - 7200000).toISOString(),
+      deskAnalyst: 'Senior Flow Strategist',
+      confidenceScore: 89,
+    },
+    {
+      id: 'sig_dow_03',
+      ticker: 'US30',
+      asset: 'Dow Jones Industrial 30',
+      direction: 'BUY',
+      orderType: 'MARKET',
+      entryPrice: 43650.00,
+      stopLoss: 43480.00,
+      takeProfit1: 43900.00,
+      takeProfit2: 44250.00,
+      riskRewardRatio: '1:3.5',
+      confluence: ['Daily Discount Array Rebalance', 'Volume Profile Point of Control (POC) Bounce'],
+      status: 'target_hit',
+      publishedAt: new Date(Date.now() - 86400000).toISOString(),
+      deskAnalyst: 'Chief Institutional Desk',
+      confidenceScore: 96,
     }
-  });
+  ];
 
   res.json({
     success: true,
-    message: `Payout request of $${requestAmount.toFixed(2)} submitted to administrator.`,
-    transaction: tx,
-    newBalance,
-    newPending,
+    signals: proprietarySignals,
+    subscriptionStatus: req.user!.subscriptionStatus,
+    expiresAt: req.user!.subscriptionExpiresAt,
+    accessLevel: req.user!.role === 'client' ? 'VIP Pro Client Tier' : 'Institutional Staff Access',
+  });
+});
+
+// GET /api/user/courses (Proprietary Institutional Curriculum & Video Lessons)
+router.get('/courses', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = await Database.findUserById(req.user!.id);
+  const proprietaryCourses = [
+    {
+      id: 'course_smc_01',
+      title: 'Institutional Smart Money Concepts (SMC) & Liquidity Architecture',
+      level: 'Advanced',
+      totalLessons: 12,
+      durationHours: 18.5,
+      modules: [
+        'Anatomy of Liquidity Pools & Stop Runs',
+        'Imbalance, Fair Value Gaps (FVG) & Volume Imbalances',
+        'Break of Structure (BOS) vs Change of Character (CHoCH)',
+        'Internal vs External Range Liquidity Mapping'
+      ],
+      materials: ['SMC Blueprint PDF', 'Killzone Time & Price Cheatsheet', 'TradingView Proprietary Indicators']
+    },
+    {
+      id: 'course_orderflow_02',
+      title: 'Order Flow, Footprint & Cumulative Volume Delta (CVD) Mastery',
+      level: 'Professional Elite',
+      totalLessons: 8,
+      durationHours: 14.0,
+      modules: [
+        'Reading Delta Clusters & Absorption Barriers',
+        'Bookmap Liquidity Heatmaps & Iceberg Orders',
+        'Market Depth DOM Execution Strategies'
+      ],
+      materials: ['Sierra Chart Templates', 'Order Flow Master Checklist']
+    },
+    {
+      id: 'course_risk_03',
+      title: 'Proprietary Capital Preservation & Institutional Risk Protocols',
+      level: 'Comprehensive',
+      totalLessons: 6,
+      durationHours: 8.0,
+      modules: [
+        'Dynamic Value at Risk (VaR) Sizing',
+        'Max Drawdown Algorithmic Circuit Breakers',
+        'Portfolio Hedging & Correlation Matrices'
+      ],
+      materials: ['Risk Calculator Excel Workbook', 'Trade Journaling Database']
+    }
+  ];
+
+  res.json({
+    success: true,
+    courses: proprietaryCourses,
+    userTrainingProgress: user?.trainingProgress || [],
+    trainingStatus: user?.trainingStatus || 'active_training',
+  });
+});
+
+// GET /api/user/trading-data (Proprietary Live Trading & Order Book Heatmaps)
+router.get('/trading-data', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
+  res.json({
+    success: true,
+    data: {
+      institutionalSentiment: {
+        gold: { bias: 'STRONG_BULLISH', cvdDelta: '+4,820 lots', retailShortRatio: '74%' },
+        nasdaq: { bias: 'NEUTRAL_BEARISH', cvdDelta: '-1,340 lots', retailShortRatio: '32%' },
+        us30: { bias: 'BULLISH_ACCUMULATION', cvdDelta: '+2,910 lots', retailShortRatio: '68%' },
+      },
+      liquidityNodes: [
+        { asset: 'XAUUSD', poolType: 'Buy Side Liquidity (BSL)', price: 2940.00, volumeEst: '$180M' },
+        { asset: 'XAUUSD', poolType: 'Sell Side Liquidity (SSL)', price: 2865.00, volumeEst: '$240M' },
+        { asset: 'NAS100', poolType: 'Equal Highs (EQH)', price: 22100.00, volumeEst: '$320M' },
+      ],
+      cotPositioning: {
+        commercials: 'Net Buyers (+18% WoW)',
+        nonCommercials: 'Heavy Speculative Shorts',
+      },
+      updatedAt: new Date().toISOString(),
+    }
+  });
+});
+
+// GET /api/user/coaching-progress (Proprietary Student Coaching & Certified Mentor Milestones)
+router.get('/coaching-progress', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
+  const user = await Database.findUserById(req.user!.id);
+  if (!user) {
+    res.status(404).json({ error: 'User profile not found.' });
+    return;
+  }
+
+  let assignedCoachInfo = null;
+  if (user.assignedCoachId) {
+    const coach = await Database.findUserById(user.assignedCoachId);
+    if (coach) {
+      assignedCoachInfo = {
+        id: coach.id,
+        username: coach.username,
+        fullName: coach.fullName,
+        avatarUrl: coach.avatarUrl,
+        specialty: coach.coachSpecialty || 'Certified Institutional SMC Specialist',
+      };
+    }
+  }
+
+  res.json({
+    success: true,
+    assignedCoach: assignedCoachInfo,
+    trainingStatus: user.trainingStatus || 'active_training',
+    trainingProgress: user.trainingProgress || [],
+    coachingNotes: user.notes || 'No notes currently recorded by your mentor.',
+    subscriptionStatus: user.subscriptionStatus,
+    subscriptionPlan: user.subscriptionPlan,
+    subscriptionExpiresAt: user.subscriptionExpiresAt,
+  });
+});
+
+// GET /api/user/content (Proprietary Market Analysis & Live Desk Alpha Briefs)
+router.get('/content', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
+  res.json({
+    success: true,
+    vipContent: [
+      {
+        id: 'vip_brief_01',
+        title: 'Q1 Global Liquidity Cycle & Central Bank Balance Sheet Analysis',
+        type: 'Institutional Research',
+        readTimeMinutes: 12,
+        publishedAt: new Date().toISOString(),
+        summary: 'Deep-dive analysis into Fed RRP depletion, Treasury General Account refill dynamics, and asset allocation impact.',
+      },
+      {
+        id: 'vip_webinar_02',
+        title: 'Live Desk Tape Reading Session & Execution Masterclass',
+        type: 'Exclusive Webinar Recording',
+        durationMinutes: 75,
+        publishedAt: new Date(Date.now() - 172800000).toISOString(),
+        summary: 'Recorded live stream breaking down high-frequency algorithmic spoofing on gold futures.',
+      }
+    ]
   });
 });
 

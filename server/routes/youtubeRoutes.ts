@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Database } from '../db';
-import { authenticateToken, AuthRequest } from '../auth';
+import { authenticateToken, requirePermission, AuthRequest } from '../auth';
 
 const router = Router();
 
@@ -283,13 +283,10 @@ router.get('/status', (req: Request, res: Response): void => {
 
 /**
  * POST /api/youtube/settings
- * Admin-only route to update YouTube channel configuration.
+ * Admin & Staff route to update YouTube channel configuration.
+ * Protected by dynamic RBAC canManageLiveStream permission.
  */
-router.post('/settings', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
-  if (req.user?.role !== 'admin') {
-    res.status(403).json({ error: 'Access denied. Master Admin privileges required.' });
-    return;
-  }
+router.post('/settings', authenticateToken, requirePermission('canManageLiveStream'), async (req: AuthRequest, res: Response): Promise<void> => {
 
   const { channelId, channelHandle } = req.body;
   const currentSettings = (await Database.getSystemSettings()) as any;

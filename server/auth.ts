@@ -1,8 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { Database, UserRecord, UserRole } from './db';
+import { Database, UserRecord, UserRole, RolePermissions, DEFAULT_ROLE_PERMISSIONS } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smtrading_super_secret_jwt_key_2026';
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim().length === 0) {
+    throw new Error('[Security Exception] JWT_SECRET environment variable is missing. A secure secret key must be set in the environment.');
+  }
+  return secret;
+}
+
 const TOKEN_EXPIRY = '7d';
 
 export interface AuthRequest extends Request {
@@ -17,7 +24,7 @@ export function generateToken(user: UserRecord): string {
       role: user.role,
       subscriptionStatus: user.subscriptionStatus,
     },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: TOKEN_EXPIRY }
   );
 }
@@ -72,7 +79,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; username: string };
+    const decoded = jwt.verify(token, getJwtSecret()) as { id: string; username: string };
     const user = await Database.findUserById(decoded.id);
 
     if (!user) {
@@ -111,6 +118,67 @@ export function requireRole(roles: UserRole[]) {
   };
 }
 
+export function requirePermission(permissionKey: keyof RolePermissions) {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
+
+    // Super Admin has full, unrestricted control across all gates and permissions
+    if (req.user.role === 'super_admin') {
+      next();
+      return;
+    }
+
+    // Check individual user permission override if explicitly specified
+    if (req.user.permissions && typeof req.user.permissions[permissionKey] === 'boolean') {
+      if (req.user.permissions[permissionKey]) {
+        next();
+        return;
+      } else {
+        res.status(403).json({
+          error: `Access denied. Permission '${permissionKey}' is revoked for your account.`,
+          code: 'PERMISSION_DENIED',
+          permission: permissionKey,
+        });
+        return;
+      }
+    }
+
+    try {
+      // Connect directly to live dynamic rbac_settings in database
+      const rbacSettings = await Database.getRBACSettings();
+      const rolePerms = rbacSettings[req.user.role];
+
+      if (rolePerms && rolePerms[permissionKey] === true) {
+        next();
+        return;
+      }
+
+      res.status(403).json({
+        error: `Access denied. Role '${req.user.role}' lacks required permission '${permissionKey}'.`,
+        code: 'PERMISSION_DENIED',
+        permission: permissionKey,
+        role: req.user.role,
+      });
+    } catch (err: any) {
+      // Graceful fallback to static defaults if DB is temporarily unreachable
+      const defaultRolePerms = DEFAULT_ROLE_PERMISSIONS[req.user.role];
+      if (defaultRolePerms && defaultRolePerms[permissionKey] === true) {
+        next();
+        return;
+      }
+
+      res.status(403).json({
+        error: `Access denied. Required permission '${permissionKey}' could not be verified.`,
+        code: 'PERMISSION_DENIED',
+        permission: permissionKey,
+      });
+    }
+  };
+}
+
 export async function requireActiveSubscription(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required.' });
@@ -124,27 +192,30 @@ export async function requireActiveSubscription(req: AuthRequest, res: Response,
   }
 
   if (req.user.subscriptionStatus !== 'active') {
+    const isExpired = req.user.subscriptionStatus === 'expired';
     res.status(403).json({
-      error: 'Subscription required or expired.',
+      error: isExpired ? 'Subscription has expired. Please renew your membership.' : 'Active subscription required.',
       subscriptionStatus: req.user.subscriptionStatus,
       expiresAt: req.user.subscriptionExpiresAt,
-      code: 'SUBSCRIPTION_INACTIVE'
+      code: isExpired ? 'SUBSCRIPTION_EXPIRED' : 'SUBSCRIPTION_INACTIVE'
     });
     return;
   }
 
   // Check date expiration
-  const expDate = new Date(req.user.subscriptionExpiresAt);
-  if (expDate < new Date()) {
-    // Automatically update to expired
-    await Database.updateUser(req.user.id, { subscriptionStatus: 'expired' });
-    res.status(403).json({
-      error: 'Subscription has expired. Please renew your membership.',
-      subscriptionStatus: 'expired',
-      expiresAt: req.user.subscriptionExpiresAt,
-      code: 'SUBSCRIPTION_EXPIRED'
-    });
-    return;
+  if (req.user.subscriptionExpiresAt) {
+    const expDate = new Date(req.user.subscriptionExpiresAt);
+    if (!isNaN(expDate.getTime()) && expDate < new Date()) {
+      // Automatically update to expired in DB
+      await Database.updateUser(req.user.id, { subscriptionStatus: 'expired' });
+      res.status(403).json({
+        error: 'Subscription has expired. Please renew your membership.',
+        subscriptionStatus: 'expired',
+        expiresAt: req.user.subscriptionExpiresAt,
+        code: 'SUBSCRIPTION_EXPIRED'
+      });
+      return;
+    }
   }
 
   next();

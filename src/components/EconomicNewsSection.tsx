@@ -8,19 +8,23 @@ import {
   ChevronDown, 
   ChevronUp, 
   Globe, 
-  TrendingUp, 
-  Zap, 
   Flame,
   Info,
-  ExternalLink
+  Building,
+  RotateCcw,
+  Check
 } from 'lucide-react';
-import { EconomicEvent, EventImpact } from '../types';
+import { EconomicEvent } from '../types';
 import { useTranslation } from '../context/LanguageContext';
 import { 
   getUserTimezoneInfo, 
   formatEventLocalTime, 
   getEventCountdown, 
-  getImpactBadgeStyle 
+  getImpactBadgeStyle,
+  POPULAR_TRADING_TIMEZONES,
+  getStoredTimezonePreference,
+  setStoredTimezonePreference,
+  getDetectedTimezone
 } from '../utils/economicNewsUtils';
 
 interface EconomicNewsSectionProps {
@@ -37,7 +41,11 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
   const { t, language, isRTL } = useTranslation();
   const [now, setNow] = useState<number>(Date.now());
   const [filterImpact, setFilterImpact] = useState<string>('All');
-  const [expandedEventId, setExpandedEventId] = useState<string | null>('news-approaching');
+  const [expandedEventId, setExpandedEventId] = useState<string | null>('news-us-nfp-sep04');
+  const [selectedTz, setSelectedTz] = useState<string>(() => {
+    return getStoredTimezonePreference() || 'AUTO';
+  });
+  const [isTzPickerOpen, setIsTzPickerOpen] = useState<boolean>(false);
 
   // Real-time ticking counter every second
   useEffect(() => {
@@ -47,29 +55,48 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const tzInfo = getUserTimezoneInfo();
+  // Update on focus/visibility change
+  useEffect(() => {
+    const handleFocus = () => {
+      setNow(Date.now());
+    };
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, []);
+
+  const tzInfo = getUserTimezoneInfo(selectedTz);
+  const activeTz = tzInfo.timeZone;
+  const detectedTz = getDetectedTimezone();
+
+  const handleSelectTz = (tz: string) => {
+    setSelectedTz(tz);
+    setStoredTimezonePreference(tz);
+    setIsTzPickerOpen(false);
+  };
 
   // Filter events
   const filteredEvents = events.filter(evt => {
     if (filterImpact === 'All') return true;
     if (filterImpact === 'Extreme') return evt.impact === 'Extreme';
     if (filterImpact === 'High') return evt.impact === 'High';
-    if (filterImpact === 'Medium') return evt.impact === 'Medium';
-    if (filterImpact === 'Low') return evt.impact === 'Low';
     if (filterImpact === 'Upcoming') {
-      const { status } = getEventCountdown(evt, now);
+      const { status } = getEventCountdown(evt, now, language);
       return status === 'upcoming' || status === 'approaching' || status === 'live';
     }
     if (filterImpact === 'Released') {
-      const { status } = getEventCountdown(evt, now);
+      const { status } = getEventCountdown(evt, now, language);
       return status === 'released';
     }
     return true;
   });
 
   // Check if any event is approaching or live to highlight top alert
-  const approachingEvent = events.find(e => getEventCountdown(e, now).isApproaching);
-  const liveEvent = events.find(e => getEventCountdown(e, now).isLive);
+  const approachingEvent = events.find(e => getEventCountdown(e, now, language).isApproaching);
+  const liveEvent = events.find(e => getEventCountdown(e, now, language).isLive);
 
   const toggleExpand = (id: string) => {
     setExpandedEventId(prev => (prev === id ? null : id));
@@ -77,7 +104,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
 
   return (
     <div className="bg-[#0D1322] border border-slate-800/90 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
-      {/* 1. Header Bar with Local Timezone Display */}
+      {/* 1. Header Bar with Local Timezone Display & Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
@@ -88,16 +115,55 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
               <span>{t('newsSectionTitle')}</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             </h4>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 pt-0.5">
+            <div className="relative flex items-center gap-1.5 text-[11px] text-slate-400 pt-0.5">
               <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
-              <span className="truncate" title={tzInfo.displayName}>
-                {t('ecoYourTzLabel')}: <strong className="text-cyan-300 font-mono-num font-semibold">{tzInfo.displayName}</strong>
-              </span>
+              <span>{t('ecoYourTzLabel')}:</span>
+              <button
+                type="button"
+                onClick={() => setIsTzPickerOpen(!isTzPickerOpen)}
+                className="text-cyan-300 hover:text-cyan-200 font-mono-num font-semibold underline decoration-dotted underline-offset-2 cursor-pointer flex items-center gap-1"
+              >
+                <span>{tzInfo.isAutoDetected ? `Auto (${tzInfo.abbreviation || tzInfo.offsetString})` : tzInfo.displayName}</span>
+                <ChevronDown className="w-3 h-3 text-cyan-400" />
+              </button>
+
+              {/* Timezone Popover */}
+              {isTzPickerOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setIsTzPickerOpen(false)} />
+                  <div className="absolute left-0 rtl:left-auto rtl:right-0 top-full mt-1 z-40 w-72 bg-[#0B0F19] border border-cyan-500/30 rounded-xl shadow-2xl p-1.5 max-h-64 overflow-y-auto space-y-1">
+                    <div className="px-2 py-1 text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                      Select Display Timezone
+                    </div>
+                    {POPULAR_TRADING_TIMEZONES.map(option => {
+                      const isSelected = selectedTz === option.timeZone || (option.timeZone === 'AUTO' && selectedTz === 'AUTO');
+                      const optInfo = getUserTimezoneInfo(option.timeZone === 'AUTO' ? detectedTz : option.timeZone);
+                      return (
+                        <button
+                          key={option.timeZone}
+                          type="button"
+                          onClick={() => handleSelectTz(option.timeZone)}
+                          className={`w-full text-left rtl:text-right px-2.5 py-1.5 rounded-lg text-xs font-mono-num flex items-center justify-between cursor-pointer ${
+                            isSelected ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="truncate flex items-center gap-1.5">
+                            <span>{option.flag}</span>
+                            <span className="truncate">{option.label}</span>
+                          </div>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={onOpenCalendar}
           className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer transition-colors bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-lg border border-amber-500/30"
         >
@@ -130,7 +196,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
           <div className="min-w-0 flex-1 text-xs">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black text-[10px] tracking-wider uppercase">
-                {t('ecoStatusApproaching')}: {getEventCountdown(approachingEvent, now).text}
+                {t('ecoStatusApproaching')}: {getEventCountdown(approachingEvent, now, language).text}
               </span>
               <span className="font-bold text-amber-200">{approachingEvent.event}</span>
             </div>
@@ -171,8 +237,8 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
       <div className="space-y-2.5">
         {filteredEvents.slice(0, 4).map((evt) => {
           const isExpanded = expandedEventId === evt.id;
-          const { text: countdownText, status, isApproaching, isLive } = getEventCountdown(evt, now);
-          const localTime = evt.timestamp ? formatEventLocalTime(evt.timestamp, language) : null;
+          const { text: countdownText, status, isApproaching, isLive } = getEventCountdown(evt, now, language);
+          const localTime = formatEventLocalTime(evt.timestamp, language, activeTz, now);
           const style = getImpactBadgeStyle(evt.impact);
 
           return (
@@ -201,10 +267,13 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                       {evt.countryCode === 'US' ? '🇺🇸 US' : evt.countryCode === 'EU' ? '🇪🇺 EU' : evt.countryCode === 'JP' ? '🇯🇵 JP' : evt.countryCode === 'GB' ? '🇬🇧 UK' : evt.countryCode}
                     </span>
 
-                    {/* Localized Date & Time (User Timezone) */}
-                    <span className="text-amber-300 font-semibold flex items-center gap-1">
+                    {/* Localized Date & Time in User's Timezone */}
+                    <span className="text-amber-300 font-bold flex items-center gap-1">
                       <Clock className="w-3 h-3 text-amber-400" />
-                      {localTime ? localTime.fullStr : `${evt.date} • ${evt.time}`}
+                      <span>{localTime.fullStr}</span>
+                      <span className="text-[10px] text-cyan-300 font-normal">
+                        ({tzInfo.abbreviation || tzInfo.offsetString})
+                      </span>
                     </span>
                   </div>
 
@@ -222,7 +291,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                         {t('ecoStatusLive')}
                       </span>
                     ) : isApproaching ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider shadow-sm animate-pulse">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px] uppercase tracking-wider animate-pulse shadow-sm">
                         <AlertTriangle className="w-2.5 h-2.5" />
                         {countdownText}
                       </span>
@@ -231,7 +300,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                         ✓ {t('ecoStatusReleased')}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700 text-cyan-300 font-bold text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 text-cyan-300 font-bold text-[10px]">
                         ⏱ {countdownText}
                       </span>
                     )}
@@ -239,94 +308,74 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                 </div>
 
                 {/* Event Name */}
-                <div className="flex items-start justify-between gap-2">
-                  <h5 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 leading-snug">
+                <div className="flex items-center justify-between gap-2">
+                  <h5 className="font-bold text-xs sm:text-sm text-white hover:text-amber-300 transition-colors truncate">
                     {evt.event}
                   </h5>
-                  <button 
-                    type="button"
-                    aria-label="Toggle event details"
-                    className="text-slate-400 hover:text-amber-300 transition-colors shrink-0 p-0.5"
-                  >
+                  <button type="button" aria-label="Toggle details" className="text-slate-400 p-0.5 shrink-0">
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-amber-400" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
                 </div>
 
-                {/* Metrics row: Previous / Forecast / Actual */}
-                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/70 text-center font-mono-num">
-                  <div className="bg-slate-950/50 p-1.5 rounded-lg border border-slate-800/80">
-                    <span className="text-[10px] text-slate-400 block">{t('ecoPreviousLabel')}</span>
+                {/* Numbers Bar */}
+                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80 text-center font-mono-num text-[11px]">
+                  <div className="bg-slate-950/50 p-1.5 rounded-lg border border-slate-800/60">
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block">{t('ecoPreviousLabel')}</span>
                     <span className="text-xs text-slate-200 font-semibold">{evt.previous}</span>
                   </div>
-                  <div className="bg-slate-950/50 p-1.5 rounded-lg border border-slate-800/80">
-                    <span className="text-[10px] text-slate-400 block">{t('ecoForecastLabel')}</span>
-                    <span className="text-xs text-amber-300 font-bold">{evt.forecast}</span>
+                  <div className="bg-slate-950/50 p-1.5 rounded-lg border border-slate-800/60">
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block">{t('ecoForecastLabel')}</span>
+                    <span className="text-xs text-amber-300 font-extrabold">{evt.forecast}</span>
                   </div>
                   <div className={`p-1.5 rounded-lg border ${
                     evt.actual 
-                      ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300' 
-                      : 'bg-slate-950/50 border-slate-800/80 text-slate-500'
+                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                      : 'bg-slate-950/50 border-slate-800/60 text-slate-500'
                   }`}>
-                    <span className="text-[10px] text-slate-400 block">{t('ecoActualLabel')}</span>
-                    <span className="text-xs font-black">
-                      {evt.actual ? evt.actual : `—`}
+                    <span className="text-[9px] text-slate-400 uppercase tracking-wider block">{t('ecoActualLabel')}</span>
+                    <span className="text-xs font-bold">
+                      {evt.actual ? evt.actual : '—'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* 5. Expanded Details: Institutional "Why It Matters" */}
+              {/* Expandable Explanation */}
               {isExpanded && (
-                <div className="px-3 pb-3 pt-1 border-t border-slate-800/80 bg-slate-950/40 space-y-2.5 animate-fadeIn text-xs">
-                  {/* Why It Matters */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px] uppercase tracking-wider">
-                      <Info className="w-3.5 h-3.5" />
-                      <span>{t('ecoWhyItMattersTitle')}</span>
-                    </div>
-                    <p className="text-slate-300 text-xs leading-relaxed bg-[#0B0F19] p-2.5 rounded-xl border border-slate-800">
-                      {evt.whyItMatters || t('calVolNote')}
-                    </p>
-                  </div>
+                <div className="px-3 pb-3 pt-1 border-t border-slate-800/80 bg-slate-950/50 space-y-2 text-xs animate-fadeIn">
+                  <p className="text-slate-300 text-[11px] leading-relaxed bg-[#0B0F19] p-2 rounded-lg border border-slate-800">
+                    {evt.whyItMatters || t('calVolNote')}
+                  </p>
 
-                  {/* Key Affected Assets */}
+                  {/* Official Source Metadata */}
+                  {evt.sourceLocalTime && evt.sourceTimezone && (
+                    <div className="text-[10px] text-slate-400 font-mono-num flex items-center gap-1">
+                      <Building className="w-3 h-3 text-slate-500" />
+                      <span>Source Time: <strong>{evt.sourceLocalTime}</strong> {evt.sourceTimezone}</span>
+                    </div>
+                  )}
+
+                  {/* Impacted Tickers */}
                   {evt.affectedAssets && evt.affectedAssets.length > 0 && (
                     <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                      <span className="text-[10px] text-slate-400 uppercase font-mono-num">
+                      <span className="text-[10px] text-slate-400 font-mono-num uppercase font-semibold">
                         {t('ecoAffectedAssetsLabel')}:
                       </span>
                       {evt.affectedAssets.map(asset => (
                         <button
                           key={asset}
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (onOpenChartModal) {
-                              if (asset.includes('XAU')) onOpenChartModal('OANDA:XAUUSD');
-                              else if (asset.includes('NAS')) onOpenChartModal('OANDA:NAS100USD');
-                              else if (asset.includes('US30')) onOpenChartModal('OANDA:US30USD');
-                              else onOpenChartModal();
-                            }
+                            if (onOpenChartModal) onOpenChartModal(asset);
                           }}
-                          className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[10px] font-mono-num font-bold text-cyan-300 hover:text-cyan-200 transition-colors cursor-pointer"
+                          className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono-num font-bold text-cyan-300 hover:text-white hover:border-cyan-400 cursor-pointer"
                         >
                           {asset}
                         </button>
                       ))}
                     </div>
                   )}
-
-                  {/* Market Bias / Rule of Thumb */}
-                  <div className="text-[11px] text-slate-400 flex items-center justify-between gap-2 pt-1 border-t border-slate-800/60">
-                    <span className="text-emerald-400 font-medium">
-                      ↑ {t('ecoMarketBiasBullish')}
-                    </span>
-                    <button
-                      onClick={onOpenCalendar}
-                      className="text-amber-400 hover:text-amber-300 font-semibold inline-flex items-center gap-1 cursor-pointer shrink-0"
-                    >
-                      {t('widgetViewAll')} <ExternalLink className="w-3 h-3" />
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

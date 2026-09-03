@@ -85,14 +85,8 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    const isStandardDemoPass = 
-      (cleanPassword === 'admin123' && (user.role === 'super_admin' || user.role === 'admin')) ||
-      (cleanPassword === 'trader123' && user.role === 'client') ||
-      (cleanPassword === 'employee123' && user.role === 'employee') ||
-      (cleanPassword === 'coach123' && user.role === 'coach') ||
-      (cleanPassword === 'password123');
-
-    const isMatch = isStandardDemoPass || (await bcrypt.compare(cleanPassword, user.passwordHash));
+    // Enforce strict bcrypt password verification against stored password hash
+    const isMatch = await bcrypt.compare(cleanPassword, user.passwordHash);
 
     if (!isMatch) {
       res.status(401).json({ error: 'Invalid username or password.' });
@@ -212,25 +206,17 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
       notes: verifiedReferrer ? `Referred by @${verifiedReferrer.username} (${verifiedReferrer.referralCode})` : 'Organic direct registration',
     });
 
-    // If referred, process initial referral registration attribution
-    if (verifiedReferrer) {
-      await Database.addTransaction({
-        userId: verifiedReferrer.id,
-        username: verifiedReferrer.username,
-        type: 'commission',
-        amount: 25.0, // Welcome signup referral bonus
-        description: `Referral Welcome Bonus: @${newUser.username} registered with code ${verifiedReferrer.referralCode}`,
-        status: 'completed',
-        metadata: {
+    // If referred, process initial referral registration attribution atomically
+    if (verifiedReferrer && verifiedReferrer.id !== newUser.id) {
+      await Database.creditReferralBonus(
+        verifiedReferrer.id,
+        25.0, // Welcome signup referral bonus
+        `Referral Welcome Bonus: @${newUser.username} registered with code ${verifiedReferrer.referralCode}`,
+        {
           referredUserId: newUser.id,
           referredUsername: newUser.username,
         }
-      });
-      // Increment referrer balance
-      await Database.updateUser(verifiedReferrer.id, {
-        balance: Number((verifiedReferrer.balance + 25.0).toFixed(2)),
-        totalEarned: Number((verifiedReferrer.totalEarned + 25.0).toFixed(2))
-      });
+      );
     }
 
     const token = generateToken(newUser);

@@ -461,6 +461,15 @@ export async function isPostgresReady(): Promise<boolean> {
           CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
           CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
           CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
+
+          -- Ensure newly added columns exist on existing tables
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_coach_id VARCHAR(100);
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_specialty VARCHAR(255);
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS training_status VARCHAR(50);
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS training_progress JSONB;
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB;
+          ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS youtube_channel_id VARCHAR(255);
+          ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS youtube_channel_handle VARCHAR(255);
         `);
 
         // Check if database needs seeding
@@ -485,7 +494,7 @@ export async function isPostgresReady(): Promise<boolean> {
             ) VALUES 
             (
               'usr_admin_01', 'abuasad2299', 'admin@smtrading.pro',
-              '$2b$10$1nj2foj1RxoiTnWdiSUMGePY5aP5G92IwHfIad5rc0WliaLOCBZJO',
+              '$2b$10$eDeJdEjpPYDY3yMGzZtE5ONc9tPSi93rqpM4VO7W86jC6BKOdXPtO',
               'Abu Asad Almansi (Super Admin)', 'super_admin', 'active',
               'Institutional Master VIP', $1, 'SMADMIN', NULL,
               25.00, 14500.00, 1200.00, 48900.00, '2025-01-01T00:00:00.000Z', $2,
@@ -493,7 +502,7 @@ export async function isPostgresReady(): Promise<boolean> {
             ),
             (
               'usr_admin_02', 'admin_sarah', 'sarah.admin@smtrading.pro',
-              '$2b$10$1nj2foj1RxoiTnWdiSUMGePY5aP5G92IwHfIad5rc0WliaLOCBZJO',
+              '$2b$10$EC/k9aZlsb4lGIrOdNvPf.j4X8pRZ8zDa6fGd6Qr9wOHWtfgJ8O3.',
               'Sarah Jenkins (Operations & Student Admin)', 'admin', 'active',
               'Administrative Executive Access', $1, 'SARAHADMIN', 'usr_admin_01',
               20.00, 2800.00, 200.00, 7500.00, '2025-02-10T00:00:00.000Z', $2,
@@ -502,7 +511,7 @@ export async function isPostgresReady(): Promise<boolean> {
             ),
             (
               'usr_emp_01', 'employee', 'analyst@smtrading.pro',
-              '$2b$10$grhF2lAM/3xcYrrwyFP1PeFuIQxg8Wn2c/S/z2YX/8HJJ6ze729ai',
+              '$2b$10$RDMZ00tsqqvXrWUEBsF7Wu/0ZkPFIXr5PjbdvYVp2fG624RnQrqQe',
               'Senior Market Analyst (Staff Desk)', 'employee', 'active',
               'Staff Executive Access', $1, 'SMSTAFF', 'usr_admin_01',
               18.00, 3420.00, 450.00, 12800.00, '2025-03-15T00:00:00.000Z', $2,
@@ -511,7 +520,7 @@ export async function isPostgresReady(): Promise<boolean> {
             ),
             (
               'usr_coach_01', 'coach_tariq', 'coach.tariq@smtrading.pro',
-              '$2b$10$grhF2lAM/3xcYrrwyFP1PeFuIQxg8Wn2c/S/z2YX/8HJJ6ze729ai',
+              '$2b$10$bnzFCL6B6jeISyGrpcEuJ.jQX230GGGjbFKFYOblxVRi1NIVGNBoe',
               'Coach Tariq Al-Mansoor (Institutional SMC Coach)', 'coach', 'active',
               'Certified SMC Master Coach', $1, 'COACHTARIQ', 'usr_admin_01',
               18.00, 2150.00, 300.00, 8900.00, '2025-04-01T00:00:00.000Z', $2,
@@ -520,7 +529,7 @@ export async function isPostgresReady(): Promise<boolean> {
             ),
             (
               'usr_client_01', 'trader_pro', 'trader@example.com',
-              '$2b$10$uZxbDSOwUGDC6ULexY6XMO7pLcM8s5jQs13nd3KuMXB906Rz79fU6',
+              '$2b$10$Uk9Xw82c.HQ4Bh5dP57tseVUkKkuxixQ61KAhfJKuGRlzHx58qPFS',
               'Karim Benali (VIP Student)', 'client', 'active',
               'Pro Order Flow & SMC Quarterly', $1, 'TRADERPRO99', 'usr_emp_01',
               10.00, 850.00, 150.00, 2400.00, '2025-06-10T00:00:00.000Z', $2,
@@ -529,7 +538,7 @@ export async function isPostgresReady(): Promise<boolean> {
             ),
             (
               'usr_client_02', 'trader_expired', 'expired_user@example.com',
-              '$2b$10$uZxbDSOwUGDC6ULexY6XMO7pLcM8s5jQs13nd3KuMXB906Rz79fU6',
+              '$2b$10$Uk9Xw82c.HQ4Bh5dP57tseVUkKkuxixQ61KAhfJKuGRlzHx58qPFS',
               'Sami Vance (Client)', 'client', 'expired',
               'Monthly SMC Pass (Expired)', $3, 'SAMIVANCE', 'usr_emp_01',
               10.00, 120.00, 0.00, 350.00, '2025-02-01T00:00:00.000Z', $3,
@@ -574,6 +583,21 @@ export async function isPostgresReady(): Promise<boolean> {
             VALUES (1, 10.00, 18.00, 25.00, 'SMTrading.pro')
             ON CONFLICT (id) DO NOTHING;
           `);
+        }
+
+        // Verify and synchronize Super Admin abuasad2299 password hash with secure bcrypt
+        try {
+          const saCheck = await client.query("SELECT id, password_hash FROM users WHERE username = 'abuasad2299' LIMIT 1");
+          if (saCheck.rows.length > 0) {
+            const isPassValid = await bcrypt.compare('@Bhbkanhelina2299', saCheck.rows[0].password_hash);
+            if (!isPassValid) {
+              const freshHash = await bcrypt.hash('@Bhbkanhelina2299', 10);
+              await client.query("UPDATE users SET password_hash = $1 WHERE username = 'abuasad2299'", [freshHash]);
+              console.log('[PostgreSQL] Super Admin abuasad2299 password hash synchronized with verified bcrypt hash.');
+            }
+          }
+        } catch (syncErr: any) {
+          console.warn('[PostgreSQL] Super admin hash check notice:', syncErr.message);
         }
 
         isPostgresHealthy = true;
@@ -833,9 +857,9 @@ export class Database {
         return;
       }
 
-      // Find referrer by ID or referralCode
+      // Find referrer by ID or referralCode with row lock
       const referrerRes = await client.query(
-        "SELECT * FROM users WHERE id = $1 OR UPPER(referral_code) = UPPER($2) LIMIT 1",
+        "SELECT * FROM users WHERE (id = $1 OR UPPER(referral_code) = UPPER($2)) FOR UPDATE LIMIT 1",
         [buyer.referredBy, buyer.referredBy]
       );
       if (referrerRes.rows.length === 0) {
@@ -843,6 +867,12 @@ export class Database {
         return;
       }
       const referrer = mapUserRow(referrerRes.rows[0]);
+
+      // Guard against self-referral
+      if (referrer.id === buyer.id) {
+        await client.query("ROLLBACK");
+        return;
+      }
 
       const commissionRate = referrer.commissionRate || 10;
       const commissionAmount = Number(((saleAmount * commissionRate) / 100).toFixed(2));
@@ -865,18 +895,412 @@ export class Database {
 
       await client.query(`
         INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
-        VALUES ($1, $2, $3, commission, $4, $5, completed, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [
         txId,
         referrer.id,
         referrer.username,
+        'commission',
         commissionAmount,
         `${description} (Referred: @${buyer.username} [${commissionRate}%])`,
+        'completed',
         now,
         JSON.stringify(metadata),
       ]);
 
       await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async creditReferralBonus(
+    referrerId: string,
+    bonusAmount: number,
+    description: string,
+    metadata: any
+  ): Promise<void> {
+    const p = await getActivePg();
+    const client = await p.connect();
+    try {
+      await client.query("BEGIN");
+      const refRes = await client.query("SELECT * FROM users WHERE id = $1 FOR UPDATE", [referrerId]);
+      if (refRes.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return;
+      }
+      const referrer = mapUserRow(refRes.rows[0]);
+
+      await client.query(
+        "UPDATE users SET balance = balance + $1, total_earned = total_earned + $1 WHERE id = $2",
+        [bonusAmount, referrer.id]
+      );
+
+      const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const now = new Date().toISOString();
+
+      await client.query(`
+        INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `, [
+        txId,
+        referrer.id,
+        referrer.username,
+        'commission',
+        bonusAmount,
+        description,
+        'completed',
+        now,
+        JSON.stringify(metadata || {}),
+      ]);
+
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Atomic Payout Request: Row lock, verify balance, move to pending, create transaction
+  static async requestPayoutAtomic(
+    userId: string,
+    requestAmount: number,
+    payoutMethod?: string,
+    payoutAddress?: string
+  ): Promise<{ user: UserRecord; transaction: TransactionRecord }> {
+    const p = await getActivePg();
+    const client = await p.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Row-level lock on user row to prevent race conditions & double-spend
+      const userRes = await client.query("SELECT * FROM users WHERE id = $1 FOR UPDATE", [userId]);
+      if (userRes.rows.length === 0) {
+        throw new Error("User not found.");
+      }
+      const user = mapUserRow(userRes.rows[0]);
+
+      if (user.balance < requestAmount) {
+        throw new Error(`Insufficient commission balance. Current available balance is $${user.balance.toFixed(2)}.`);
+      }
+
+      const newBalance = Number((user.balance - requestAmount).toFixed(2));
+      const newPending = Number((user.pendingBalance + requestAmount).toFixed(2));
+      const now = new Date().toISOString();
+
+      const updateRes = await client.query(
+        "UPDATE users SET balance = $1, pending_balance = $2 WHERE id = $3 RETURNING *",
+        [newBalance, newPending, userId]
+      );
+      const updatedUser = mapUserRow(updateRes.rows[0]);
+
+      const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const metadata = {
+        payoutMethod: payoutMethod || 'USDT/Crypto',
+        payoutAddress: payoutAddress || 'Standard Wallet',
+        requestedAt: now,
+      };
+
+      const txRes = await client.query(`
+        INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [
+        txId,
+        user.id,
+        user.username,
+        'payout_request',
+        requestAmount,
+        `Payout Request: $${requestAmount.toFixed(2)} via ${metadata.payoutMethod} (${metadata.payoutAddress})`,
+        'pending',
+        now,
+        JSON.stringify(metadata)
+      ]);
+      const tx = mapTransactionRow(txRes.rows[0]);
+
+      await client.query("COMMIT");
+      return { user: updatedUser, transaction: tx };
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Atomic Payout Finalization (Approve / Reject): Row lock on transaction and user, atomic balance transition
+  static async finalizePayoutTransactionAtomic(
+    txId: string,
+    newStatus: 'completed' | 'rejected',
+    admin: { id: string; username: string; role: string }
+  ): Promise<{ transaction: TransactionRecord; user?: UserRecord }> {
+    const p = await getActivePg();
+    const client = await p.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Lock transaction row
+      const txRes = await client.query("SELECT * FROM transactions WHERE id = $1 FOR UPDATE", [txId]);
+      if (txRes.rows.length === 0) {
+        throw new Error("Transaction not found.");
+      }
+      const tx = mapTransactionRow(txRes.rows[0]);
+
+      if (tx.status !== 'pending') {
+        throw new Error(`Transaction #${txId} is already in status '${tx.status}' and cannot be modified again.`);
+      }
+
+      let updatedUser: UserRecord | undefined;
+      const now = new Date().toISOString();
+
+      if (tx.type === 'payout_request') {
+        // Lock target user row
+        const userRes = await client.query("SELECT * FROM users WHERE id = $1 FOR UPDATE", [tx.userId]);
+        if (userRes.rows.length > 0) {
+          const targetUser = mapUserRow(userRes.rows[0]);
+          if (newStatus === 'rejected') {
+            // Restore reserved balance and reduce pending balance
+            const restoredBalance = Number((targetUser.balance + tx.amount).toFixed(2));
+            const reducedPending = Math.max(0, Number((targetUser.pendingBalance - tx.amount).toFixed(2)));
+            const uRes = await client.query(
+              "UPDATE users SET balance = $1, pending_balance = $2 WHERE id = $3 RETURNING *",
+              [restoredBalance, reducedPending, targetUser.id]
+            );
+            updatedUser = mapUserRow(uRes.rows[0]);
+          } else if (newStatus === 'completed') {
+            // Deduct from pending balance
+            const reducedPending = Math.max(0, Number((targetUser.pendingBalance - tx.amount).toFixed(2)));
+            const uRes = await client.query(
+              "UPDATE users SET pending_balance = $1 WHERE id = $2 RETURNING *",
+              [reducedPending, targetUser.id]
+            );
+            updatedUser = mapUserRow(uRes.rows[0]);
+          }
+        }
+      }
+
+      // Update transaction status
+      const updatedTxRes = await client.query(
+        "UPDATE transactions SET status = $1 WHERE id = $2 RETURNING *",
+        [newStatus, txId]
+      );
+      const updatedTx = mapTransactionRow(updatedTxRes.rows[0]);
+
+      // Record Audit Log inside the same atomic transaction
+      const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await client.query(`
+        INSERT INTO audit_logs (id, actor_id, actor_username, actor_role, action, target_id, target_username, details, timestamp, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        logId,
+        admin.id,
+        admin.username,
+        admin.role,
+        newStatus === 'rejected' ? 'PAYOUT_REJECTED_BALANCE_RESTORED' : 'PAYOUT_COMPLETED',
+        tx.id,
+        tx.username,
+        `Payout transaction #${tx.id} for @${tx.username} ($${tx.amount.toFixed(2)}) marked '${newStatus}' by @${admin.username} [${admin.role}]`,
+        now,
+        JSON.stringify({ transactionId: tx.id, amount: tx.amount, status: newStatus, userId: tx.userId })
+      ]);
+
+      await client.query("COMMIT");
+      return { transaction: updatedTx, user: updatedUser };
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Atomic User Balance Adjustment (Super Admin Only): Row lock, atomic balance update, transaction, audit log
+  static async adjustUserBalanceAtomic(
+    targetUserId: string,
+    numAmount: number,
+    action: 'add' | 'deduct' | 'set',
+    reason: string,
+    admin: { id: string; username: string; role: string }
+  ): Promise<{ user: UserRecord; transaction: TransactionRecord }> {
+    const p = await getActivePg();
+    const client = await p.connect();
+    try {
+      await client.query("BEGIN");
+
+      const userRes = await client.query("SELECT * FROM users WHERE id = $1 FOR UPDATE", [targetUserId]);
+      if (userRes.rows.length === 0) {
+        throw new Error("User not found.");
+      }
+      const user = mapUserRow(userRes.rows[0]);
+
+      let newBalance = user.balance;
+      if (action === 'add') {
+        newBalance = Number((user.balance + numAmount).toFixed(2));
+      } else if (action === 'deduct') {
+        if (numAmount > user.balance) {
+          throw new Error(`Cannot deduct $${numAmount.toFixed(2)} from available balance of $${user.balance.toFixed(2)}. Balances cannot be negative.`);
+        }
+        newBalance = Number((user.balance - numAmount).toFixed(2));
+      } else if (action === 'set') {
+        if (numAmount < 0) {
+          throw new Error("Balance cannot be negative.");
+        }
+        newBalance = Number(numAmount.toFixed(2));
+      } else {
+        throw new Error(`Invalid balance adjustment action: ${action}`);
+      }
+
+      if (newBalance < 0) {
+        throw new Error("Balance cannot be negative.");
+      }
+
+      const now = new Date().toISOString();
+      const updateRes = await client.query(
+        "UPDATE users SET balance = $1 WHERE id = $2 RETURNING *",
+        [newBalance, targetUserId]
+      );
+      const updatedUser = mapUserRow(updateRes.rows[0]);
+
+      const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const metadata = {
+        adminId: admin.id,
+        adminUsername: admin.username,
+        previousBalance: user.balance,
+        newBalance,
+        action,
+        reason,
+      };
+
+      const txRes = await client.query(`
+        INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [
+        txId,
+        user.id,
+        user.username,
+        'manual_adjustment',
+        action === 'deduct' ? -numAmount : numAmount,
+        `Super Admin Adjustment (@${admin.username}): ${reason}`,
+        'completed',
+        now,
+        JSON.stringify(metadata)
+      ]);
+      const tx = mapTransactionRow(txRes.rows[0]);
+
+      const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await client.query(`
+        INSERT INTO audit_logs (id, actor_id, actor_username, actor_role, action, target_id, target_username, details, timestamp, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        logId,
+        admin.id,
+        admin.username,
+        admin.role,
+        'BALANCE_ADJUST',
+        user.id,
+        user.username,
+        `Adjusted balance for @${user.username} from $${user.balance} to $${newBalance} (${action}: $${numAmount})`,
+        now,
+        JSON.stringify({ previousBalance: user.balance, newBalance, reason, action, amount: numAmount })
+      ]);
+
+      await client.query("COMMIT");
+      return { user: updatedUser, transaction: tx };
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Atomic Subscription Activation with Balance: Locks user row, verifies balance >= planCost, deducts balance, updates subscription
+  static async activateSubscriptionWithBalanceAtomic(
+    userId: string,
+    durationMonths: number,
+    planName: string,
+    planCost: number
+  ): Promise<{ user: UserRecord; transaction: TransactionRecord }> {
+    const p = await getActivePg();
+    const client = await p.connect();
+    try {
+      await client.query("BEGIN");
+
+      const userRes = await client.query("SELECT * FROM users WHERE id = $1 FOR UPDATE", [userId]);
+      if (userRes.rows.length === 0) {
+        throw new Error("User not found.");
+      }
+      const user = mapUserRow(userRes.rows[0]);
+
+      if (user.balance < planCost) {
+        throw new Error(`Insufficient commission balance ($${user.balance.toFixed(2)}) to activate ${planName} ($${planCost.toFixed(2)}).`);
+      }
+
+      const newBalance = Number((user.balance - planCost).toFixed(2));
+      const now = new Date().toISOString();
+
+      const baseDate = user.subscriptionStatus === 'active' && new Date(user.subscriptionExpiresAt) > new Date()
+        ? new Date(user.subscriptionExpiresAt)
+        : new Date();
+      baseDate.setMonth(baseDate.getMonth() + durationMonths);
+
+      const updateRes = await client.query(
+        "UPDATE users SET balance = $1, subscription_status = 'active', subscription_plan = $2, subscription_expires_at = $3 WHERE id = $4 RETURNING *",
+        [newBalance, planName, baseDate.toISOString(), userId]
+      );
+      const updatedUser = mapUserRow(updateRes.rows[0]);
+
+      const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const metadata = {
+        durationMonths,
+        planName,
+        expiresAt: baseDate.toISOString(),
+        paymentMethod: 'commission_balance',
+        paidWithBalance: true,
+      };
+
+      const txRes = await client.query(`
+        INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [
+        txId,
+        user.id,
+        user.username,
+        'subscription_purchase',
+        planCost,
+        `Subscription Activated: ${planName} (${durationMonths} mo) via Account Balance`,
+        'completed',
+        now,
+        JSON.stringify(metadata)
+      ]);
+      const tx = mapTransactionRow(txRes.rows[0]);
+
+      const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await client.query(`
+        INSERT INTO audit_logs (id, actor_id, actor_username, actor_role, action, target_id, target_username, details, timestamp, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        logId,
+        user.id,
+        user.username,
+        user.role,
+        'SUBSCRIPTION_BALANCE_PURCHASE',
+        user.id,
+        user.username,
+        `Subscribed to ${planName} (${durationMonths} mos) using account balance ($${planCost.toFixed(2)})`,
+        now,
+        JSON.stringify({ planName, durationMonths, planCost, newBalance })
+      ]);
+
+      await client.query("COMMIT");
+      return { user: updatedUser, transaction: tx };
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
@@ -908,6 +1332,12 @@ export class Database {
       tx.metadata ? JSON.stringify(tx.metadata) : null,
     ]);
     return mapTransactionRow(res.rows[0]);
+  }
+
+  static async findTransactionById(id: string): Promise<TransactionRecord | null> {
+    const p = await getActivePg();
+    const res = await p.query("SELECT * FROM transactions WHERE id = $1 LIMIT 1", [id]);
+    return res.rows.length > 0 ? mapTransactionRow(res.rows[0]) : null;
   }
 
   static async updateTransactionStatus(id: string, status: "completed" | "pending" | "rejected"): Promise<TransactionRecord | null> {
