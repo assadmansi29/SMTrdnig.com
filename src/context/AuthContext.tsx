@@ -43,14 +43,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-      } else {
-        // Token expired or invalid
+      } else if (res.status === 401 || res.status === 403) {
+        // Token is genuinely expired, revoked, or invalid
         localStorage.removeItem('smtrading_token');
         setToken(null);
         setUser(null);
+      } else {
+        // Temporary server or database error (e.g. 503 DATABASE_UNAVAILABLE, 502, 504)
+        // Strictly PRESERVE the user's stored token in localStorage and state so session is never lost
+        console.warn(`[AuthContext] Database or server temporarily unavailable (status ${res.status}). Preserving authentication token.`);
+        // Retry fetching user profile after a short delay when the temporary condition clears
+        setTimeout(() => {
+          fetchCurrentUser(activeToken);
+        }, 5000);
       }
     } catch (err) {
-      console.error('Error fetching current user:', err);
+      console.error('Network error fetching current user:', err);
+      // Network interruption: do NOT wipe token
+      setTimeout(() => {
+        fetchCurrentUser(activeToken);
+      }, 5000);
     } finally {
       setLoading(false);
     }

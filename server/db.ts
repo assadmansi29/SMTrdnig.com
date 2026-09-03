@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import dns from 'dns';
 import pg from 'pg';
 import type { Pool as PgPool, PoolConfig } from 'pg';
 const { Pool } = pg;
@@ -251,43 +252,136 @@ export function isDatabaseHealthy(): boolean {
   return isPostgresHealthy;
 }
 
-export function normalizeDatabaseUrl(rawUrl: string): string {
-  if (!rawUrl) return rawUrl;
+// Detect Render internal PostgreSQL hostnames like "dpg-xxxxxx-a" without dots
+export function isRenderInternalHost(hostname: string): boolean {
+  return /^dpg-[a-z0-9]+(-[a-z0-9]+)*$/i.test(hostname) && !hostname.includes('.');
+}
+
+// Check if a hostname can be resolved directly via DNS in the current environment
+export function canResolveHost(hostname: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    dns.lookup(hostname, (err) => {
+      resolve(!err);
+    });
+  });
+}
+
+let cachedResolvedConfig: {
+  connectionString: string;
+  ssl: boolean | { rejectUnauthorized: boolean };
+} | null = null;
+
+export async function resolveDatabaseConfig(): Promise<{ connectionString: string; ssl: boolean | { rejectUnauthorized: boolean } } | null> {
+  if (cachedResolvedConfig) return cachedResolvedConfig;
+
+  const rawConnectionString = (process.env.INTERNAL_DATABASE_URL || process.env.DATABASE_URL)?.trim();
+  if (!rawConnectionString) return null;
+
   try {
-    const parsed = new URL(rawUrl);
-    // Detect Render internal hostnames like "dpg-xxxxxx-a" without dots
-    if (/^dpg-[a-z0-9]+(-[a-z0-9]+)*$/i.test(parsed.hostname) && !parsed.hostname.includes('.')) {
-      parsed.hostname = `${parsed.hostname}.oregon-postgres.render.com`;
-      return parsed.toString();
+    const parsed = new URL(rawConnectionString);
+    const hostname = parsed.hostname;
+    const isInternal = isRenderInternalHost(hostname);
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isRenderEnv = process.env.RENDER === 'true';
+
+    // Test whether the internal hostname resolves directly via DNS (e.g. within Render's private VPC network)
+    const canResolve = isInternal ? await canResolveHost(hostname) : true;
+
+    if (isInternal && (isRenderEnv || canResolve)) {
+      // Configure production service to use Render's internal PostgreSQL hostname and internal connection settings (ssl: false)
+      console.log(`[Database Config] Configured for Render internal PostgreSQL network (host: ${hostname}, ssl: false).`);
+      cachedResolvedConfig = {
+        connectionString: rawConnectionString,
+        ssl: false, // Render internal private network requires unencrypted connections (ssl: false)
+      };
+      return cachedResolvedConfig;
     }
-    return rawUrl;
-  } catch {
-    return rawUrl;
+
+    if (isInternal && !canResolve) {
+      // In development/preview container outside Render VPC:
+      // The internal hostname does not resolve via external DNS.
+      // Connect through external gateway with SSL so preview/verification functions properly.
+      console.log(`[Database Config] Internal host ${hostname} is not resolvable outside Render VPC. Using external gateway for preview verification.`);
+      const extUrl = new URL(rawConnectionString);
+      extUrl.hostname = `${hostname}.oregon-postgres.render.com`;
+      cachedResolvedConfig = {
+        connectionString: extUrl.toString(),
+        ssl: { rejectUnauthorized: false },
+      };
+      return cachedResolvedConfig;
+    }
+
+    cachedResolvedConfig = {
+      connectionString: rawConnectionString,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+    };
+    return cachedResolvedConfig;
+  } catch (err: any) {
+    console.error('[Database Config] Failed to parse database connection URL:', err.message);
+    cachedResolvedConfig = {
+      connectionString: rawConnectionString,
+      ssl: { rejectUnauthorized: false },
+    };
+    return cachedResolvedConfig;
   }
+}
+
+export function normalizeDatabaseUrl(rawUrl: string): string {
+  // Preserves the Render internal hostname without forcing external public hostname
+  if (!rawUrl) return rawUrl;
+  return rawUrl;
 }
 
 export function getPool(): PgPool | null {
   if (pool) return pool;
-  const rawConnectionString = process.env.DATABASE_URL?.trim();
+  const rawConnectionString = (process.env.INTERNAL_DATABASE_URL || process.env.DATABASE_URL)?.trim();
   if (!rawConnectionString) return null;
 
-  const connectionString = normalizeDatabaseUrl(rawConnectionString);
-  const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+  if (cachedResolvedConfig) {
+    try {
+      const config: PoolConfig = {
+        connectionString: cachedResolvedConfig.connectionString,
+        ssl: cachedResolvedConfig.ssl,
+        max: parseInt(process.env.DB_POOL_MAX || '20', 10),
+        min: parseInt(process.env.DB_POOL_MIN || '0', 10),
+        idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '15000', 10),
+        connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT_MS || '10000', 10),
+        maxUses: 7500,
+      };
+      pool = new Pool(config);
+      pool.on('error', (err) => {
+        console.error('[PostgreSQL Pool Error]', err.message);
+        isPostgresHealthy = false;
+        initPromise = null;
+      });
+      return pool;
+    } catch {
+      return null;
+    }
+  }
 
   try {
+    let hostname = '';
+    try {
+      hostname = new URL(rawConnectionString).hostname;
+    } catch {}
+
+    const isInternal = isRenderInternalHost(hostname);
+    const isRenderEnv = process.env.RENDER === 'true';
+
     const config: PoolConfig = {
-      connectionString,
-      ssl: isLocal ? false : { rejectUnauthorized: false },
+      connectionString: rawConnectionString,
+      ssl: (isInternal && isRenderEnv) ? false : (hostname === 'localhost' || hostname === '127.0.0.1' ? false : { rejectUnauthorized: false }),
       max: parseInt(process.env.DB_POOL_MAX || '20', 10),
       min: parseInt(process.env.DB_POOL_MIN || '0', 10),
       idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '15000', 10),
       connectionTimeoutMillis: parseInt(process.env.DB_CONN_TIMEOUT_MS || '10000', 10),
-      maxUses: 7500, // Recycle connections periodically to prevent memory leaks
+      maxUses: 7500,
     };
 
     pool = new Pool(config);
     pool.on('error', (err) => {
-      // Handle idle client disconnections cleanly without crashing
+      console.error('[PostgreSQL Pool Error]', err.message);
       isPostgresHealthy = false;
       initPromise = null;
     });
@@ -358,247 +452,20 @@ function mapAuditRow(row: any): AuditLogRecord {
 }
 
 export async function isPostgresReady(): Promise<boolean> {
-  const p = getPool();
-  if (!p) return false;
-
-  if (isPostgresHealthy) return true;
+  if (isPostgresHealthy && pool) return true;
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
     try {
+      await resolveDatabaseConfig();
+      const p = getPool();
+      if (!p) return false;
       const client = await p.connect();
       try {
-        // 1. Create tables and indexes if they do not exist
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS users (
-            id VARCHAR(100) PRIMARY KEY,
-            username VARCHAR(100) UNIQUE NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            full_name VARCHAR(255) NOT NULL,
-            role VARCHAR(50) NOT NULL DEFAULT 'client',
-            subscription_status VARCHAR(50) NOT NULL DEFAULT 'active',
-            subscription_plan VARCHAR(255) NOT NULL DEFAULT 'Standard SMC Pro Access',
-            subscription_expires_at TIMESTAMPTZ NOT NULL,
-            referral_code VARCHAR(50) UNIQUE NOT NULL,
-            referred_by VARCHAR(100),
-            commission_rate NUMERIC(5, 2) NOT NULL DEFAULT 10.00,
-            balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-            pending_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-            total_earned NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            last_login_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            avatar_url TEXT,
-            phone VARCHAR(100),
-            notes TEXT,
-            assigned_coach_id VARCHAR(100),
-            coach_specialty VARCHAR(255),
-            training_status VARCHAR(50),
-            training_progress JSONB,
-            permissions JSONB
-          );
-
-          CREATE TABLE IF NOT EXISTS transactions (
-            id VARCHAR(100) PRIMARY KEY,
-            user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            username VARCHAR(100) NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            amount NUMERIC(12, 2) NOT NULL,
-            description TEXT NOT NULL,
-            status VARCHAR(50) NOT NULL DEFAULT 'completed',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata JSONB
-          );
-
-          CREATE TABLE IF NOT EXISTS audit_logs (
-            id VARCHAR(100) PRIMARY KEY,
-            actor_id VARCHAR(100) NOT NULL,
-            actor_username VARCHAR(100) NOT NULL,
-            actor_role VARCHAR(50) NOT NULL,
-            action VARCHAR(100) NOT NULL,
-            target_id VARCHAR(100),
-            target_username VARCHAR(100),
-            details TEXT NOT NULL,
-            timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata JSONB
-          );
-
-          CREATE TABLE IF NOT EXISTS operational_items (
-            id VARCHAR(100) PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            priority VARCHAR(50) NOT NULL DEFAULT 'medium',
-            status VARCHAR(50) NOT NULL DEFAULT 'pending',
-            assigned_to VARCHAR(100),
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            notes TEXT
-          );
-
-          CREATE TABLE IF NOT EXISTS rbac_settings (
-            role VARCHAR(50) PRIMARY KEY,
-            permissions JSONB NOT NULL,
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_by VARCHAR(100)
-          );
-
-          CREATE TABLE IF NOT EXISTS system_settings (
-            id INT PRIMARY KEY DEFAULT 1,
-            default_client_commission NUMERIC(5, 2) NOT NULL DEFAULT 10.00,
-            default_employee_commission NUMERIC(5, 2) NOT NULL DEFAULT 18.00,
-            default_admin_commission NUMERIC(5, 2) NOT NULL DEFAULT 25.00,
-            site_name VARCHAR(255) NOT NULL DEFAULT 'SMTrading.pro',
-            youtube_channel_id VARCHAR(255),
-            youtube_channel_handle VARCHAR(255)
-          );
-
-          CREATE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username));
-          CREATE INDEX IF NOT EXISTS idx_users_email ON users(LOWER(email));
-          CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(UPPER(referral_code));
-          CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);
-          CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, subscription_status);
-          CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
-          CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
-          CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at DESC);
-          CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC);
-
-          -- Ensure newly added columns exist on existing tables
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_coach_id VARCHAR(100);
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS coach_specialty VARCHAR(255);
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS training_status VARCHAR(50);
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS training_progress JSONB;
-          ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB;
-          ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS youtube_channel_id VARCHAR(255);
-          ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS youtube_channel_handle VARCHAR(255);
-        `);
-
-        // Check if database needs seeding
-        const userCountRes = await client.query('SELECT COUNT(*) as count FROM users');
-        const userCount = parseInt(userCountRes.rows[0].count, 10);
-
-        if (userCount === 0) {
-          console.log('[PostgreSQL] Database is empty. Seeding initial institutional records with multi-role hierarchy...');
-
-          const now = new Date();
-          const futureDate = new Date();
-          futureDate.setFullYear(now.getFullYear() + 1);
-          const pastDate = new Date();
-          pastDate.setMonth(now.getMonth() - 1);
-
-          await client.query(`
-            INSERT INTO users (
-              id, username, email, password_hash, full_name, role,
-              subscription_status, subscription_plan, subscription_expires_at,
-              referral_code, referred_by, commission_rate, balance, pending_balance,
-              total_earned, created_at, last_login_at, avatar_url, notes
-            ) VALUES 
-            (
-              'usr_admin_01', 'abuasad2299', 'admin@smtrading.pro',
-              '$2b$10$eDeJdEjpPYDY3yMGzZtE5ONc9tPSi93rqpM4VO7W86jC6BKOdXPtO',
-              'Abu Asad Almansi (Super Admin)', 'super_admin', 'active',
-              'Institutional Master VIP', $1, 'SMADMIN', NULL,
-              25.00, 14500.00, 1200.00, 48900.00, '2025-01-01T00:00:00.000Z', $2,
-              '/abu_asad_almansi.jpg', 'Master Super Administrator with full platform control'
-            ),
-            (
-              'usr_admin_02', 'admin_sarah', 'sarah.admin@smtrading.pro',
-              '$2b$10$EC/k9aZlsb4lGIrOdNvPf.j4X8pRZ8zDa6fGd6Qr9wOHWtfgJ8O3.',
-              'Sarah Jenkins (Operations & Student Admin)', 'admin', 'active',
-              'Administrative Executive Access', $1, 'SARAHADMIN', 'usr_admin_01',
-              20.00, 2800.00, 200.00, 7500.00, '2025-02-10T00:00:00.000Z', $2,
-              'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80',
-              'General Admin managing client enrollments and subscriptions'
-            ),
-            (
-              'usr_emp_01', 'employee', 'analyst@smtrading.pro',
-              '$2b$10$RDMZ00tsqqvXrWUEBsF7Wu/0ZkPFIXr5PjbdvYVp2fG624RnQrqQe',
-              'Senior Market Analyst (Staff Desk)', 'employee', 'active',
-              'Staff Executive Access', $1, 'SMSTAFF', 'usr_admin_01',
-              18.00, 3420.00, 450.00, 12800.00, '2025-03-15T00:00:00.000Z', $2,
-              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80',
-              'Operations staff responsible for market briefs and live stream monitoring'
-            ),
-            (
-              'usr_coach_01', 'coach_tariq', 'coach.tariq@smtrading.pro',
-              '$2b$10$bnzFCL6B6jeISyGrpcEuJ.jQX230GGGjbFKFYOblxVRi1NIVGNBoe',
-              'Coach Tariq Al-Mansoor (Institutional SMC Coach)', 'coach', 'active',
-              'Certified SMC Master Coach', $1, 'COACHTARIQ', 'usr_admin_01',
-              18.00, 2150.00, 300.00, 8900.00, '2025-04-01T00:00:00.000Z', $2,
-              'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80',
-              'Dedicated SMC Order Flow and Execution Coach'
-            ),
-            (
-              'usr_client_01', 'trader_pro', 'trader@example.com',
-              '$2b$10$Uk9Xw82c.HQ4Bh5dP57tseVUkKkuxixQ61KAhfJKuGRlzHx58qPFS',
-              'Karim Benali (VIP Student)', 'client', 'active',
-              'Pro Order Flow & SMC Quarterly', $1, 'TRADERPRO99', 'usr_emp_01',
-              10.00, 850.00, 150.00, 2400.00, '2025-06-10T00:00:00.000Z', $2,
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-              'Active mentorship student assigned to Coach Tariq'
-            ),
-            (
-              'usr_client_02', 'trader_expired', 'expired_user@example.com',
-              '$2b$10$Uk9Xw82c.HQ4Bh5dP57tseVUkKkuxixQ61KAhfJKuGRlzHx58qPFS',
-              'Sami Vance (Client)', 'client', 'expired',
-              'Monthly SMC Pass (Expired)', $3, 'SAMIVANCE', 'usr_emp_01',
-              10.00, 120.00, 0.00, 350.00, '2025-02-01T00:00:00.000Z', $3,
-              'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=300&auto=format&fit=crop&q=80',
-              'Subscription ended last month. Needs renewal.'
-            )
-            ON CONFLICT (id) DO NOTHING;
-          `, [futureDate.toISOString(), now.toISOString(), pastDate.toISOString()]);
-
-          // Seed default audit logs
-          await client.query(`
-            INSERT INTO audit_logs (id, actor_id, actor_username, actor_role, action, target_id, target_username, details, timestamp)
-            VALUES
-            ('log_seed_01', 'usr_admin_01', 'abuasad2299', 'super_admin', 'SYSTEM_INITIALIZATION', NULL, NULL, 'Platform initialized with Super Admin, Admin, Employee, and Coach RBAC tiers', NOW() - INTERVAL '10 days'),
-            ('log_seed_02', 'usr_admin_01', 'abuasad2299', 'super_admin', 'ROLE_ASSIGNMENT', 'usr_admin_02', 'admin_sarah', 'Appointed Sarah Jenkins as Operations & Student Administrator', NOW() - INTERVAL '8 days'),
-            ('log_seed_03', 'usr_admin_01', 'abuasad2299', 'super_admin', 'COACH_ASSIGNMENT', 'usr_coach_01', 'coach_tariq', 'Assigned Institutional SMC Coaching duties to Tariq Al-Mansoor', NOW() - INTERVAL '5 days')
-            ON CONFLICT (id) DO NOTHING;
-          `);
-
-          // Seed default transactions
-          await client.query(`
-            INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at)
-            VALUES
-            ('tx_seed_01', 'usr_admin_01', 'abuasad2299', 'commission', 500.00, 'Tier-1 Referral Commission from VIP Enterprise Enrollment', 'completed', NOW() - INTERVAL '2 days'),
-            ('tx_seed_02', 'usr_emp_01', 'employee', 'commission', 250.00, 'Direct Affiliate commission for Bookmap Master Strategy sale', 'completed', NOW() - INTERVAL '4 days'),
-            ('tx_seed_03', 'usr_client_01', 'trader_pro', 'commission', 80.00, 'Referral reward from invited trading buddy', 'completed', NOW() - INTERVAL '7 days')
-            ON CONFLICT (id) DO NOTHING;
-          `);
-
-          // Seed system settings
-          await client.query(`
-            INSERT INTO system_settings (id, default_client_commission, default_employee_commission, default_admin_commission, site_name)
-            VALUES (1, 10.00, 18.00, 25.00, 'SMTrading.pro')
-            ON CONFLICT (id) DO NOTHING;
-          `);
-
-          console.log('[PostgreSQL] Initial seed completed successfully.');
-        } else {
-          // Ensure default system settings row exists
-          await client.query(`
-            INSERT INTO system_settings (id, default_client_commission, default_employee_commission, default_admin_commission, site_name)
-            VALUES (1, 10.00, 18.00, 25.00, 'SMTrading.pro')
-            ON CONFLICT (id) DO NOTHING;
-          `);
-        }
-
-        // Verify and synchronize Super Admin abuasad2299 password hash with secure bcrypt
-        try {
-          const saCheck = await client.query("SELECT id, password_hash FROM users WHERE username = 'abuasad2299' LIMIT 1");
-          if (saCheck.rows.length > 0) {
-            const isPassValid = await bcrypt.compare('@Bhbkanhelina2299', saCheck.rows[0].password_hash);
-            if (!isPassValid) {
-              const freshHash = await bcrypt.hash('@Bhbkanhelina2299', 10);
-              await client.query("UPDATE users SET password_hash = $1 WHERE username = 'abuasad2299'", [freshHash]);
-              console.log('[PostgreSQL] Super Admin abuasad2299 password hash synchronized with verified bcrypt hash.');
-            }
-          }
-        } catch (syncErr: any) {
-          console.warn('[PostgreSQL] Super admin hash check notice:', syncErr.message);
-        }
+        // Verify connectivity and schema readiness without modifying any schema or user data
+        const verifyRes = await client.query('SELECT current_database(), current_user, count(*) as count FROM users;');
+        const userCount = parseInt(verifyRes.rows[0].count, 10);
+        console.log(`[PostgreSQL] Connection verified. Database: "${verifyRes.rows[0].current_database}", User: "${verifyRes.rows[0].current_user}", Registered Users: ${userCount}`);
 
         isPostgresHealthy = true;
         return true;
@@ -628,11 +495,11 @@ export async function initPostgres(): Promise<void> {
 }
 
 async function getActivePg(): Promise<PgPool> {
+  const ready = await isPostgresReady();
   const p = getPool();
   if (!p) {
     throw new Error("[Database Error] DATABASE_URL is not configured. PostgreSQL is the only supported storage engine.");
   }
-  const ready = await isPostgresReady();
   if (!ready || !isPostgresHealthy) {
     throw new Error("[Database Error] PostgreSQL connection is not active.");
   }
