@@ -67,23 +67,23 @@ export const LanguageSelector: React.FC = () => {
         <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-1" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400">
-              <Globe className="w-4 h-4" />
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+            <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0">
+              <Globe className="w-4.5 h-4.5" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-white">Select Language / اختر اللغة</h3>
-              <p className="text-[11px] text-slate-400 font-mono">SMTrading International Desk</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-bold text-white truncate">Select Language / اختر اللغة</h3>
+              <p className="text-[11px] text-slate-400 font-mono truncate">SMTrading International Desk</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer"
+            className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
             aria-label="Close language selector"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 

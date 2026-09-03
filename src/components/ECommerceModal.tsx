@@ -117,16 +117,16 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
       <div className="bg-[#090D17] border border-slate-800/90 rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[92vh] relative">
         
         {/* Top Header Bar */}
-        <div className="p-4 sm:p-5 bg-[#0C1220] border-b border-slate-800 flex items-center justify-between gap-4 sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-amber-500 p-[1px] shadow-md shadow-emerald-500/10 shrink-0">
+        <div className="p-3.5 sm:p-5 bg-[#0C1220] border-b border-slate-800 flex items-center justify-between gap-3 sticky top-0 z-20 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-amber-500 p-[1px] shadow-md shadow-emerald-500/10 shrink-0">
               <div className="w-full h-full bg-[#0E1526] rounded-[11px] flex items-center justify-center">
                 <ShoppingBag className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                <h2 className="text-base sm:text-xl font-black text-white tracking-tight truncate">
                   SMTrading <span className="text-emerald-400">{t('ecomStore')}</span>
                 </h2>
                 <div className="hidden sm:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
@@ -134,14 +134,14 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                   <span>{t('ecomOfficialDesk')}</span>
                 </div>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 truncate">
                 {t('ecomSubtitle')}
               </p>
             </div>
           </div>
 
           {/* Right Actions: Cart Toggle & Close */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => setIsCartView(!isCartView)}
               className={`relative flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
@@ -162,9 +162,11 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
             </button>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
+              className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
               title="Close Store"
+              aria-label="Close Store"
             >
               <X className="w-5 h-5" />
             </button>

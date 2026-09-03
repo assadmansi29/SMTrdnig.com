@@ -143,19 +143,19 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
       <div className="bg-[#0B0F19] border border-slate-700/80 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col text-slate-200">
         {/* Top Control Bar */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 bg-[#080C14]/95 backdrop-blur-md border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="bg-amber-400/10 text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded border border-amber-400/30">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-3 bg-[#080C14]/95 backdrop-blur-md border-b border-slate-800 gap-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 pr-1 rtl:pr-0 rtl:pl-1">
+            <span className="bg-amber-400/10 text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded border border-amber-400/30 truncate">
               {getLocalizedCategory(article.category, t)}
             </span>
-            <span className="text-xs text-slate-400 font-mono-num hidden sm:inline">
+            <span className="text-xs text-slate-400 font-mono-num hidden sm:inline truncate">
               • {article.readTime}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Font size toggle */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
+            <div className="hidden xs:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
               <button
                 onClick={() => setFontSize('normal')}
                 className={`px-2 py-1 rounded font-semibold cursor-pointer ${fontSize === 'normal' ? 'bg-slate-800 text-white' : 'text-slate-400'}`}
@@ -173,7 +173,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             {/* Bookmark */}
             <button
               onClick={() => onToggleBookmark(article.id)}
-              className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
                 isBookmarked
                   ? 'bg-amber-400 text-slate-950 border-amber-400'
                   : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
@@ -186,7 +186,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             {/* Share */}
             <button
               onClick={handleShare}
-              className="p-2 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition-colors relative cursor-pointer"
+              className="p-2 rounded-xl bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition-colors relative cursor-pointer"
               title={t('modalShare')}
             >
               {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
@@ -194,10 +194,12 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
             {/* Close */}
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors ml-2 rtl:ml-0 rtl:mr-2 cursor-pointer"
+              className="min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95 ml-1 sm:ml-2 rtl:ml-0 rtl:mr-1 rtl:sm:mr-2"
+              aria-label="Close article"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>

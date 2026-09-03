@@ -379,59 +379,59 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       <div className="relative w-full max-w-4xl bg-[#0C111E] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh]">
         
         {/* Modal Top Header */}
-        <div className="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between bg-[#080C14]">
-          <div className="flex items-center gap-3">
-            <div className="relative group cursor-pointer" onClick={() => setShowAvatarModal(true)} title="Click to change profile picture">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800/80 flex items-center justify-between bg-[#080C14] gap-2 shrink-0 sticky top-0 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-1 rtl:pr-0 rtl:pl-1">
+            <div className="relative group cursor-pointer shrink-0" onClick={() => setShowAvatarModal(true)} title="Click to change profile picture">
               <UserAvatar
                 user={user}
                 size="lg"
                 isEditable={true}
                 onEditClick={() => setShowAvatarModal(true)}
-                className="w-11 h-11 ring-2 ring-amber-400/40 group-hover:ring-amber-400 transition-all rounded-xl shadow-md"
+                className="w-10 h-10 sm:w-11 sm:h-11 ring-2 ring-amber-400/40 group-hover:ring-amber-400 transition-all rounded-xl shadow-md"
               />
               <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full shadow-sm border border-slate-900">
                 <Camera className="w-2.5 h-2.5" />
               </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base sm:text-lg text-white">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="font-extrabold text-sm sm:text-lg text-white truncate max-w-[130px] sm:max-w-none">
                   {user.fullName || user.username}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">(@{user.username})</span>
+                <span className="text-xs text-slate-400 font-mono hidden sm:inline">(@{user.username})</span>
                 
                 {/* Role Badge */}
                 {isRoleSuperAdmin ? (
-                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1 shadow-sm">
+                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1 shadow-sm shrink-0">
                     <Crown className="w-3 h-3 text-amber-400" />
-                    <span>{t('profileRoleSuperAdmin')}</span>
+                    <span className="hidden xs:inline">{t('profileRoleSuperAdmin')}</span>
                   </span>
                 ) : isRoleAdmin ? (
-                  <span className="bg-purple-400/20 text-purple-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-purple-400/50 flex items-center gap-1">
+                  <span className="bg-purple-400/20 text-purple-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-purple-400/50 flex items-center gap-1 shrink-0">
                     <ShieldCheck className="w-3 h-3 text-purple-400" />
-                    <span>{t('profileRoleAdmin')}</span>
+                    <span className="hidden xs:inline">{t('profileRoleAdmin')}</span>
                   </span>
                 ) : isRoleCoach ? (
-                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/50 flex items-center gap-1">
+                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/50 flex items-center gap-1 shrink-0">
                     <GraduationCap className="w-3 h-3 text-emerald-400" />
-                    <span>{t('profileRoleCoach')}</span>
+                    <span className="hidden xs:inline">{t('profileRoleCoach')}</span>
                   </span>
                 ) : isRoleEmployee ? (
-                  <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/50 flex items-center gap-1">
+                  <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/50 flex items-center gap-1 shrink-0">
                     <Briefcase className="w-3 h-3 text-blue-400" />
-                    <span>{t('profileRoleEmployee')}</span>
+                    <span className="hidden xs:inline">{t('profileRoleEmployee')}</span>
                   </span>
                 ) : (
-                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/40 flex items-center gap-1">
+                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/40 flex items-center gap-1 shrink-0">
                     <BlueVerifiedBadge size="sm" />
-                    <span>{t('profileRoleClient')}</span>
+                    <span className="hidden xs:inline">{t('profileRoleClient')}</span>
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-xs text-slate-400">
-                <span>{user.email}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400 truncate">
+                <span className="truncate max-w-[140px] sm:max-w-none">{user.email}</span>
+                <span className="hidden sm:inline">•</span>
+                <span className="hidden sm:flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400'}`} />
                   <span className={isExpired ? 'text-rose-400 font-bold' : 'text-emerald-300 font-medium'}>
                     {isStaffRole ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
@@ -441,8 +441,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="w-[84px] shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden sm:block w-[84px] shrink-0">
               <LanguageSelector />
             </div>
 
@@ -452,7 +452,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   onClose();
                   onOpenAdmin();
                 }}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20 shrink-0"
               >
                 {isRoleSuperAdmin ? <Crown className="w-3.5 h-3.5" /> : isRoleCoach ? <GraduationCap className="w-3.5 h-3.5" /> : isRoleEmployee ? <Briefcase className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
                 <span>{isRoleSuperAdmin ? 'Super Admin Desk' : isRoleCoach ? 'Coaching Desk' : isRoleEmployee ? 'Operations Desk' : 'Admin Desk'}</span>
@@ -460,8 +460,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             )}
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+              aria-label="Close user profile"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1305,14 +1307,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       {showPayoutModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
           <div className="w-full max-w-md bg-[#0D121F] border border-amber-500/40 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-amber-400" />
-                <span>{t('profilePayoutModalTitle')}</span>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 gap-2">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2 min-w-0 flex-1 truncate">
+                <DollarSign className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="truncate">{t('profilePayoutModalTitle')}</span>
               </h3>
               <button
+                type="button"
                 onClick={() => setShowPayoutModal(false)}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                aria-label="Close payout modal"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1395,17 +1399,19 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       {showVerifyModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
           <div className="w-full max-w-md bg-[#0D121F] border border-amber-500/40 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>{t('profileSecModalTitle')}</span>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 gap-2">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2 min-w-0 flex-1 truncate">
+                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="truncate">{t('profileSecModalTitle')}</span>
               </h3>
               <button
+                type="button"
                 onClick={() => {
                   setShowVerifyModal(false);
                   setVerifyError(null);
                 }}
-                className="text-slate-400 hover:text-white cursor-pointer"
+                className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                aria-label="Close security modal"
               >
                 <X className="w-4 h-4" />
               </button>

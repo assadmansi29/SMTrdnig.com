@@ -81,23 +81,23 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
         <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-emerald-400/20 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-inner">
               <CandlestickChart className="w-5 h-5 text-amber-400" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white tracking-tight">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-bold text-white tracking-tight truncate">
                 {t('navTradingTools')}
               </h3>
-              <p className="text-xs text-slate-400 font-mono">Institutional Trading Suite</p>
+              <p className="text-xs text-slate-400 font-mono truncate">Institutional Trading Suite</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
             aria-label="Close tools menu"
           >
             <X className="w-5 h-5" />

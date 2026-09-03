@@ -110,21 +110,21 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
       <div className="bg-[#0B0F17] border border-slate-700/80 rounded-2xl w-full max-w-7xl max-h-[96vh] flex flex-col shadow-2xl overflow-hidden text-slate-200">
         
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-[#080C14]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 p-[1px] shadow-md shadow-amber-500/10 shrink-0">
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-3.5 border-b border-slate-800 bg-[#080C14] gap-2 shrink-0 sticky top-0 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-1 rtl:pr-0 rtl:pl-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 p-[1px] shadow-md shadow-amber-500/10 shrink-0">
               <div className="w-full h-full bg-[#0E131F] rounded-[11px] flex items-center justify-center text-amber-400">
                 <LineChart className="w-5 h-5" />
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h3 className="font-black text-lg sm:text-xl text-white flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-base sm:text-xl text-white flex items-center gap-1.5 truncate">
                   <span>SMTrading<span className="text-amber-400">.pro</span></span>
                   <span className="text-slate-600">/</span>
-                  <span className="text-slate-200 font-semibold text-sm sm:text-base">{t('chartStudioTitle')}</span>
+                  <span className="text-slate-200 font-semibold text-xs sm:text-base truncate">{t('chartStudioTitle')}</span>
                 </h3>
-                <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/40 shadow-sm backdrop-blur-sm tracking-wide">
+                <div className="hidden xs:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/40 shadow-sm backdrop-blur-sm tracking-wide shrink-0">
                   <span>{t('chartStudioBy')}</span>
                   <BlueVerifiedBadge size="sm" />
                 </div>
@@ -136,17 +136,19 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                   {t('chartStudioFeed')}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 truncate">
                 {t('chartStudioDesc')}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
               title="Close Chart Studio"
+              aria-label="Close Chart Studio"
             >
               <X className="w-5 h-5" />
             </button>

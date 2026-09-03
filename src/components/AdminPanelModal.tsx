@@ -676,9 +676,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       <div className="relative w-full max-w-6xl bg-[#0B0F19] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-4 sm:my-6 flex flex-col max-h-[94vh]">
         
         {/* Top Header */}
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-800 flex items-center justify-between bg-[#080C14]">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl p-[1px] shadow-lg ${
+        <div className="px-3.5 sm:px-6 py-3 sm:py-3.5 border-b border-slate-800 flex items-center justify-between bg-[#080C14] gap-2 shrink-0 sticky top-0 z-20">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-1 rtl:pr-0 rtl:pl-1">
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl p-[1px] shadow-lg shrink-0 ${
               isSuperAdmin 
                 ? 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 shadow-amber-500/20'
                 : isCoach
@@ -699,9 +699,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                 )}
               </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-white">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-lg font-black text-white truncate max-w-[150px] sm:max-w-none">
                   {isSuperAdmin 
                     ? 'SM Trading Master Super Admin'
                     : isCoach 
@@ -710,7 +710,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     ? 'SM Trading Operational Desk'
                     : 'SM Trading Management Desk'}
                 </h2>
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                <span className={`text-[9px] sm:text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${
                   isSuperAdmin
                     ? 'bg-amber-400 text-slate-950 font-bold'
                     : isCoach
@@ -719,7 +719,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                     : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                 }`}>
-                  {isSuperAdmin ? 'Full System Authority' : isCoach ? 'Coach Staff' : isEmployee ? 'Operations Staff' : 'Admin Staff'}
+                  {isSuperAdmin ? 'Full Authority' : isCoach ? 'Coach Staff' : isEmployee ? 'Operations' : 'Admin'}
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 truncate max-w-xs sm:max-w-xl">
@@ -734,17 +734,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
+              type="button"
               onClick={fetchAdminData}
-              className="p-2 text-slate-400 hover:text-amber-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-w-[38px] min-h-[38px] w-9 h-9 sm:w-10 sm:h-10 text-slate-400 hover:text-amber-400 rounded-xl bg-slate-850 border border-slate-700/60 hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center shrink-0 shadow-sm active:scale-95"
               title="Refresh Desk Data"
+              aria-label="Refresh Desk Data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+              aria-label="Close Admin Panel"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1808,12 +1812,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
         {selectedUserForBalance && isSuperAdmin && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="w-full max-w-md bg-[#0C111E] border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-amber-400" />
-                  <span>Super Admin Balance Adjustment</span>
+              <div className="flex justify-between items-center gap-2">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
+                  <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="truncate">Super Admin Balance Adjustment</span>
                 </h4>
-                <button onClick={() => setSelectedUserForBalance(null)} className="text-slate-400 hover:text-white">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForBalance(null)}
+                  className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                  aria-label="Close modal"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -1903,9 +1912,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
         {selectedUserForRate && isSuperAdmin && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="w-full max-w-md bg-[#0C111E] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-white">Update Commission Rate</h4>
-                <button onClick={() => setSelectedUserForRate(null)} className="text-slate-400 hover:text-white">
+              <div className="flex justify-between items-center gap-2">
+                <h4 className="text-sm font-bold text-white min-w-0 flex-1 truncate">Update Commission Rate</h4>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForRate(null)}
+                  className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                  aria-label="Close modal"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -1947,12 +1961,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
         {selectedUserForPass && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="w-full max-w-md bg-[#0C111E] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-amber-400" />
-                  <span>Reset Password for @{selectedUserForPass.username}</span>
+              <div className="flex justify-between items-center gap-2">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
+                  <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="truncate">Reset Password for @{selectedUserForPass.username}</span>
                 </h4>
-                <button onClick={() => setSelectedUserForPass(null)} className="text-slate-400 hover:text-white">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForPass(null)}
+                  className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                  aria-label="Close modal"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -1994,12 +2013,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
         {showNewOpModal && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="w-full max-w-md bg-[#0C111E] border border-blue-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-blue-400" />
-                  <span>Add Operational Task</span>
+              <div className="flex justify-between items-center gap-2">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
+                  <Plus className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span className="truncate">Add Operational Task</span>
                 </h4>
-                <button onClick={() => setShowNewOpModal(false)} className="text-slate-400 hover:text-white">
+                <button
+                  type="button"
+                  onClick={() => setShowNewOpModal(false)}
+                  className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                  aria-label="Close modal"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -2072,12 +2096,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
         {selectedStudentForNote && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="w-full max-w-md bg-[#0C111E] border border-emerald-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <GraduationCap className="w-4 h-4 text-emerald-400" />
-                  <span>Mentorship Notes: {selectedStudentForNote.fullName}</span>
+              <div className="flex justify-between items-center gap-2">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
+                  <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="truncate">Mentorship Notes: {selectedStudentForNote.fullName}</span>
                 </h4>
-                <button onClick={() => setSelectedStudentForNote(null)} className="text-slate-400 hover:text-white">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentForNote(null)}
+                  className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                  aria-label="Close modal"
+                >
                   <X className="w-4 h-4" />
                 </button>
               </div>

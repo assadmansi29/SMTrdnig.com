@@ -35,10 +35,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#0D121F] border border-slate-700/80 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden text-slate-200">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-24 p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+      <div className="bg-[#0D121F] border border-slate-700/80 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden text-slate-200 flex flex-col max-h-[90vh]">
         {/* Search Input Bar */}
-        <div className="relative p-4 border-b border-slate-800 bg-[#090D17] flex items-center gap-3">
+        <div className="relative px-3.5 py-3 sm:p-4 border-b border-slate-800 bg-[#090D17] flex items-center gap-3 shrink-0">
           <Search className="w-5 h-5 text-amber-400 shrink-0" />
           <input
             type="text"
@@ -46,11 +46,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             placeholder={t('searchModalPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none"
+            className="w-full bg-transparent text-sm sm:text-base text-white placeholder:text-slate-500 focus:outline-none min-w-0"
           />
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer shrink-0"
+            className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+            aria-label="Close search"
           >
             <X className="w-5 h-5" />
           </button>
