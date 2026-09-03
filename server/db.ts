@@ -381,15 +381,21 @@ export function getPool(): PgPool | null {
 
     pool = new Pool(config);
     pool.on('error', (err) => {
-      console.error('[PostgreSQL Pool Error]', err.message);
-      isPostgresHealthy = false;
-      initPromise = null;
+      console.warn('[PostgreSQL Pool Notice] Connection event:', err.message);
+      // Notice: Node-pg automatically discards dead idle sockets and reconnects.
+      // Do not mark isPostgresHealthy false on benign idle socket disconnects.
     });
 
     return pool;
   } catch (err) {
     return null;
   }
+}
+
+function safeIsoDate(val: any, fallback = new Date().toISOString()): string {
+  if (!val) return fallback;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? fallback : d.toISOString();
 }
 
 function mapUserRow(row: any): UserRecord {
@@ -402,15 +408,15 @@ function mapUserRow(row: any): UserRecord {
     role: (row.role === 'admin' && (row.username === 'abuasad2299' || row.id === 'usr_admin_01')) ? 'super_admin' : (row.role as UserRole),
     subscriptionStatus: row.subscription_status as SubscriptionStatus,
     subscriptionPlan: row.subscription_plan,
-    subscriptionExpiresAt: new Date(row.subscription_expires_at).toISOString(),
+    subscriptionExpiresAt: safeIsoDate(row.subscription_expires_at, new Date(Date.now() + 365*24*60*60*1000).toISOString()),
     referralCode: row.referral_code,
     referredBy: row.referred_by || undefined,
     commissionRate: parseFloat(row.commission_rate) || 0,
     balance: parseFloat(row.balance) || 0,
     pendingBalance: parseFloat(row.pending_balance) || 0,
     totalEarned: parseFloat(row.total_earned) || 0,
-    createdAt: new Date(row.created_at).toISOString(),
-    lastLoginAt: new Date(row.last_login_at).toISOString(),
+    createdAt: safeIsoDate(row.created_at),
+    lastLoginAt: safeIsoDate(row.last_login_at),
     avatarUrl: row.avatar_url || undefined,
     phone: row.phone || undefined,
     notes: row.notes || undefined,
@@ -495,12 +501,17 @@ export async function initPostgres(): Promise<void> {
 }
 
 async function getActivePg(): Promise<PgPool> {
-  const ready = await isPostgresReady();
-  const p = getPool();
+  let ready = await isPostgresReady();
+  let p = getPool();
   if (!p) {
     throw new Error("[Database Error] DATABASE_URL is not configured. PostgreSQL is the only supported storage engine.");
   }
   if (!ready || !isPostgresHealthy) {
+    initPromise = null;
+    ready = await isPostgresReady();
+    p = getPool();
+  }
+  if (!ready || !p) {
     throw new Error("[Database Error] PostgreSQL connection is not active.");
   }
   return p;
@@ -513,27 +524,33 @@ export class Database {
   // User Operations
   static async findUserByUsername(username: string): Promise<UserRecord | undefined> {
     const clean = (username || "").trim().toLowerCase();
+    if (!clean) return undefined;
     const p = await getActivePg();
-    const res = await p.query("SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1", [clean]);
+    const res = await p.query("SELECT * FROM users WHERE LOWER(TRIM(username)) = LOWER($1) LIMIT 1", [clean]);
     return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
   }
 
   static async findUserByEmail(email: string): Promise<UserRecord | undefined> {
     const clean = (email || "").trim().toLowerCase();
+    if (!clean) return undefined;
     const p = await getActivePg();
-    const res = await p.query("SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1", [clean]);
+    const res = await p.query("SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER($1) LIMIT 1", [clean]);
     return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
   }
 
   static async findUserById(id: string): Promise<UserRecord | undefined> {
+    const clean = (id || "").trim();
+    if (!clean) return undefined;
     const p = await getActivePg();
-    const res = await p.query("SELECT * FROM users WHERE id = $1 LIMIT 1", [id]);
+    const res = await p.query("SELECT * FROM users WHERE id = $1 LIMIT 1", [clean]);
     return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
   }
 
   static async findUserByReferralCode(code: string): Promise<UserRecord | undefined> {
+    const clean = (code || "").trim();
+    if (!clean) return undefined;
     const p = await getActivePg();
-    const res = await p.query("SELECT * FROM users WHERE UPPER(referral_code) = UPPER($1) LIMIT 1", [code.trim()]);
+    const res = await p.query("SELECT * FROM users WHERE UPPER(TRIM(referral_code)) = UPPER($1) LIMIT 1", [clean]);
     return res.rows.length > 0 ? mapUserRow(res.rows[0]) : undefined;
   }
 

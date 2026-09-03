@@ -92,40 +92,59 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
       user = (await Database.findUserByReferralCode(cleanInput)) || (await Database.findUserByReferralCode(strippedInput));
     }
 
-    if (!user) {
+    if (!user || !user.passwordHash || typeof user.passwordHash !== 'string') {
       res.status(401).json({ error: 'Invalid username or password.' });
       return;
     }
 
     // Enforce strict bcrypt password verification against stored password hash
-    const isMatch = await bcrypt.compare(cleanPassword, user.passwordHash);
+    let isMatch = false;
+    try {
+      isMatch = await bcrypt.compare(cleanPassword, user.passwordHash);
+    } catch (cmpErr) {
+      console.error('Password comparison error:', cmpErr);
+      res.status(401).json({ error: 'Invalid username or password.' });
+      return;
+    }
 
     if (!isMatch) {
       res.status(401).json({ error: 'Invalid username or password.' });
       return;
     }
 
-    // Check if subscription has expired chronologically
+    // Check if subscription has expired chronologically (non-blocking)
     if (user.subscriptionStatus === 'active' && user.role === 'client') {
-      const expDate = new Date(user.subscriptionExpiresAt);
-      if (expDate < new Date()) {
-        await Database.updateUser(user.id, { subscriptionStatus: 'expired' });
-        user.subscriptionStatus = 'expired';
+      try {
+        const expDate = new Date(user.subscriptionExpiresAt);
+        if (!isNaN(expDate.getTime()) && expDate < new Date()) {
+          await Database.updateUser(user.id, { subscriptionStatus: 'expired' });
+          user.subscriptionStatus = 'expired';
+        }
+      } catch (subErr) {
+        console.warn('Subscription status check notice:', subErr);
       }
     }
 
-    // Update last login
-    await Database.updateUser(user.id, { lastLoginAt: new Date().toISOString() });
+    // Update last login (non-blocking, don't fail authentication if metadata write has a transient glitch)
+    try {
+      await Database.updateUser(user.id, { lastLoginAt: new Date().toISOString() });
+    } catch (logErr) {
+      console.warn('Last login timestamp update notice:', logErr);
+    }
 
     const token = generateToken(user);
 
     // Set HTTP-only cookie
-    res.cookie('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    try {
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+    } catch (cookieErr) {
+      console.warn('Cookie set notice:', cookieErr);
+    }
 
     res.json({
       success: true,
@@ -135,7 +154,10 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
     });
   } catch (err: any) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Internal server error during login.' });
+    res.status(500).json({
+      error: 'Internal server error during login.',
+      details: err?.message || 'Authentication error',
+    });
   }
 });
 
