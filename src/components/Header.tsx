@@ -180,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
                         @{user.username}
                       </div>
                       <div className="text-[9px] font-mono text-emerald-400 font-bold leading-none">
-                        ${user.balance.toFixed(2)}
+                        ${(user.balance ?? 0).toFixed(2)}
                       </div>
                     </div>
                   </button>

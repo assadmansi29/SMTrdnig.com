@@ -495,7 +495,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <Share2 className="w-3.5 h-3.5" />
             <span>{t('profileTabReferrals')}</span>
             <span className="ml-1 bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded-full text-[10px] font-mono">
-              ${user.balance.toFixed(2)}
+              ${(user.balance ?? 0).toFixed(2)}
             </span>
           </button>
 
@@ -539,10 +539,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <DollarSign className="w-4 h-4" />
                   </div>
                   <div className="mt-2 text-2xl sm:text-3xl font-black text-white">
-                    ${user.balance.toFixed(2)}
+                    ${(user.balance ?? 0).toFixed(2)}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">{t('profileRateLabel')}: {user.commissionRate}%</span>
+                    <span className="text-[11px] text-slate-400">{t('profileRateLabel')}: {user.commissionRate ?? 10}%</span>
                     <button
                       onClick={() => setShowPayoutModal(true)}
                       className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-md transition-all cursor-pointer"
@@ -558,7 +558,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <Clock className="w-4 h-4 text-slate-500" />
                   </div>
                   <div className="mt-2 text-2xl font-black text-slate-200">
-                    ${user.pendingBalance.toFixed(2)}
+                    ${(user.pendingBalance ?? 0).toFixed(2)}
                   </div>
                   <div className="mt-2 text-[11px] text-slate-500">
                     {t('profileUnderReview')}
@@ -571,7 +571,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <TrendingUp className="w-4 h-4" />
                   </div>
                   <div className="mt-2 text-2xl font-black text-emerald-300">
-                    ${user.totalEarned.toFixed(2)}
+                    ${(user.totalEarned ?? 0).toFixed(2)}
                   </div>
                   <div className="mt-2 text-[11px] text-slate-400">
                     {t('profileTotalEarnedDesc')}
@@ -1324,7 +1324,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             <div className="p-3 bg-amber-500/10 border border-amber-400/30 rounded-xl text-xs flex items-center justify-between">
               <span className="text-slate-300">{t('profileAvailCommission')}:</span>
-              <span className="text-base font-black text-amber-300 font-mono">${user.balance.toFixed(2)}</span>
+              <span className="text-base font-black text-amber-300 font-mono">${(user.balance ?? 0).toFixed(2)}</span>
             </div>
 
             {payoutStatus && (
@@ -1340,7 +1340,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   type="number"
                   step="0.01"
                   required
-                  max={user.balance}
+                  max={user.balance ?? 0}
                   min={50}
                   value={payoutAmount}
                   onChange={(e) => setPayoutAmount(e.target.value)}

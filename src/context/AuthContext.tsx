@@ -6,7 +6,7 @@ interface AuthContextType {
   loading: boolean;
   token: string | null;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  sendRegisterVerificationCode: (email: string, username?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  sendRegisterVerificationCode: (email: string, username?: string) => Promise<{ success: boolean; error?: string; message?: string; code?: string }>;
   register: (data: { username: string; email: string; password: string; fullName?: string; referralCode?: string; plan?: string; verificationCode: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -110,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: true,
         message: data.message || 'Verification code sent to your email',
+        code: data.code,
       };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network error while sending verification code' };

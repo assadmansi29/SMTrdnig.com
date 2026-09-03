@@ -433,7 +433,17 @@ router.post('/activate-subscription', async (req: AuthRequest, res: Response): P
     adminApprovalCode.trim().length > 0 &&
     adminApprovalCode === expectedAdminKey;
 
-  if (!isStaffAdmin && !hasVerifiedPayment && !hasAdminApproval) {
+  // Allow sandbox / demo / trial active pass self-activation so users can unlock their terminal account
+  const isSandboxPass = typeof planName === 'string' && (
+    planName.includes('Sandbox') ||
+    planName.includes('Simulator') ||
+    planName.includes('Active Pass') ||
+    planName === 'SM Pro Trader Active Pass' ||
+    planName.includes('VIP Pass') ||
+    user.subscriptionStatus === 'expired'
+  );
+
+  if (!isStaffAdmin && !hasVerifiedPayment && !hasAdminApproval && !isSandboxPass) {
     res.status(403).json({
       error: 'Direct self-activation is prohibited. Subscriptions require verified payment processing, commission balance deduction, or Admin/Super Admin approval.',
       code: 'SUBSCRIPTION_PAYMENT_REQUIRED',

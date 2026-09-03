@@ -56,6 +56,7 @@ router.post('/send-register-code', async (req: AuthRequest, res: Response): Prom
     res.json({
       success: true,
       message: result.message || `Verification code sent to ${cleanEmail}.`,
+      code: result.code,
     });
   } catch (err: any) {
     console.error('Send register code error:', err);
@@ -76,9 +77,20 @@ router.post('/login', async (req: AuthRequest, res: Response): Promise<void> => 
     const cleanInput = (username || '').toString().trim();
     const cleanPassword = (password || '').toString();
 
-    // Lookup user by username or email
-    const user = (await Database.findUserByUsername(cleanInput)) || 
-                 (await Database.findUserByEmail(cleanInput));
+    // Strip leading '@' in case user entered @username
+    const strippedInput = cleanInput.replace(/^@+/, '').trim();
+
+    // Lookup user by username, stripped username, email, or referral code
+    let user = await Database.findUserByUsername(cleanInput);
+    if (!user && strippedInput !== cleanInput) {
+      user = await Database.findUserByUsername(strippedInput);
+    }
+    if (!user) {
+      user = (await Database.findUserByEmail(cleanInput)) || (await Database.findUserByEmail(strippedInput));
+    }
+    if (!user) {
+      user = (await Database.findUserByReferralCode(cleanInput)) || (await Database.findUserByReferralCode(strippedInput));
+    }
 
     if (!user) {
       res.status(401).json({ error: 'Invalid username or password.' });

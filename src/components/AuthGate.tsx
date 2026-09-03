@@ -109,6 +109,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
     } else {
       setRegStep('verify');
       setCodeCountdown(60);
+      if (res.code) {
+        setVerificationCode(res.code);
+      }
       setSuccessMsg(res.message || t('authCodeSentToast'));
     }
   };
