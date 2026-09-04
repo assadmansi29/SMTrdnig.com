@@ -12,6 +12,8 @@ export interface TelegramSendResult {
   error?: string;
   rateLimited?: boolean;
   retryAfterSec?: number;
+  permanent?: boolean;
+  statusCode?: number;
 }
 
 export class TelegramBotService {
@@ -169,9 +171,16 @@ export class TelegramBotService {
 
       if (!response.ok || !data.ok) {
         const errMsg = data.description || `HTTP ${response.status} ${response.statusText}`;
-        console.error(`[Telegram Bot Error] Failed to send message: ${errMsg}`);
+        const isPermanent = response.status === 403 || /forbidden|not a member|blocked|chat not found|not enough rights/i.test(errMsg);
+        if (isPermanent) {
+          console.warn(`[Telegram Bot Permission] Destination "${destinationChatId}" is inaccessible: ${errMsg}. Ensure bot is an Administrator with "Post Messages" rights in the channel.`);
+        } else {
+          console.error(`[Telegram Bot Error] Failed to send message: ${errMsg}`);
+        }
         return {
           success: false,
+          permanent: isPermanent,
+          statusCode: response.status,
           error: errMsg,
         };
       }

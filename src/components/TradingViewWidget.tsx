@@ -7,6 +7,7 @@ interface TradingViewWidgetProps {
   interval?: string;
   timezone?: string;
   hideSideToolbar?: boolean;
+  enableDrawingTools?: boolean;
   height?: string;
   className?: string;
 }
@@ -17,6 +18,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   interval = '15',
   timezone = 'Etc/UTC',
   hideSideToolbar = false,
+  enableDrawingTools = false,
   height,
   className
 }) => {
@@ -28,21 +30,29 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     setIsLoading(true);
   }, [symbol, interval]);
 
-  // Build secure, isolated TradingView Widget embed URL
+  // If drawing tools are explicitly enabled (e.g. for Super Admin / Admin), side toolbar MUST be shown
+  const shouldHideToolbar = enableDrawingTools ? false : hideSideToolbar;
+
+  // Build secure, isolated TradingView Widget embed URL with full capability parameters
   const searchParams = new URLSearchParams({
     frameElementId: `tradingview_${widgetId}`,
     symbol: symbol,
     interval: interval,
-    hidesidetoolbar: hideSideToolbar ? '1' : '0',
+    hidesidetoolbar: shouldHideToolbar ? '1' : '0',
     symboledit: '1',
-    saveimage: '0',
+    saveimage: '1',
     toolbarbg: '090D17',
-    studies: '[]',
+    studies: JSON.stringify(['STD;SMA', 'STD;EMA']),
     theme: theme,
     style: '1',
     timezone: timezone,
+    withdateranges: '1',
     studies_overrides: '{}',
-    enabled_features: '[]',
+    enabled_features: JSON.stringify([
+      'side_toolbar_in_fullscreen_mode', 
+      'header_in_fullscreen_mode', 
+      'use_localstorage_for_settings'
+    ]),
     disabled_features: '[]',
     locale: 'en',
     utm_source: 'smtrading.pro'

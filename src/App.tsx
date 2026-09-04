@@ -34,7 +34,7 @@ import { NewsletterModal } from './components/NewsletterModal';
 import { ECommerceModal } from './components/ECommerceModal';
 import { AuthGate } from './components/AuthGate';
 import { UserProfileModal } from './components/UserProfileModal';
-import { AdminPanelModal } from './components/AdminPanelModal';
+import { AdminPanelModal, AdminPanelTabType } from './components/AdminPanelModal';
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
 import { getArticlesByLanguage, getEconomicEventsByLanguage, getAuthorsByLanguage } from './data/localizedData';
@@ -89,6 +89,16 @@ export default function App() {
   const [isECommerceOpen, setIsECommerceOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState<AdminPanelTabType>('users');
+  const [adminInitialSymbol, setAdminInitialSymbol] = useState<string | undefined>(undefined);
+  const [adminInitialInterval, setAdminInitialInterval] = useState<string | undefined>(undefined);
+
+  const handleOpenAdmin = (tab: AdminPanelTabType = 'users', symbol?: string, interval?: string) => {
+    setAdminInitialTab(tab);
+    setAdminInitialSymbol(symbol);
+    setAdminInitialInterval(interval);
+    setIsAdminOpen(true);
+  };
   const [supportEmailCopied, setSupportEmailCopied] = useState(false);
 
   const handleCopySupportEmail = async () => {
@@ -206,7 +216,7 @@ export default function App() {
         onOpenNewsletter={() => setIsNewsletterOpen(true)}
         onOpenECommerce={() => setIsECommerceOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => handleOpenAdmin('users')}
       />
 
       {/* 3. Main Body Container */}
@@ -234,6 +244,7 @@ export default function App() {
             setCalculatorSetup(null);
             setIsCalculatorOpen(true);
           }}
+          onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'tradingview_studio', symbol, interval)}
           localizedEvents={localizedEvents}
         />
 
@@ -576,6 +587,7 @@ export default function App() {
         isOpen={isChartOpen}
         onClose={() => setIsChartOpen(false)}
         defaultSymbol={chartDefaultSymbol}
+        onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'tradingview_studio', symbol, interval)}
       />
 
       <SavedArticlesModal
@@ -606,12 +618,15 @@ export default function App() {
       <UserProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAdmin={() => handleOpenAdmin('users')}
       />
 
       <AdminPanelModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
+        initialTab={adminInitialTab}
+        initialSymbol={adminInitialSymbol}
+        initialInterval={adminInitialInterval}
       />
     </div>
     </AuthGate>

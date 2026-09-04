@@ -4,6 +4,7 @@ import { getPool, Database } from '../db';
 import { economicScheduler } from '../services/economicScheduler';
 import { telegramBotService } from '../services/telegramBotService';
 import { biquoteService } from '../services/biquoteService';
+import { runTelegramDiagnostic } from '../../src/utils/telegramDiagnostic';
 import {
   getEconomicBotStats,
   getUpcomingHighImpactEvents,
@@ -49,6 +50,22 @@ router.get('/status', async (req: AuthRequest, res: Response): Promise<void> => 
     });
   } catch (err: any) {
     res.status(500).json({ error: `Failed to fetch Telegram bot status: ${err.message}` });
+  }
+});
+
+/**
+ * GET /api/telegram/diagnostic
+ * Performs in-depth real-time diagnostic checks on Telegram connectivity, credentials, and channel permissions.
+ */
+router.get('/diagnostic', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const report = await runTelegramDiagnostic({ silent: false });
+    res.json({
+      success: true,
+      report,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: `Diagnostic execution failed: ${err.message}` });
   }
 });
 

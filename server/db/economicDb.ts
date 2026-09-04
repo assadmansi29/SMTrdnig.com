@@ -98,9 +98,45 @@ export async function ensureEconomicTables(pool: PgPool): Promise<void> {
         value TEXT NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      -- Transition any existing stuck pending notifications with permanent errors or expired schedules to failed
+      UPDATE event_notifications
+      SET status = 'failed',
+          error_message = COALESCE(error_message, 'Marked failed due to permission or expiration')
+      WHERE status = 'pending'
+        AND (
+          error_message ILIKE '%Forbidden%'
+          OR error_message ILIKE '%not a member%'
+          OR error_message ILIKE '%chat not found%'
+          OR scheduled_for_utc < (NOW() - INTERVAL '3 hours')
+        );
     `);
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Cleans up pending notifications that have permanent errors or whose scheduled time has expired.
+ */
+export async function cleanupExpiredOrForbiddenNotifications(pool: PgPool): Promise<number> {
+  try {
+    const res = await pool.query(`
+      UPDATE event_notifications
+      SET status = 'failed',
+          error_message = COALESCE(error_message, 'Marked failed due to permission or expiration')
+      WHERE status = 'pending'
+        AND (
+          error_message ILIKE '%Forbidden%'
+          OR error_message ILIKE '%not a member%'
+          OR error_message ILIKE '%chat not found%'
+          OR scheduled_for_utc < (NOW() - INTERVAL '2 hours')
+        );
+    `);
+    return res.rowCount || 0;
+  } catch (err: any) {
+    console.warn(`[Economic DB] Error cleaning stale notifications: ${err.message}`);
+    return 0;
   }
 }
 
@@ -434,13 +470,15 @@ export async function markNotificationFailed(
   errorMessage: string,
   permanentFail: boolean = false
 ): Promise<void> {
-  const status: NotificationStatus = permanentFail ? 'failed' : 'pending';
+  const isPermanent = permanentFail || /forbidden|not a member|blocked|chat not found|not enough rights|kicked/i.test(errorMessage);
+  const status: NotificationStatus = isPermanent ? 'failed' : 'pending';
   await pool.query(`
     UPDATE event_notifications
     SET 
       status = $1,
       retry_count = retry_count + 1,
-      error_message = $2
+      error_message = $2,
+      scheduled_for_utc = CASE WHEN $1 = 'pending' THEN NOW() + INTERVAL '10 minutes' ELSE scheduled_for_utc END
     WHERE id = $3;
   `, [status, errorMessage, notificationId]);
 }

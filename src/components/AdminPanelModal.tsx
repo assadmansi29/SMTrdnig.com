@@ -46,16 +46,29 @@ import {
   AlertTriangle,
   BookOpen,
   ListTodo,
-  Send
+  Send,
+  BarChart2
 } from 'lucide-react';
 import { TelegramBotTab } from './admin/TelegramBotTab';
+import { TradingViewStudioTab } from './admin/TradingViewStudioTab';
+
+export type AdminPanelTabType = 'users' | 'audit_logs' | 'rbac' | 'coaching' | 'operations' | 'transactions' | 'create_user' | 'youtube' | 'telegram' | 'tradingview_studio';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: AdminPanelTabType;
+  initialSymbol?: string;
+  initialInterval?: string;
 }
 
-export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClose }) => {
+export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ 
+  isOpen, 
+  onClose,
+  initialTab,
+  initialSymbol,
+  initialInterval
+}) => {
   const { user, token } = useAuth();
   
   // Available tabs based on role
@@ -65,10 +78,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   const isCoach = user?.role === 'coach';
   const isStaff = isSuperAdmin || isAdmin || isEmployee || isCoach;
 
-  type TabType = 'users' | 'audit_logs' | 'rbac' | 'coaching' | 'operations' | 'transactions' | 'create_user' | 'youtube' | 'telegram';
+  type TabType = AdminPanelTabType;
   const [activeTab, setActiveTab] = useState<TabType>(
-    isCoach ? 'coaching' : isEmployee ? 'operations' : 'users'
+    initialTab || (isCoach ? 'coaching' : isEmployee ? 'operations' : 'users')
   );
+
+  // Synchronize tab if opened with an explicit initialTab (e.g., TradingView Studio)
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Core Data states
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -900,6 +920,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             >
               <Send className="w-4 h-4 text-sky-400" />
               <span>Telegram Bot</span>
+            </button>
+          )}
+
+          {/* TradingView Studio (Super Admin & Admin) */}
+          {(isSuperAdmin || isAdmin) && (
+            <button
+              onClick={() => setActiveTab('tradingview_studio')}
+              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'tradingview_studio' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4 text-amber-400" />
+              <span>TradingView Studio</span>
             </button>
           )}
         </div>
@@ -1824,6 +1857,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
           {/* TAB 9: TELEGRAM ECONOMIC BOT (Super Admin & Admin) */}
           {activeTab === 'telegram' && (isSuperAdmin || isAdmin) && (
             <TelegramBotTab token={token} />
+          )}
+
+          {/* TAB 10: TRADINGVIEW MASTER STUDIO (Super Admin & Admin) */}
+          {activeTab === 'tradingview_studio' && (isSuperAdmin || isAdmin) && user && (
+            <TradingViewStudioTab 
+              token={token} 
+              currentUser={user} 
+              initialSymbol={initialSymbol}
+              initialInterval={initialInterval}
+            />
           )}
 
         </div>

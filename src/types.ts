@@ -284,3 +284,107 @@ export interface YouTubeLiveStatus {
   cached?: boolean;
 }
 
+// ====================================================
+// TRADINGVIEW INSTITUTIONAL SMC ANALYSIS & DRAWINGS
+// ====================================================
+
+export type AnalysisBias = 'bullish' | 'bearish' | 'neutral';
+
+export type ChartDrawingType = 
+  | 'order_block' 
+  | 'fvg' 
+  | 'key_level' 
+  | 'market_structure' 
+  | 'trendline' 
+  | 'callout';
+
+export interface BaseChartDrawing {
+  id: string;
+  type: ChartDrawingType;
+  label: string;
+  color?: string;
+}
+
+export interface OrderBlockDrawing extends BaseChartDrawing {
+  type: 'order_block';
+  subType: 'bullish_demand' | 'bearish_supply';
+  priceHigh: number;
+  priceLow: number;
+  timeframe?: string;
+  tested?: boolean;
+}
+
+export interface FvgDrawing extends BaseChartDrawing {
+  type: 'fvg';
+  subType: 'bullish' | 'bearish';
+  priceHigh: number;
+  priceLow: number;
+  timeframe?: string;
+}
+
+export interface KeyLevelDrawing extends BaseChartDrawing {
+  type: 'key_level';
+  subType: 'support' | 'resistance' | 'equal_highs' | 'equal_lows' | 'daily_open' | 'session_high' | 'session_low';
+  price: number;
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+}
+
+export interface MarketStructureDrawing extends BaseChartDrawing {
+  type: 'market_structure';
+  subType: 'bos' | 'choch' | 'liquidity_sweep';
+  direction: 'bullish' | 'bearish';
+  price: number;
+}
+
+export interface TrendlineDrawing extends BaseChartDrawing {
+  type: 'trendline';
+  priceStart: number;
+  priceEnd: number;
+  direction?: 'up' | 'down' | 'horizontal';
+}
+
+export interface CalloutDrawing extends BaseChartDrawing {
+  type: 'callout';
+  price: number;
+  text: string;
+}
+
+export type ChartDrawing = 
+  | OrderBlockDrawing 
+  | FvgDrawing 
+  | KeyLevelDrawing 
+  | MarketStructureDrawing 
+  | TrendlineDrawing 
+  | CalloutDrawing;
+
+export interface AnalysisTradeSetup {
+  direction: 'long' | 'short';
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
+  riskRewardRatio: number;
+  status: 'pending' | 'active' | 'tp_hit' | 'sl_hit' | 'closed';
+  invalidationLevel?: number;
+  notes?: string;
+}
+
+export interface ChartAnalysisRecord {
+  id: string;
+  symbol: string;
+  interval: string;
+  title: string;
+  bias: AnalysisBias;
+  summary?: string;
+  drawings: ChartDrawing[];
+  tradeSetup?: AnalysisTradeSetup;
+  authorId: string;
+  authorUsername: string;
+  authorRole: string;
+  isPublished: boolean;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+

@@ -11,6 +11,8 @@ import userRoutes from './server/routes/userRoutes';
 import adminRoutes from './server/routes/adminRoutes';
 import youtubeRoutes from './server/routes/youtubeRoutes';
 import telegramRoutes from './server/routes/telegramRoutes';
+import chartAnalysisRoutes from './server/routes/chartAnalysisRoutes';
+import { ensureChartAnalysisTable } from './server/db/chartAnalysisDb';
 import { economicScheduler } from './server/services/economicScheduler';
 
 async function startServer() {
@@ -24,6 +26,9 @@ async function startServer() {
         console.log("[Database] Connected to PostgreSQL successfully.");
         const p = getPool();
         if (p) {
+          ensureChartAnalysisTable(p).catch((err: any) => {
+            console.error("[Chart Analysis] Table ensure notice:", err.message);
+          });
           economicScheduler.start(p).catch((err: any) => {
             console.error("[Economic Scheduler] Startup notice:", err.message);
           });
@@ -67,6 +72,7 @@ async function startServer() {
   app.use('/api/admin', requireDatabaseReady, adminRoutes);
   app.use('/api/youtube', requireDatabaseReady, youtubeRoutes);
   app.use('/api/telegram', requireDatabaseReady, telegramRoutes);
+  app.use('/api/chart-analyses', requireDatabaseReady, chartAnalysisRoutes);
 
   // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)
   app.get("/api/health", (req, res) => {

@@ -479,6 +479,33 @@ export async function isPostgresReady(): Promise<boolean> {
           ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(100);
           ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100);
           ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_notifications_enabled BOOLEAN DEFAULT true;
+
+          CREATE TABLE IF NOT EXISTS admin_chart_analyses (
+            id VARCHAR(64) PRIMARY KEY,
+            symbol VARCHAR(64) NOT NULL,
+            interval VARCHAR(16) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            bias VARCHAR(20) NOT NULL DEFAULT 'neutral',
+            summary TEXT,
+            drawings JSONB NOT NULL DEFAULT '[]',
+            trade_setup JSONB,
+            author_id VARCHAR(64) NOT NULL,
+            author_username VARCHAR(100) NOT NULL,
+            author_role VARCHAR(32) NOT NULL,
+            is_published BOOLEAN DEFAULT false,
+            published_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_chart_analyses_lookup 
+          ON admin_chart_analyses (symbol, interval, is_published);
+
+          CREATE INDEX IF NOT EXISTS idx_chart_analyses_author 
+          ON admin_chart_analyses (author_id);
+
+          CREATE INDEX IF NOT EXISTS idx_chart_analyses_updated 
+          ON admin_chart_analyses (updated_at DESC);
         `);
 
         // Verify connectivity and schema readiness without modifying any user data

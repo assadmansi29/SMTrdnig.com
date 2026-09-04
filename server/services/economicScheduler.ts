@@ -1,6 +1,7 @@
 import type { Pool as PgPool } from 'pg';
 import {
   ensureEconomicTables,
+  cleanupExpiredOrForbiddenNotifications,
   upsertEconomicEvent,
   scheduleEventReminders,
   getDueNotifications,
@@ -39,7 +40,8 @@ export class EconomicScheduler {
     console.log('[Economic Scheduler] Initializing tables and background workers...');
     try {
       await ensureEconomicTables(this.pool);
-      console.log('[Economic Scheduler] PostgreSQL economic tables verified.');
+      await cleanupExpiredOrForbiddenNotifications(this.pool);
+      console.log('[Economic Scheduler] PostgreSQL economic tables verified and queue cleaned.');
     } catch (err: any) {
       console.error(`[Economic Scheduler Error] Migration failed: ${err.message}`);
     }
@@ -159,6 +161,15 @@ export class EconomicScheduler {
     for (const item of dueList) {
       const { notification, event } = item;
       try {
+        // Skip elapsed pre-event reminders
+        if (
+          notification.notificationType.startsWith('reminder_') &&
+          new Date(event.dateUtc).getTime() < Date.now() - 5 * 60 * 1000
+        ) {
+          await markNotificationFailed(this.pool, notification.id, 'Event release time has already passed; reminder skipped', true);
+          continue;
+        }
+
         // Resolve target timezone for this recipient from PostgreSQL
         const targetTz = notification.targetTimezone || await resolveUserTimezone(this.pool, notification.userId);
         const destinationChatId = notification.targetChatId || undefined;
@@ -188,11 +199,22 @@ export class EconomicScheduler {
           break; // Stop loop to honor Telegram backoff
         } else {
           const errMsg = result?.error || 'Unknown send error';
-          await markNotificationFailed(this.pool, notification.id, errMsg, notification.retryCount >= 3);
-          console.error(`[Telegram Alert Failed] Notification #${notification.id}: ${errMsg}`);
+          const isPermanent = Boolean(result?.permanent) || /forbidden|not a member|blocked|chat not found|not enough rights/i.test(errMsg);
+          await markNotificationFailed(this.pool, notification.id, errMsg, isPermanent || notification.retryCount >= 2);
+          if (isPermanent) {
+            console.warn(`[Telegram Alert Marked Failed] Notification #${notification.id}: ${errMsg}. Add the bot as an Administrator in Telegram to enable broadcasts.`);
+            if (!destinationChatId) {
+              // The default broadcast channel is currently missing bot admin permissions; break this tick to avoid log spam
+              break;
+            }
+          } else {
+            console.error(`[Telegram Alert Failed] Notification #${notification.id}: ${errMsg}`);
+          }
         }
       } catch (err: any) {
-        await markNotificationFailed(this.pool, notification.id, err.message, notification.retryCount >= 3);
+        const errMsg = err.message || 'Unknown error';
+        const isPermanent = /forbidden|not a member|blocked|chat not found|not enough rights/i.test(errMsg);
+        await markNotificationFailed(this.pool, notification.id, errMsg, isPermanent || notification.retryCount >= 2);
       }
     }
   }

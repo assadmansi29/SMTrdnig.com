@@ -161,9 +161,13 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
           message: `Arabic test alert sent successfully to Telegram channel! (Message ID: #${data.messageId}, Timezone: ${data.timezone})`,
         });
       } else {
+        let msg = data.error || 'Failed to dispatch test message to Telegram.';
+        if (msg.includes('Forbidden: bot is not a member of the channel chat') || msg.includes('bot is not a member')) {
+          msg = '⚠️ Telegram Permission Required: The bot is not an Administrator in the channel. Please open your Telegram channel (@smtradingpro), tap Settings > Administrators > Add Administrator, search for @SMTradingnewsBot, and enable "Post Messages".';
+        }
         setActionFeedback({
           type: 'error',
-          message: data.error || 'Failed to dispatch test message to Telegram.',
+          message: msg,
         });
       }
     } catch (err: any) {
