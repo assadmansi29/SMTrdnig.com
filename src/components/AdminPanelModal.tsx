@@ -45,8 +45,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   BookOpen,
-  ListTodo
+  ListTodo,
+  Send
 } from 'lucide-react';
+import { TelegramBotTab } from './admin/TelegramBotTab';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -63,7 +65,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   const isCoach = user?.role === 'coach';
   const isStaff = isSuperAdmin || isAdmin || isEmployee || isCoach;
 
-  type TabType = 'users' | 'audit_logs' | 'rbac' | 'coaching' | 'operations' | 'transactions' | 'create_user' | 'youtube';
+  type TabType = 'users' | 'audit_logs' | 'rbac' | 'coaching' | 'operations' | 'transactions' | 'create_user' | 'youtube' | 'telegram';
   const [activeTab, setActiveTab] = useState<TabType>(
     isCoach ? 'coaching' : isEmployee ? 'operations' : 'users'
   );
@@ -885,6 +887,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
             >
               <Radio className="w-4 h-4 text-rose-400" />
               <span>YouTube Live Stream</span>
+            </button>
+          )}
+
+          {/* Telegram Economic Bot (Super Admin & Admin) */}
+          {(isSuperAdmin || isAdmin) && (
+            <button
+              onClick={() => setActiveTab('telegram')}
+              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === 'telegram' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Send className="w-4 h-4 text-sky-400" />
+              <span>Telegram Bot</span>
             </button>
           )}
         </div>
@@ -1804,6 +1819,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                 </div>
               )}
             </div>
+          )}
+
+          {/* TAB 9: TELEGRAM ECONOMIC BOT (Super Admin & Admin) */}
+          {activeTab === 'telegram' && (isSuperAdmin || isAdmin) && (
+            <TelegramBotTab token={token} />
           )}
 
         </div>

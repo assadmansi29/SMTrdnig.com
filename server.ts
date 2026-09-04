@@ -10,6 +10,8 @@ import authRoutes from './server/routes/authRoutes';
 import userRoutes from './server/routes/userRoutes';
 import adminRoutes from './server/routes/adminRoutes';
 import youtubeRoutes from './server/routes/youtubeRoutes';
+import telegramRoutes from './server/routes/telegramRoutes';
+import { economicScheduler } from './server/services/economicScheduler';
 
 async function startServer() {
   const app = express();
@@ -20,6 +22,12 @@ async function startServer() {
     initPostgres()
       .then(() => {
         console.log("[Database] Connected to PostgreSQL successfully.");
+        const p = getPool();
+        if (p) {
+          economicScheduler.start(p).catch((err: any) => {
+            console.error("[Economic Scheduler] Startup notice:", err.message);
+          });
+        }
       })
       .catch((err: any) => {
         console.error("[Database Notice] PostgreSQL initialization attempt:", err.message);
@@ -58,6 +66,7 @@ async function startServer() {
   app.use('/api/user', requireDatabaseReady, userRoutes);
   app.use('/api/admin', requireDatabaseReady, adminRoutes);
   app.use('/api/youtube', requireDatabaseReady, youtubeRoutes);
+  app.use('/api/telegram', requireDatabaseReady, telegramRoutes);
 
   // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)
   app.get("/api/health", (req, res) => {
@@ -105,6 +114,9 @@ async function startServer() {
   // 6. Graceful Shutdown handlers for zero-downtime autoscaling rollouts
   const gracefulShutdown = async (signal: string) => {
     console.log(`[Server] Received ${signal}. Initiating graceful shutdown...`);
+    try {
+      economicScheduler.stop();
+    } catch {}
     server.close(async () => {
       console.log('[Server] HTTP server closed.');
       const pool = getPool();

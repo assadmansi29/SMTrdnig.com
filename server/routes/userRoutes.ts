@@ -73,7 +73,17 @@ router.get('/profile', async (req: AuthRequest, res: Response): Promise<void> =>
 
 // PATCH /api/user/profile
 router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> => {
-  const { fullName, phone, avatarUrl, email, username, verificationCode } = req.body;
+  const {
+    fullName,
+    phone,
+    avatarUrl,
+    email,
+    username,
+    verificationCode,
+    timezone,
+    telegramChatId,
+    telegramNotificationsEnabled,
+  } = req.body;
   const user = await Database.findUserById(req.user!.id);
   if (!user) {
     res.status(404).json({ error: 'User not found.' });
@@ -82,6 +92,29 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
 
   const updates: any = {};
   let isPersonalInfoChanging = false;
+
+  if (timezone !== undefined && typeof timezone === 'string') {
+    const cleanTz = timezone.trim();
+    if (cleanTz) {
+      try {
+        Intl.DateTimeFormat(undefined, { timeZone: cleanTz });
+        updates.timezone = cleanTz;
+      } catch {
+        res.status(400).json({ error: `Invalid IANA timezone identifier: "${cleanTz}".` });
+        return;
+      }
+    } else {
+      updates.timezone = null;
+    }
+  }
+
+  if (telegramChatId !== undefined) {
+    updates.telegramChatId = typeof telegramChatId === 'string' ? telegramChatId.trim() : null;
+  }
+
+  if (telegramNotificationsEnabled !== undefined) {
+    updates.telegramNotificationsEnabled = Boolean(telegramNotificationsEnabled);
+  }
 
   if (fullName !== undefined && fullName.trim() !== (user.fullName || '')) {
     updates.fullName = fullName.trim();
@@ -177,6 +210,51 @@ router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> 
   }
 
   res.json({ success: true, profile: sanitizeUser(updated), message: 'Profile updated successfully.' });
+});
+
+// PUT /api/user/timezone (Set individual user timezone in PostgreSQL)
+router.put('/timezone', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { timezone } = req.body;
+  if (!timezone || typeof timezone !== 'string') {
+    res.status(400).json({ error: 'Valid timezone string is required (e.g. Asia/Riyadh, America/New_York, UTC).' });
+    return;
+  }
+  const cleanTz = timezone.trim();
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: cleanTz });
+  } catch {
+    res.status(400).json({ error: `Invalid IANA timezone: "${cleanTz}".` });
+    return;
+  }
+
+  const updated = await Database.updateUser(req.user!.id, { timezone: cleanTz });
+  if (!updated) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  console.log(`[User Timezone] Updated user @${updated.username} timezone to "${cleanTz}" in PostgreSQL.`);
+  res.json({ success: true, timezone: cleanTz, profile: sanitizeUser(updated) });
+});
+
+// PUT /api/user/telegram-alerts (Configure user Telegram chat ID and alerts preference in PostgreSQL)
+router.put('/telegram-alerts', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { telegramChatId, telegramNotificationsEnabled } = req.body;
+  const updates: any = {};
+  if (telegramChatId !== undefined) {
+    updates.telegramChatId = typeof telegramChatId === 'string' ? telegramChatId.trim() : null;
+  }
+  if (telegramNotificationsEnabled !== undefined) {
+    updates.telegramNotificationsEnabled = Boolean(telegramNotificationsEnabled);
+  }
+
+  const updated = await Database.updateUser(req.user!.id, updates);
+  if (!updated) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  res.json({ success: true, profile: sanitizeUser(updated) });
 });
 
 // POST /api/user/avatar (Upload & Link Profile Picture)

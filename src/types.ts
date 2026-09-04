@@ -216,6 +216,9 @@ export interface UserProfile {
   coachSpecialty?: string;
   permissions?: Partial<RolePermissions>;
   trainingProgress?: TrainingMilestone[];
+  timezone?: string;
+  telegramChatId?: string;
+  telegramNotificationsEnabled?: boolean;
 }
 
 export interface Transaction {

@@ -211,6 +211,9 @@ export interface UserRecord {
   trainingStatus?: 'active_training' | 'mentorship_pending' | 'graduated' | 'paused';
   trainingProgress?: TrainingMilestone[];
   permissions?: Partial<RolePermissions>;
+  timezone?: string;
+  telegramChatId?: string;
+  telegramNotificationsEnabled?: boolean;
 }
 
 export interface TransactionRecord {
@@ -425,6 +428,9 @@ function mapUserRow(row: any): UserRecord {
     trainingStatus: row.training_status || undefined,
     trainingProgress: typeof row.training_progress === 'string' ? JSON.parse(row.training_progress) : (row.training_progress || undefined),
     permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions) : (row.permissions || undefined),
+    timezone: row.timezone || undefined,
+    telegramChatId: row.telegram_chat_id || undefined,
+    telegramNotificationsEnabled: row.telegram_notifications_enabled !== false,
   };
 }
 
@@ -468,7 +474,14 @@ export async function isPostgresReady(): Promise<boolean> {
       if (!p) return false;
       const client = await p.connect();
       try {
-        // Verify connectivity and schema readiness without modifying any schema or user data
+        // Ensure user timezone and notification preference columns exist in PostgreSQL
+        await client.query(`
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(100);
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100);
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_notifications_enabled BOOLEAN DEFAULT true;
+        `);
+
+        // Verify connectivity and schema readiness without modifying any user data
         const verifyRes = await client.query('SELECT current_database(), current_user, count(*) as count FROM users;');
         const userCount = parseInt(verifyRes.rows[0].count, 10);
         console.log(`[PostgreSQL] Connection verified. Database: "${verifyRes.rows[0].current_database}", User: "${verifyRes.rows[0].current_user}", Registered Users: ${userCount}`);
@@ -570,12 +583,14 @@ export class Database {
         subscription_status, subscription_plan, subscription_expires_at,
         referral_code, referred_by, commission_rate, balance, pending_balance,
         total_earned, created_at, last_login_at, avatar_url, phone, notes,
-        assigned_coach_id, coach_specialty, training_status, training_progress, permissions
+        assigned_coach_id, coach_specialty, training_status, training_progress, permissions,
+        timezone, telegram_chat_id, telegram_notifications_enabled
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11, $12,
         $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25
+        $21, $22, $23, $24, $25,
+        $26, $27, $28
       ) RETURNING *
     `;
     const values = [
@@ -604,6 +619,9 @@ export class Database {
       user.trainingStatus || null,
       user.trainingProgress ? JSON.stringify(user.trainingProgress) : null,
       user.permissions ? JSON.stringify(user.permissions) : null,
+      user.timezone || null,
+      user.telegramChatId || null,
+      user.telegramNotificationsEnabled !== false,
     ];
     const res = await p.query(query, values);
     return mapUserRow(res.rows[0]);
@@ -706,6 +724,18 @@ export class Database {
     if (updates.permissions !== undefined) {
       fields.push(`permissions = $${idx++}`);
       values.push(JSON.stringify(updates.permissions));
+    }
+    if (updates.timezone !== undefined) {
+      fields.push(`timezone = $${idx++}`);
+      values.push(updates.timezone);
+    }
+    if (updates.telegramChatId !== undefined) {
+      fields.push(`telegram_chat_id = $${idx++}`);
+      values.push(updates.telegramChatId);
+    }
+    if (updates.telegramNotificationsEnabled !== undefined) {
+      fields.push(`telegram_notifications_enabled = $${idx++}`);
+      values.push(updates.telegramNotificationsEnabled);
     }
 
     if (fields.length === 0) {
