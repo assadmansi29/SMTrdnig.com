@@ -18,6 +18,7 @@ export class TelegramBotService {
   private botToken: string | null;
   private channelId: string | null;
   private isEnabled: boolean;
+  private defaultTimezone: string = 'UTC';
   private rateLimitResetTime: number = 0;
 
   constructor() {
@@ -30,6 +31,16 @@ export class TelegramBotService {
     return Boolean(this.botToken && this.channelId && this.isEnabled);
   }
 
+  public setDefaultTimezone(tz: string): void {
+    if (tz && tz.trim()) {
+      this.defaultTimezone = tz.trim();
+    }
+  }
+
+  public getDefaultTimezone(): string {
+    return this.defaultTimezone;
+  }
+
   public getConfigSummary() {
     return {
       configured: this.isConfigured(),
@@ -39,6 +50,7 @@ export class TelegramBotService {
         ? `${this.botToken.substring(0, 6)}...${this.botToken.substring(this.botToken.length - 4)}`
         : 'Not set',
       rateLimitedUntil: this.rateLimitResetTime > Date.now() ? new Date(this.rateLimitResetTime).toISOString() : null,
+      timezone: this.defaultTimezone,
     };
   }
 
@@ -49,10 +61,11 @@ export class TelegramBotService {
   public async sendEventReminder(
     event: EconomicEventRecord,
     minutesBefore: number,
-    targetTimezone: string = 'UTC',
+    targetTimezone?: string,
     targetChatId?: string | null
   ): Promise<TelegramSendResult> {
-    const text = generateArabicReminderMessage(event, minutesBefore, targetTimezone);
+    const tz = (targetTimezone && targetTimezone.trim()) ? targetTimezone.trim() : (this.defaultTimezone || 'UTC');
+    const text = generateArabicReminderMessage(event, minutesBefore, tz);
     return this.sendMessage(text, 0, targetChatId || undefined);
   }
 
@@ -62,10 +75,11 @@ export class TelegramBotService {
    */
   public async sendLiveReleaseAlert(
     event: EconomicEventRecord,
-    targetTimezone: string = 'UTC',
+    targetTimezone?: string,
     targetChatId?: string | null
   ): Promise<TelegramSendResult> {
-    const text = generateArabicLiveReleaseMessage(event, targetTimezone);
+    const tz = (targetTimezone && targetTimezone.trim()) ? targetTimezone.trim() : (this.defaultTimezone || 'UTC');
+    const text = generateArabicLiveReleaseMessage(event, tz);
     return this.sendMessage(text, 0, targetChatId || undefined);
   }
 
@@ -74,10 +88,11 @@ export class TelegramBotService {
    */
   public async sendTestAlert(
     callerUsername: string,
-    targetTimezone: string = 'UTC',
+    targetTimezone?: string,
     targetChatId?: string | null
   ): Promise<TelegramSendResult> {
-    const text = generateArabicTestMessage(callerUsername, targetTimezone);
+    const tz = (targetTimezone && targetTimezone.trim()) ? targetTimezone.trim() : (this.defaultTimezone || 'UTC');
+    const text = generateArabicTestMessage(callerUsername, tz);
     return this.sendMessage(text, 0, targetChatId || undefined);
   }
 

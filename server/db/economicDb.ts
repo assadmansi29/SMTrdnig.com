@@ -186,6 +186,14 @@ export async function resolveUserTimezone(pool: PgPool, userId?: string | null):
 }
 
 /**
+ * Returns the currently configured timezone for economic Telegram alerts.
+ * Alias for resolveUserTimezone to ensure backwards compatibility across routes.
+ */
+export async function getConfiguredTimezone(pool: PgPool, userId?: string | null): Promise<string> {
+  return resolveUserTimezone(pool, userId);
+}
+
+/**
  * Upserts an economic event from BiQuote Market Intelligence.
  * If event already exists, updates actual, forecast, previous, revised, and last_updated_utc.
  */
