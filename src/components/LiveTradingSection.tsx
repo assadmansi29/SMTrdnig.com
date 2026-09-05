@@ -198,15 +198,14 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
           </div>
 
           {/* Embedded Real-Time TradingView Chart */}
-          <div className="rounded-2xl overflow-hidden border border-slate-800/90 shadow-2xl bg-[#090D17] max-w-[800px] mx-auto w-full" dir="ltr">
+          <div className="rounded-2xl overflow-hidden border border-slate-800/90 shadow-2xl bg-[#090D17] max-w-[800px] mx-auto w-full h-[520px] flex flex-col min-h-0 min-w-0" dir="ltr">
             <TradingViewWidget
-              key={`${selectedInstrument.symbol}_${selectedInterval}_${canAnalyzeCharts}`}
               symbol={selectedInstrument.symbol}
               interval={selectedInterval}
               enableDrawingTools={canAnalyzeCharts}
               hideSideToolbar={!canAnalyzeCharts}
               height="520px"
-              className="min-h-[520px]"
+              className="w-full h-full flex-1 min-h-0 min-w-0 rounded-none border-0"
             />
           </div>
 

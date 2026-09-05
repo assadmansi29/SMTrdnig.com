@@ -128,10 +128,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     return localStorage.getItem('smtrading_token');
   }, []);
 
+  // Track currently active symbol and interval loaded in chart series
+  const lastLoadedKeyRef = useRef<string>('');
+
   // 2. Fetch Candle Data
-  const fetchCandles = useCallback(async (sym: string, inv: string) => {
+  const fetchCandles = useCallback(async (sym: string, inv: string, isSilent: boolean = false) => {
+    const requestKey = `${sym}_${inv}`;
     try {
-      setIsLoadingCandles(true);
+      if (!isSilent) {
+        setIsLoadingCandles(true);
+      }
       const res = await fetch(`/api/market/candles?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}`);
       const data = await res.json();
 
@@ -142,14 +148,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           const last = data.candles[data.candles.length - 1];
           setLastBarInfo({ open: last.open, high: last.high, low: last.low, close: last.close });
         }
-        if (chartApiRef.current) {
+        // ONLY call fitContent on initial explicit load of a new symbol or interval!
+        // NEVER reset the time scale during silent updates, panning, zooming, dragging, or resizing!
+        if (!isSilent && chartApiRef.current) {
           chartApiRef.current.timeScale().fitContent();
         }
+        lastLoadedKeyRef.current = requestKey;
       }
     } catch (err: any) {
       console.error('[Financial Chart] Error loading candles:', err.message);
     } finally {
-      setIsLoadingCandles(false);
+      if (!isSilent) {
+        setIsLoadingCandles(false);
+      }
     }
   }, []);
 
@@ -776,16 +787,30 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     });
 
     manager.on('drawing:updated', () => {
-      // Sync to PostgreSQL
-      batchSaveRef.current();
+      // Sync to PostgreSQL - do NOT flood network or re-renders during active drag!
+      // The pointer up handler will perform batch save when the drag gesture completes.
+      if (!dragStateRef.current) {
+        batchSaveRef.current();
+      }
     });
 
-    // Crosshair move handler for OHLC header display
+    // Crosshair move handler for OHLC header display (optimized to avoid re-renders when bar doesn't change)
+    let lastKnownBar: { open: number; high: number; low: number; close: number } | null = null;
     chart.subscribeCrosshairMove((param) => {
+      if (dragStateRef.current) return;
       if (param.time && param.seriesData.get(series)) {
         const bar = param.seriesData.get(series) as any;
         if (bar && bar.open != null) {
-          setLastBarInfo({ open: bar.open, high: bar.high, low: bar.low, close: bar.close });
+          if (
+            !lastKnownBar ||
+            lastKnownBar.open !== bar.open ||
+            lastKnownBar.high !== bar.high ||
+            lastKnownBar.low !== bar.low ||
+            lastKnownBar.close !== bar.close
+          ) {
+            lastKnownBar = { open: bar.open, high: bar.high, low: bar.low, close: bar.close };
+            setLastBarInfo(lastKnownBar);
+          }
         }
       }
     });
@@ -862,16 +887,39 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     chart.subscribeClick(handleChartClick);
 
-    // Responsive Resize Observer
-    const resizeObserver = new ResizeObserver((entries) => {
-      if (!entries || entries.length === 0 || !chartContainerRef.current) return;
-      const { width, height } = entries[0].contentRect;
+    // Responsive Size Synchronization & ResizeObserver
+    const syncChartSize = () => {
+      if (!chartContainerRef.current || !chartApiRef.current) return;
+      const el = chartContainerRef.current;
+      const width = Math.floor(el.clientWidth);
+      const height = Math.floor(el.clientHeight);
       if (width > 0 && height > 0) {
-        chart.applyOptions({ width, height });
+        chartApiRef.current.applyOptions({ width, height });
       }
+    };
+
+    let resizeFrameId: number | null = null;
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0 || !chartContainerRef.current || !chartApiRef.current) return;
+      if (resizeFrameId !== null) cancelAnimationFrame(resizeFrameId);
+      resizeFrameId = requestAnimationFrame(() => {
+        syncChartSize();
+      });
     });
 
     resizeObserver.observe(container);
+
+    // Multi-cycle initial dimension sync so chart occupies 100% of flex container immediately
+    syncChartSize();
+    requestAnimationFrame(syncChartSize);
+    const initTimer1 = setTimeout(syncChartSize, 80);
+    const initTimer2 = setTimeout(syncChartSize, 250);
+
+    const handleWindowResize = () => {
+      if (resizeFrameId !== null) cancelAnimationFrame(resizeFrameId);
+      resizeFrameId = requestAnimationFrame(syncChartSize);
+    };
+    window.addEventListener('resize', handleWindowResize);
 
     // Keyboard Shortcuts (Escape to cancel tool, Delete to remove selected)
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -891,6 +939,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     // Cleanup
     return () => {
+      if (resizeFrameId !== null) cancelAnimationFrame(resizeFrameId);
+      clearTimeout(initTimer1);
+      clearTimeout(initTimer2);
+      window.removeEventListener('resize', handleWindowResize);
       window.removeEventListener('keydown', handleKeyDown);
       container.removeEventListener('mousedown', handlePointerDownCapture, { capture: true } as any);
       container.removeEventListener('touchstart', handlePointerDownCapture, { capture: true } as any);
@@ -912,15 +964,22 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 9. Load Market Data & Published Drawings on Symbol/Interval Change
   useEffect(() => {
-    fetchCandles(symbol, interval);
+    const key = `${symbol}_${interval}`;
+    // If the chart already has this exact symbol and interval loaded, DO NOT reload!
+    if (lastLoadedKeyRef.current === key) {
+      return;
+    }
+    fetchCandles(symbol, interval, false);
     loadPostgresDrawings(symbol, interval);
   }, [symbol, interval, fetchCandles, loadPostgresDrawings]);
 
-  // Periodic candle refresh (every 12 seconds) to keep stream live
+  // Periodic candle refresh (every 15 seconds) to keep stream live - completely silent, preserves zoom/pan!
   useEffect(() => {
     const timer = setInterval(() => {
-      fetchCandles(symbol, interval);
-    }, 12000);
+      if (!dragStateRef.current && chartApiRef.current) {
+        fetchCandles(symbol, interval, true);
+      }
+    }, 15000);
     return () => clearInterval(timer);
   }, [symbol, interval, fetchCandles]);
 
@@ -954,8 +1013,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   return (
     <div
-      className={`tradingview-widget-container w-full bg-[#090D17] rounded-xl overflow-hidden border border-slate-800 flex flex-col relative ${
-        className || 'h-full min-h-[350px]'
+      className={`tradingview-widget-container w-full flex-1 min-h-0 min-w-0 bg-[#090D17] flex flex-col relative overflow-hidden ${
+        className || 'h-full'
       }`}
       style={height ? { height } : undefined}
     >
@@ -1060,8 +1119,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       <div
         ref={chartContainerRef}
         id="lightweight-financial-chart-container"
-        className={`w-full flex-1 relative ${activeTool ? 'cursor-crosshair' : 'cursor-default'}`}
-        style={{ minHeight: '280px' }}
+        className={`w-full h-full flex-1 min-h-0 min-w-0 relative overflow-hidden ${activeTool ? 'cursor-crosshair' : 'cursor-default'}`}
       >
         {/* Loading Spinner */}
         {isLoadingCandles && (
