@@ -50,9 +50,8 @@ import {
   BarChart2
 } from 'lucide-react';
 import { TelegramBotTab } from './admin/TelegramBotTab';
-import { TradingViewStudioTab } from './admin/TradingViewStudioTab';
 
-export type AdminPanelTabType = 'users' | 'audit_logs' | 'rbac' | 'coaching' | 'operations' | 'transactions' | 'create_user' | 'youtube' | 'telegram' | 'tradingview_studio';
+export type AdminPanelTabType = 'users' | 'audit_logs' | 'rbac' | 'coaching' | 'operations' | 'transactions' | 'create_user' | 'youtube' | 'telegram';
 
 interface AdminPanelModalProps {
   isOpen: boolean;
@@ -920,19 +919,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
             >
               <Send className="w-4 h-4 text-sky-400" />
               <span>Telegram Bot</span>
-            </button>
-          )}
-
-          {/* TradingView Studio (Super Admin & Admin) */}
-          {(isSuperAdmin || isAdmin) && (
-            <button
-              onClick={() => setActiveTab('tradingview_studio')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'tradingview_studio' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <BarChart2 className="w-4 h-4 text-amber-400" />
-              <span>TradingView Studio</span>
             </button>
           )}
         </div>
@@ -1857,16 +1843,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {/* TAB 9: TELEGRAM ECONOMIC BOT (Super Admin & Admin) */}
           {activeTab === 'telegram' && (isSuperAdmin || isAdmin) && (
             <TelegramBotTab token={token} />
-          )}
-
-          {/* TAB 10: TRADINGVIEW MASTER STUDIO (Super Admin & Admin) */}
-          {activeTab === 'tradingview_studio' && (isSuperAdmin || isAdmin) && user && (
-            <TradingViewStudioTab 
-              token={token} 
-              currentUser={user} 
-              initialSymbol={initialSymbol}
-              initialInterval={initialInterval}
-            />
           )}
 
         </div>

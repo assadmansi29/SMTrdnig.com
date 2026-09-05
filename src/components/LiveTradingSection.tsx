@@ -4,8 +4,6 @@ import { TradingViewWidget } from './TradingViewWidget';
 import { FearGreedGauge } from './FearGreedGauge';
 import { YouTubeLivePlayer } from './YouTubeLivePlayer';
 import { EconomicNewsSection } from './EconomicNewsSection';
-import { ChartAnalysisOverlay } from './ChartAnalysisOverlay';
-import { AdminChartAnalysisSuite } from './admin/AdminChartAnalysisSuite';
 import { useYouTubeLive } from '../hooks/useYouTubeLive';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -87,8 +85,6 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
   const [selectedInstrument, setSelectedInstrument] = useState<InstrumentOption>(INSTRUMENTS[0]);
   const [selectedInterval, setSelectedInterval] = useState<string>('15');
   const [viewMode, setViewMode] = useState<'stream' | 'chart' | 'both'>('both');
-  const [isAdminDrawingMode, setIsAdminDrawingMode] = useState(false);
-  const [analysisRefreshKey, setAnalysisRefreshKey] = useState(0);
 
   const {
     isLive,
@@ -197,38 +193,16 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
             </div>
           </div>
 
-          {/* 1. Super Admin & Admin ONLY: Dedicated TradingView Analysis & Drawing Suite */}
-          {canAnalyzeCharts && (
-            <AdminChartAnalysisSuite
-              symbol={selectedInstrument.symbol}
-              interval={selectedInterval}
-              isDrawingMode={isAdminDrawingMode}
-              onToggleDrawingMode={() => setIsAdminDrawingMode(prev => !prev)}
-              onOpenMasterStudio={() => onOpenAdminModal?.('tradingview_studio', selectedInstrument.symbol, selectedInterval)}
-              onAnalysisUpdated={() => setAnalysisRefreshKey(prev => prev + 1)}
-            />
-          )}
-
-          {/* 2. Institutional SMC Analysis & Draw Overlay Synchronized from PostgreSQL (Visible to All) */}
-          <div className="max-w-[800px] mx-auto w-full">
-            <ChartAnalysisOverlay
-              key={`${selectedInstrument.symbol}_${analysisRefreshKey}`}
-              symbol={selectedInstrument.symbol}
-              interval={selectedInterval}
-              onOpenAnalysisStudio={() => onOpenAdminModal?.('tradingview_studio', selectedInstrument.symbol, selectedInterval)}
-              isAdmin={canAnalyzeCharts}
-            />
-          </div>
-
-          {/* 3. Embedded Professional Trading Chart Display with Dynamic Drawing Mode */}
+          {/* Embedded Real-Time TradingView Chart */}
           <div className="rounded-2xl overflow-hidden border border-slate-800/90 shadow-2xl bg-[#090D17] max-w-[800px] mx-auto w-full" dir="ltr">
             <TradingViewWidget
-              key={`${selectedInstrument.symbol}_${selectedInterval}_${isAdminDrawingMode}`}
+              key={`${selectedInstrument.symbol}_${selectedInterval}_${canAnalyzeCharts}`}
               symbol={selectedInstrument.symbol}
               interval={selectedInterval}
-              enableDrawingTools={canAnalyzeCharts && isAdminDrawingMode}
-              height={isAdminDrawingMode ? '620px' : '340px'}
-              className={isAdminDrawingMode ? 'min-h-[620px]' : 'min-h-[340px]'}
+              enableDrawingTools={canAnalyzeCharts}
+              hideSideToolbar={!canAnalyzeCharts}
+              height="520px"
+              className="min-h-[520px]"
             />
           </div>
 

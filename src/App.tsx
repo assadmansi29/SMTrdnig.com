@@ -244,7 +244,7 @@ export default function App() {
             setCalculatorSetup(null);
             setIsCalculatorOpen(true);
           }}
-          onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'tradingview_studio', symbol, interval)}
+          onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
           localizedEvents={localizedEvents}
         />
 
@@ -587,7 +587,7 @@ export default function App() {
         isOpen={isChartOpen}
         onClose={() => setIsChartOpen(false)}
         defaultSymbol={chartDefaultSymbol}
-        onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'tradingview_studio', symbol, interval)}
+        onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
       />
 
       <SavedArticlesModal

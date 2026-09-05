@@ -21,6 +21,8 @@
     "express": "^4.21.2",
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.3",
+    "lightweight-charts": "^5.2.1",
+    "lightweight-charts-drawing": "^0.1.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "nodemailer": "^9.1.0",

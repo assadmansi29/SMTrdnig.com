@@ -12,6 +12,9 @@ import adminRoutes from './server/routes/adminRoutes';
 import youtubeRoutes from './server/routes/youtubeRoutes';
 import telegramRoutes from './server/routes/telegramRoutes';
 import chartAnalysisRoutes from './server/routes/chartAnalysisRoutes';
+import tradingviewStorageRoutes, { ensureTradingViewStorageTable } from './server/routes/tradingviewStorageRoutes';
+import chartDrawingsRoutes, { ensureChartDrawingsTable } from './server/routes/chartDrawingsRoutes';
+import marketRoutes from './server/routes/marketRoutes';
 import { ensureChartAnalysisTable } from './server/db/chartAnalysisDb';
 import { economicScheduler } from './server/services/economicScheduler';
 
@@ -28,6 +31,12 @@ async function startServer() {
         if (p) {
           ensureChartAnalysisTable(p).catch((err: any) => {
             console.error("[Chart Analysis] Table ensure notice:", err.message);
+          });
+          ensureTradingViewStorageTable().catch((err: any) => {
+            console.error("[TradingView Storage] Table ensure notice:", err.message);
+          });
+          ensureChartDrawingsTable().catch((err: any) => {
+            console.error("[Chart Drawings] Table ensure notice:", err.message);
           });
           economicScheduler.start(p).catch((err: any) => {
             console.error("[Economic Scheduler] Startup notice:", err.message);
@@ -73,6 +82,9 @@ async function startServer() {
   app.use('/api/youtube', requireDatabaseReady, youtubeRoutes);
   app.use('/api/telegram', requireDatabaseReady, telegramRoutes);
   app.use('/api/chart-analyses', requireDatabaseReady, chartAnalysisRoutes);
+  app.use('/api/tradingview-storage', requireDatabaseReady, tradingviewStorageRoutes);
+  app.use('/api/chart-drawings', requireDatabaseReady, chartDrawingsRoutes);
+  app.use('/api/market', marketRoutes);
 
   // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)
   app.get("/api/health", (req, res) => {

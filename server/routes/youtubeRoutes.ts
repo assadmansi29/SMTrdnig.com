@@ -282,6 +282,27 @@ router.get('/status', (req: Request, res: Response): void => {
 });
 
 /**
+ * GET /api/youtube/settings
+ * Admin & Staff route to read YouTube channel configuration.
+ */
+router.get('/settings', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSettings = (await Database.getSystemSettings()) as any;
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    const channelId = currentSettings?.youtubeSettings?.channelId || process.env.YOUTUBE_CHANNEL_ID || '';
+    const channelHandle = currentSettings?.youtubeSettings?.channelHandle || process.env.YOUTUBE_CHANNEL_HANDLE || '';
+
+    res.json({
+      configured: Boolean(apiKey),
+      channelId,
+      channelHandle,
+    });
+  } catch (err: any) {
+    res.status(500).json({ configured: false, error: err.message });
+  }
+});
+
+/**
  * POST /api/youtube/settings
  * Admin & Staff route to update YouTube channel configuration.
  * Protected by dynamic RBAC canManageLiveStream permission.

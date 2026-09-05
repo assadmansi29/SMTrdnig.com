@@ -18,7 +18,6 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
-import { ChartAnalysisOverlay } from './ChartAnalysisOverlay';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -270,19 +269,6 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                   </a>
                 </div>
 
-                {/* Institutional SMC Analysis Overlay */}
-                <div className="p-2.5 pb-0">
-                  <ChartAnalysisOverlay
-                    symbol={selectedSymbol}
-                    interval={activeInterval}
-                    onOpenAnalysisStudio={onOpenAdminModal ? () => {
-                      onClose();
-                      onOpenAdminModal('tradingview_studio', selectedSymbol, activeInterval);
-                    } : undefined}
-                    isAdmin={isStaff}
-                  />
-                </div>
-
                 {/* Actual Real-Time TradingView Widget */}
                 <div className="flex-1 w-full h-[520px]">
                   <TradingViewWidget
@@ -292,6 +278,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                     interval={activeInterval}
                     timezone="Etc/UTC"
                     enableDrawingTools={isStaff}
+                    hideSideToolbar={!isStaff}
                   />
                 </div>
               </div>
