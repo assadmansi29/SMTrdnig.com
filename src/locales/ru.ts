@@ -339,6 +339,7 @@ export const ru: Record<TranslationKey, string> = {
   ecomCatAll: 'Все решения',
   ecomCatSoftware: 'ПО и индикаторы',
   ecomCatEducation: 'Обучение и мастер-классы',
+  ecomCatStrategies: 'Профессиональные торговые стратегии',
   ecomCatHardware: 'Оборудование и мерч',
   ecomSearchPlaceholder: 'Поиск индикаторов, алгоритмов, курсов...',
   ecomAddToCart: 'В корзину',

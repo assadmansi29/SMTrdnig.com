@@ -339,6 +339,7 @@ export const uk: Record<TranslationKey, string> = {
   ecomCatAll: 'Всі рішення',
   ecomCatSoftware: 'ПЗ та індикатори',
   ecomCatEducation: 'Навчання та майстер-класи',
+  ecomCatStrategies: 'Професійні торгові стратегії',
   ecomCatHardware: 'Обладнання та мерч',
   ecomSearchPlaceholder: 'Пошук індикаторів, алгоритмів, курсів...',
   ecomAddToCart: 'Додати до кошика',

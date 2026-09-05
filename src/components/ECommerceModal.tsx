@@ -33,7 +33,7 @@ interface ECommerceModalProps {
 
 export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose }) => {
   const { t, isRTL, language } = useTranslation();
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Education & Masterclass');
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartView, setIsCartView] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
@@ -45,15 +45,13 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
   if (!isOpen) return null;
 
   const categoryLabels: Record<string, string> = {
-    'All': t('ecomCatAll'),
-    'Software & Indicators': t('ecomCatSoftware'),
-    'Education & Masterclass': t('ecomCatEducation'),
-    'Hardware & Merch': t('ecomCatHardware')
+    'Education & Masterclass': t('ecomCatEducation') || 'Education & Masterclass',
+    'Pro Trading Strategies': t('ecomCatStrategies') || 'Pro Trading Strategies'
   };
 
-  const filteredProducts = selectedCategory === 'All'
-    ? products
-    : products.filter(p => p.category === selectedCategory);
+  const filteredProducts = products.filter(
+    p => p.category === selectedCategory || p.id === 'prod-7'
+  );
 
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => {
@@ -401,15 +399,15 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               
               {/* Category Filter Pills & Banner */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0C1220] p-3 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  {['All', 'Software & Indicators', 'Education & Masterclass', 'Hardware & Merch'].map(cat => (
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  {['Education & Masterclass', 'Pro Trading Strategies'].map(cat => (
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                         selectedCategory === cat
-                          ? 'bg-emerald-400 text-slate-950 font-bold shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                          ? 'bg-emerald-400 text-slate-950 font-black shadow-md shadow-emerald-400/20'
+                          : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800 hover:border-slate-700'
                       }`}
                     >
                       {categoryLabels[cat] || cat}

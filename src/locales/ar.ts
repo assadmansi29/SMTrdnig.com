@@ -339,6 +339,7 @@ export const ar: Record<TranslationKey, string> = {
   ecomCatAll: 'جميع الحلول',
   ecomCatSoftware: 'البرمجيات والمؤشرات',
   ecomCatEducation: 'التعليم والماستركلاس',
+  ecomCatStrategies: 'استراتيجيات التداول الاحترافية',
   ecomCatHardware: 'الأجهزة والعتاد',
   ecomSearchPlaceholder: 'ابحث في المؤشرات، الخوارزميات، والدورات...',
   ecomAddToCart: 'إضافة إلى السلة',

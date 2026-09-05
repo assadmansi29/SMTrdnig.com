@@ -13,9 +13,14 @@ import {
   IDrawing,
 } from 'lightweight-charts-drawing';
 import { DrawingToolbar } from './chart/DrawingToolbar';
+import { DrawingPropertiesDialog } from './chart/DrawingPropertiesDialog';
 import { DRAWING_TOOLS } from './chart/toolsConfig';
 import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
 import { Check, Loader2, X, Database } from 'lucide-react';
+import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
+
+// Install TradingView-style Gann Box rendering enhancer
+installGannBoxEnhancer();
 
 interface TradingViewWidgetProps {
   symbol?: string;
@@ -60,6 +65,25 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const [saveStatus, setSaveStatus] = useState<'synced' | 'saving' | 'idle'>('idle');
   const [lastBarInfo, setLastBarInfo] = useState<{ open: number; high: number; low: number; close: number } | null>(null);
 
+  // Drawing Properties Dialog State
+  const [propertiesDrawing, setPropertiesDrawing] = useState<any | null>(null);
+  const [isPropertiesOpen, setIsPropertiesOpen] = useState<boolean>(false);
+
+  const openPropertiesModal = useCallback((drawing: any) => {
+    if (!drawing || !enableDrawingToolsRef.current) return;
+    setPropertiesDrawing(drawing);
+    setIsPropertiesOpen(true);
+  }, []);
+  const openPropertiesModalRef = useRef(openPropertiesModal);
+  openPropertiesModalRef.current = openPropertiesModal;
+
+  // Double-click tracker on drawings and handles
+  const lastClickRef = useRef<{
+    drawingId: string;
+    time: number;
+    point: { x: number; y: number };
+  } | null>(null);
+
   // Sync ref with latest state for chart click callback
   const activeToolRef = useRef<string | null>(null);
   activeToolRef.current = activeTool;
@@ -69,6 +93,21 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   currentColorRef.current = currentColor;
   const currentWidthRef = useRef<number>(currentWidth);
   currentWidthRef.current = currentWidth;
+  const enableDrawingToolsRef = useRef<boolean>(enableDrawingTools);
+  enableDrawingToolsRef.current = enableDrawingTools;
+
+  // Track active drawing drag state (anchor handle resize/move or whole drawing reposition)
+  const dragStateRef = useRef<{
+    type: 'handle' | 'element';
+    drawing: any;
+    anchorIndex?: number;
+    startPoint: { x: number; y: number };
+    initialPixels?: Array<{ x: number; y: number } | null>;
+    initialAnchors?: Array<{ time: any; price: number }>;
+    hasMoved?: boolean;
+  } | null>(null);
+
+  const batchSaveRef = useRef<() => void>(() => {});
 
   // 1. Get Auth Token for persistent PostgreSQL saving
   const getAuthToken = useCallback((): string | null => {
@@ -129,6 +168,34 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             );
 
             if (restored) {
+              (restored as any)._currentChartInterval = interval;
+              if (d.type === 'gann-box') {
+                (restored as any).gannOptions = {
+                  ...(d.options || {}),
+                  ...((d as any).gannOptions || {}),
+                };
+              }
+              if (d.options) {
+                const restAny = restored as any;
+                if (typeof restAny.setRectangleOptions === 'function') restAny.setRectangleOptions(d.options);
+                if (typeof restAny.setTrendLineOptions === 'function') restAny.setTrendLineOptions(d.options);
+                if (typeof restAny.setRayOptions === 'function') restAny.setRayOptions(d.options);
+                if (typeof restAny.setExtendedLineOptions === 'function') restAny.setExtendedLineOptions(d.options);
+                if (typeof restAny.setHorizontalLineOptions === 'function') restAny.setHorizontalLineOptions(d.options);
+                if (typeof restAny.setHorizontalRayOptions === 'function') restAny.setHorizontalRayOptions(d.options);
+                if (typeof restAny.setArrowOptions === 'function') restAny.setArrowOptions(d.options);
+                if (typeof restAny.setChannelOptions === 'function') restAny.setChannelOptions(d.options);
+                if (typeof restAny.setFibOptions === 'function') restAny.setFibOptions(d.options);
+                if (typeof restAny.setGannOptions === 'function') restAny.setGannOptions(d.options);
+                if (typeof restAny.setPitchforkOptions === 'function') restAny.setPitchforkOptions(d.options);
+                if (typeof restAny.setCircleOptions === 'function') restAny.setCircleOptions(d.options);
+                if (typeof restAny.setTriangleOptions === 'function') restAny.setTriangleOptions(d.options);
+                if (typeof restAny.setTextOptions === 'function') restAny.setTextOptions(d.options);
+                if (typeof restAny.setCalloutOptions === 'function') restAny.setCalloutOptions(d.options);
+                if (typeof restAny.setBrushOptions === 'function') restAny.setBrushOptions(d.options);
+                if (typeof restAny.setRotatedRectangleOptions === 'function') restAny.setRotatedRectangleOptions(d.options);
+                if (typeof restAny.setTrendAngleOptions === 'function') restAny.setTrendAngleOptions(d.options);
+              }
               manager.addDrawing(restored);
             }
           } catch (restoreErr: any) {
@@ -141,7 +208,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     } catch (err: any) {
       console.error('[Financial Chart] Error loading drawings from PostgreSQL:', err.message);
     }
-  }, [enableDrawingTools]);
+  }, [enableDrawingTools, interval]);
 
   // 4. Save Single Drawing to PostgreSQL
   const saveDrawingToPostgres = useCallback(async (drawingPayload: any) => {
@@ -150,6 +217,22 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     try {
       setSaveStatus('saving');
+      const manager = drawingManagerRef.current;
+      let finalPayload = drawingPayload;
+      if (manager && drawingPayload?.id) {
+        const live = manager.getDrawing(drawingPayload.id);
+        if (live && (live as any).gannOptions) {
+          finalPayload = {
+            ...drawingPayload,
+            options: {
+              ...(drawingPayload.options || {}),
+              ...(live as any).gannOptions,
+            },
+            gannOptions: (live as any).gannOptions,
+          };
+        }
+      }
+
       const res = await fetch('/api/chart-drawings', {
         method: 'POST',
         headers: {
@@ -159,7 +242,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         body: JSON.stringify({
           symbol,
           interval,
-          drawing: drawingPayload,
+          drawing: finalPayload,
         }),
       });
 
@@ -180,7 +263,21 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     try {
       setSaveStatus('saving');
-      const allDrawings = manager.exportDrawings();
+      const allDrawings = manager.exportDrawings().map((d: any) => {
+        const live = manager.getDrawing(d.id);
+        if (live && (live as any).gannOptions) {
+          return {
+            ...d,
+            options: {
+              ...(d.options || {}),
+              ...(live as any).gannOptions,
+            },
+            gannOptions: (live as any).gannOptions,
+          };
+        }
+        return d;
+      });
+
       const res = await fetch('/api/chart-drawings/batch', {
         method: 'PUT',
         headers: {
@@ -202,6 +299,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       setSaveStatus('idle');
     }
   }, [symbol, interval, getAuthToken]);
+  batchSaveRef.current = batchSaveToPostgres;
 
   // 6. Delete Selected Drawing
   const handleDeleteSelected = useCallback(async () => {
@@ -313,6 +411,347 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     manager.attach(chart, series, container);
     drawingManagerRef.current = manager;
 
+    // Remove DrawingManager's default unhandled listeners so our prioritized capture handler
+    // has complete control over hit-testing, event propagation, and chart pan prevention
+    const rawManager = manager as any;
+    if (typeof rawManager.handleMouseDown === 'function') {
+      container.removeEventListener('mousedown', rawManager.handleMouseDown);
+    }
+    if (typeof rawManager.handleMouseMove === 'function') {
+      container.removeEventListener('mousemove', rawManager.handleMouseMove);
+    }
+    if (typeof rawManager.handleMouseUp === 'function') {
+      container.removeEventListener('mouseup', rawManager.handleMouseUp);
+    }
+
+    // Helper to detect if cursor hits any anchor handle of a drawing
+    const getHitAnchor = (drawing: any, point: { x: number; y: number }): number | null => {
+      if (!drawing || !drawingManagerRef.current) return null;
+      const viewport = (drawingManagerRef.current as any).getViewport?.();
+      if (!viewport) return null;
+
+      // 1. Precise control point check
+      if (typeof drawing.getControlPoints === 'function') {
+        const cps = drawing.getControlPoints(viewport);
+        if (Array.isArray(cps)) {
+          for (const cp of cps) {
+            const dist = Math.hypot(point.x - cp.x, point.y - cp.y);
+            // 14px hit area gives a responsive, forgiving grip on corner/edge handles
+            if (dist <= 14) {
+              return cp.index;
+            }
+          }
+        }
+      }
+
+      // 2. Fallback to drawing.hitTestAnchor
+      if (typeof drawing.hitTestAnchor === 'function') {
+        const idx = drawing.hitTestAnchor(point, viewport);
+        if (idx !== null && idx !== undefined) return idx;
+      }
+
+      return null;
+    };
+
+    // Prioritized pointer/mouse down capture handler
+    const handlePointerDownCapture = (e: MouseEvent | TouchEvent) => {
+      const currentManager = drawingManagerRef.current;
+      const currentChart = chartApiRef.current;
+      const currentContainer = chartContainerRef.current;
+      if (!currentManager || !currentChart || !currentContainer || !enableDrawingToolsRef.current) return;
+
+      // When placing points for a new tool from toolbar, allow clicks through
+      if (activeToolRef.current) return;
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const rect = currentContainer.getBoundingClientRect();
+      const point = { x: clientX - rect.left, y: clientY - rect.top };
+
+      const selected = currentManager.getSelectedDrawing();
+      const viewport = (currentManager as any).getViewport?.();
+
+      // Check hits
+      let hitAnchorIdx: number | null = null;
+      if (selected && !selected.options.locked) {
+        hitAnchorIdx = getHitAnchor(selected, point);
+      }
+      const hitDrawing = currentManager.hitTest(point);
+
+      // Priority 0: Double-click detector on drawings or handles to open Properties Dialog
+      const now = Date.now();
+      const lastClick = lastClickRef.current;
+      const clickedTarget = hitDrawing || (hitAnchorIdx !== null ? selected : null);
+
+      if (
+        clickedTarget &&
+        lastClick &&
+        lastClick.drawingId === clickedTarget.id &&
+        now - lastClick.time < 450 &&
+        Math.hypot(point.x - lastClick.point.x, point.y - lastClick.point.y) < 25
+      ) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.cancelable) e.preventDefault();
+        lastClickRef.current = null;
+        openPropertiesModalRef.current(clickedTarget);
+        return;
+      }
+
+      if (clickedTarget) {
+        lastClickRef.current = { drawingId: clickedTarget.id, time: now, point };
+      } else {
+        lastClickRef.current = null;
+      }
+
+      // Priority 1: Check if an anchor handle of the selected drawing is hit
+      if (hitAnchorIdx !== null && selected) {
+        // Prevent pointer event from reaching the chart's pan/scroll handler
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.cancelable) e.preventDefault();
+
+        // Lock chart pan/scroll so candles remain completely stationary
+        currentChart.applyOptions({
+          handleScroll: false,
+          handleScale: false,
+        });
+
+        selected.setState('editing');
+        selected.requestUpdate();
+
+        dragStateRef.current = {
+          type: 'handle',
+          drawing: selected,
+          anchorIndex: hitAnchorIdx,
+          startPoint: point,
+          hasMoved: false,
+        };
+        return;
+      }
+
+      // Priority 2: Check if a drawing element body is hit
+      if (hitDrawing && !hitDrawing.options.locked) {
+        // Prevent pointer event from reaching the chart's pan/scroll handler
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.cancelable) e.preventDefault();
+
+        // Select the drawing if not already selected
+        if (!selected || selected.id !== hitDrawing.id) {
+          currentManager.selectDrawing(hitDrawing.id);
+          setSelectedDrawingId(hitDrawing.id);
+        }
+
+        // Lock chart pan/scroll so candles remain stationary while repositioning
+        currentChart.applyOptions({
+          handleScroll: false,
+          handleScale: false,
+        });
+
+        const initPixels = viewport
+          ? hitDrawing.anchors.map((a: any) => (hitDrawing as any).anchorToPixel?.(a, viewport))
+          : [];
+
+        dragStateRef.current = {
+          type: 'element',
+          drawing: hitDrawing,
+          startPoint: point,
+          initialPixels: initPixels,
+          initialAnchors: hitDrawing.anchors.map((a: any) => ({ ...a })),
+          hasMoved: false,
+        };
+        return;
+      }
+
+      // Priority 3: User dragged/clicked empty chart space where no drawing is selected or edited
+      if (selected) {
+        currentManager.deselectAll();
+        setSelectedDrawingId(null);
+      }
+
+      // Ensure chart pan/scroll is active so chart pans smoothly
+      currentChart.applyOptions({
+        handleScroll: true,
+        handleScale: true,
+      });
+    };
+
+    // Prioritized pointer/mouse move handler during drag
+    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      const dragState = dragStateRef.current;
+      if (!dragState) return;
+
+      const currentManager = drawingManagerRef.current;
+      const currentContainer = chartContainerRef.current;
+      if (!currentManager || !currentContainer) return;
+
+      // Prevent event from propagating during drawing drag
+      e.stopPropagation();
+      if (e.cancelable) e.preventDefault();
+      dragState.hasMoved = true;
+
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const rect = currentContainer.getBoundingClientRect();
+      const point = { x: clientX - rect.left, y: clientY - rect.top };
+
+      const viewport = (currentManager as any).getViewport?.();
+      if (!viewport) return;
+
+      if (dragState.type === 'handle' && dragState.anchorIndex !== undefined) {
+        // Resize / reposition corner or edge handle
+        let time = viewport.timeScale.coordinateToTime(point.x);
+        const price = viewport.priceScale.coordinateToPrice(point.y);
+
+        if (!time && candlesRef.current.length > 0) {
+          const lastCandle = candlesRef.current[candlesRef.current.length - 1];
+          const firstCandle = candlesRef.current[0];
+          time = (point.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+        }
+
+        if (time !== null && price !== null && !isNaN(price)) {
+          dragState.drawing.updateAnchor(dragState.anchorIndex, {
+            time,
+            price: Number(price.toFixed(2)),
+          });
+          dragState.drawing.requestUpdate();
+          (currentManager as any).emit?.('drawing:updated', {
+            drawingId: dragState.drawing.id,
+            drawing: dragState.drawing,
+          });
+        }
+      } else if (dragState.type === 'element' && dragState.initialPixels) {
+        // Reposition whole drawing element
+        const dx = point.x - dragState.startPoint.x;
+        const dy = point.y - dragState.startPoint.y;
+
+        const newAnchors: any[] = [];
+        let allValid = true;
+
+        for (let i = 0; i < dragState.initialPixels.length; i++) {
+          const initPix = dragState.initialPixels[i];
+          if (!initPix) {
+            allValid = false;
+            break;
+          }
+          const movedPixel = { x: initPix.x + dx, y: initPix.y + dy };
+          let newTime = viewport.timeScale.coordinateToTime(movedPixel.x);
+          const newPrice = viewport.priceScale.coordinateToPrice(movedPixel.y);
+
+          if (!newTime && candlesRef.current.length > 0) {
+            const lastCandle = candlesRef.current[candlesRef.current.length - 1];
+            const firstCandle = candlesRef.current[0];
+            newTime = (movedPixel.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+          }
+
+          if (newTime === null || newPrice === null || isNaN(newPrice)) {
+            allValid = false;
+            break;
+          }
+
+          newAnchors.push({
+            time: newTime,
+            price: Number(newPrice.toFixed(2)),
+          });
+        }
+
+        if (allValid && newAnchors.length === dragState.drawing.anchors.length) {
+          dragState.drawing.setAnchors(newAnchors);
+          dragState.drawing.requestUpdate();
+          (currentManager as any).emit?.('drawing:updated', {
+            drawingId: dragState.drawing.id,
+            drawing: dragState.drawing,
+          });
+        }
+      }
+    };
+
+    // Release pointer handler
+    const handlePointerUp = () => {
+      const dragState = dragStateRef.current;
+      const currentChart = chartApiRef.current;
+
+      if (dragState) {
+        if (dragState.drawing) {
+          dragState.drawing.setState('selected');
+          dragState.drawing.requestUpdate();
+        }
+
+        if (dragState.hasMoved) {
+          batchSaveRef.current();
+        }
+
+        dragStateRef.current = null;
+      }
+
+      // Re-enable chart pan/scroll when mouse or touch is released
+      if (currentChart) {
+        currentChart.applyOptions({
+          handleScroll: true,
+          handleScale: true,
+        });
+      }
+    };
+
+    // Hover cursor feedback when not dragging
+    const handleHoverMove = (e: MouseEvent) => {
+      if (dragStateRef.current) return;
+      const currentManager = drawingManagerRef.current;
+      const currentContainer = chartContainerRef.current;
+      if (!currentManager || !currentContainer || !enableDrawingToolsRef.current || activeToolRef.current) return;
+
+      const rect = currentContainer.getBoundingClientRect();
+      const point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const selected = currentManager.getSelectedDrawing();
+
+      if (selected && !selected.options.locked) {
+        const hitAnchor = getHitAnchor(selected, point);
+        if (hitAnchor !== null) {
+          currentContainer.style.cursor = 'crosshair';
+          return;
+        }
+      }
+
+      const hitDrawing = currentManager.hitTest(point);
+      if (hitDrawing && !hitDrawing.options.locked) {
+        currentContainer.style.cursor = 'move';
+      } else {
+        currentContainer.style.cursor = 'default';
+      }
+    };
+
+    const handleContainerDoubleClick = (e: MouseEvent) => {
+      if (!enableDrawingToolsRef.current) return;
+      const currentManager = drawingManagerRef.current;
+      const currentContainer = chartContainerRef.current;
+      if (!currentManager || !currentContainer) return;
+
+      const rect = currentContainer.getBoundingClientRect();
+      const point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const hit = currentManager.hitTest(point);
+      const selected = currentManager.getSelectedDrawing();
+      const target = hit || selected;
+
+      if (target) {
+        e.stopPropagation();
+        e.preventDefault();
+        openPropertiesModalRef.current(target);
+      }
+    };
+
+    // Register prioritized listeners
+    container.addEventListener('mousedown', handlePointerDownCapture, { capture: true });
+    container.addEventListener('touchstart', handlePointerDownCapture, { capture: true, passive: false });
+    container.addEventListener('dblclick', handleContainerDoubleClick, { capture: true });
+    container.addEventListener('mousemove', handleHoverMove);
+
+    window.addEventListener('mousemove', handlePointerMove, { passive: false });
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchend', handlePointerUp);
+    window.addEventListener('touchcancel', handlePointerUp);
+
     // Drawing Manager Events
     manager.on('drawing:selected', (evt: any) => {
       setSelectedDrawingId(evt.drawingId || null);
@@ -323,8 +762,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     });
 
     manager.on('drawing:updated', () => {
-      // Debounced sync to PostgreSQL
-      batchSaveToPostgres();
+      // Sync to PostgreSQL
+      batchSaveRef.current();
     });
 
     // Crosshair move handler for OHLC header display
@@ -392,6 +831,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           );
 
           if (drawing) {
+            (drawing as any)._currentChartInterval = interval;
             manager.addDrawing(drawing);
             manager.selectDrawing(drawingId);
             saveDrawingToPostgres(drawing.toJSON());
@@ -438,6 +878,15 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     // Cleanup
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('mousedown', handlePointerDownCapture, { capture: true } as any);
+      container.removeEventListener('touchstart', handlePointerDownCapture, { capture: true } as any);
+      container.removeEventListener('dblclick', handleContainerDoubleClick, { capture: true } as any);
+      container.removeEventListener('mousemove', handleHoverMove);
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchend', handlePointerUp);
+      window.removeEventListener('touchcancel', handlePointerUp);
       resizeObserver.disconnect();
       manager.detach();
       chart.remove();
@@ -579,6 +1028,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           selectedDrawingId={selectedDrawingId}
           onDeleteSelected={handleDeleteSelected}
           onClearAll={handleClearAll}
+          onOpenProperties={() => {
+            const manager = drawingManagerRef.current;
+            if (manager) {
+              const sel = manager.getSelectedDrawing();
+              if (sel) openPropertiesModal(sel);
+            }
+          }}
           currentColor={currentColor}
           onColorChange={handleColorChange}
           currentWidth={currentWidth}
@@ -611,6 +1067,33 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           {enableDrawingTools ? 'Drawing Toolbar Active' : 'Read-Only Mode'}
         </span>
       </div>
+
+      {/* 6. TradingView-style Drawing Properties Dialog */}
+      {enableDrawingTools && isPropertiesOpen && propertiesDrawing && (
+        <DrawingPropertiesDialog
+          drawing={propertiesDrawing}
+          chartApi={chartApiRef.current}
+          seriesApi={seriesApiRef.current}
+          candles={candlesRef.current}
+          currentInterval={interval}
+          isOpen={isPropertiesOpen}
+          onClose={() => {
+            setIsPropertiesOpen(false);
+            setPropertiesDrawing(null);
+          }}
+          onApply={() => {
+            batchSaveToPostgres();
+          }}
+          onDelete={(drawingId) => {
+            const manager = drawingManagerRef.current;
+            if (manager) {
+              manager.removeDrawing(drawingId);
+              setSelectedDrawingId(null);
+              batchSaveToPostgres();
+            }
+          }}
+        />
+      )}
     </div>
   );
 });

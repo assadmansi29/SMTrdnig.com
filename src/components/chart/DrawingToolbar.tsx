@@ -11,6 +11,7 @@ import {
   Trash2,
   ChevronRight,
   Palette,
+  Settings,
 } from 'lucide-react';
 import { DRAWING_TOOLS, COLOR_PALETTE, LINE_WIDTHS } from './toolsConfig';
 import { DrawingToolItem } from './types';
@@ -21,6 +22,7 @@ interface DrawingToolbarProps {
   selectedDrawingId: string | null;
   onDeleteSelected: () => void;
   onClearAll: () => void;
+  onOpenProperties?: () => void;
   currentColor: string;
   onColorChange: (color: string) => void;
   currentWidth: number;
@@ -33,6 +35,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   selectedDrawingId,
   onDeleteSelected,
   onClearAll,
+  onOpenProperties,
   currentColor,
   onColorChange,
   currentWidth,
@@ -228,7 +231,19 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         )}
       </div>
 
-      {/* 4. Delete Selected Drawing */}
+      {/* 4. Properties for Selected Drawing */}
+      {selectedDrawingId && onOpenProperties && (
+        <button
+          id="btn-chart-properties-selected"
+          title="Drawing Properties / Settings (Double Click Drawing)"
+          onClick={onOpenProperties}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 my-0.5"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+      )}
+
+      {/* 5. Delete Selected Drawing */}
       {selectedDrawingId && (
         <button
           id="btn-chart-delete-selected"
@@ -240,7 +255,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         </button>
       )}
 
-      {/* 5. Clear All Drawings */}
+      {/* 6. Clear All Drawings */}
       <button
         id="btn-chart-clear-all"
         title="Clear All Drawings on this Chart"

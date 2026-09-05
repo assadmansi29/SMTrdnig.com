@@ -802,19 +802,28 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           </div>
         )}
 
-        {/* Tab Navigation (Responsive Horizontal Scroll) */}
-        <div className="flex items-center px-4 sm:px-6 pt-2 border-b border-slate-800 bg-[#080C14] overflow-x-auto no-scrollbar gap-2 sm:gap-4">
+        {/* Tab Navigation (High-Visibility Responsive Buttons with Crisp Contrast & Horizontal Scroll) */}
+        <div className="flex items-center px-3 sm:px-6 py-2.5 sm:py-3 border-b border-slate-700/80 bg-[#0B1120] gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar shrink-0">
           
           {/* User Directory Tab */}
           {(isSuperAdmin || isAdmin || isEmployee) && (
             <button
               onClick={() => setActiveTab('users')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'users' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'users'
+                  ? 'bg-amber-400/20 border-amber-400 text-amber-200 ring-1 ring-amber-400 font-bold shadow-md shadow-amber-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-amber-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <Users className="w-4 h-4" />
-              <span>{isSuperAdmin ? `Users & Staff (${users.length})` : `User Directory (${users.length})`}</span>
+              <Users className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>{isSuperAdmin ? 'Users & Staff' : 'User Directory'}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
+                activeTab === 'users'
+                  ? 'bg-amber-400 text-slate-950 font-extrabold shadow-sm'
+                  : 'bg-slate-700 text-amber-300 border border-slate-600 font-bold'
+              }`}>
+                {users.length}
+              </span>
             </button>
           )}
 
@@ -822,12 +831,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('audit_logs')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'audit_logs' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'audit_logs'
+                  ? 'bg-cyan-400/20 border-cyan-400 text-cyan-200 ring-1 ring-cyan-400 font-bold shadow-md shadow-cyan-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-cyan-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <FileText className="w-4 h-4 text-cyan-400" />
-              <span>Audit Trail ({auditLogs.length})</span>
+              <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Audit Trail</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
+                activeTab === 'audit_logs'
+                  ? 'bg-cyan-400 text-slate-950 font-extrabold shadow-sm'
+                  : 'bg-slate-700 text-cyan-300 border border-slate-600 font-bold'
+              }`}>
+                {auditLogs.length}
+              </span>
             </button>
           )}
 
@@ -835,11 +853,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('rbac')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'rbac' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'rbac'
+                  ? 'bg-purple-400/20 border-purple-400 text-purple-200 ring-1 ring-purple-400 font-bold shadow-md shadow-purple-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-purple-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <Sliders className="w-4 h-4 text-purple-400" />
+              <Sliders className="w-4 h-4 text-purple-400 shrink-0" />
               <span>RBAC Permissions</span>
             </button>
           )}
@@ -848,12 +868,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {(isSuperAdmin || isAdmin || isCoach) && (
             <button
               onClick={() => setActiveTab('coaching')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'coaching' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'coaching'
+                  ? 'bg-emerald-400/20 border-emerald-400 text-emerald-200 ring-1 ring-emerald-400 font-bold shadow-md shadow-emerald-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-emerald-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <GraduationCap className="w-4 h-4 text-emerald-400" />
-              <span>Coaching Desk ({coachingStudents.length})</span>
+              <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Coaching Desk</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
+                activeTab === 'coaching'
+                  ? 'bg-emerald-400 text-slate-950 font-extrabold shadow-sm'
+                  : 'bg-slate-700 text-emerald-300 border border-slate-600 font-bold'
+              }`}>
+                {coachingStudents.length}
+              </span>
             </button>
           )}
 
@@ -861,12 +890,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {(isSuperAdmin || isAdmin || isEmployee) && (
             <button
               onClick={() => setActiveTab('operations')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'operations' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'operations'
+                  ? 'bg-blue-400/20 border-blue-400 text-blue-200 ring-1 ring-blue-400 font-bold shadow-md shadow-blue-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-blue-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <ListTodo className="w-4 h-4 text-blue-400" />
-              <span>Operations Queue ({operationsQueue.length})</span>
+              <ListTodo className="w-4 h-4 text-blue-400 shrink-0" />
+              <span>Operations Queue</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
+                activeTab === 'operations'
+                  ? 'bg-blue-400 text-slate-950 font-extrabold shadow-sm'
+                  : 'bg-slate-700 text-blue-300 border border-slate-600 font-bold'
+              }`}>
+                {operationsQueue.length}
+              </span>
             </button>
           )}
 
@@ -874,12 +912,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {(isSuperAdmin || isAdmin) && (
             <button
               onClick={() => setActiveTab('transactions')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'transactions' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'transactions'
+                  ? 'bg-amber-400/20 border-amber-400 text-amber-200 ring-1 ring-amber-400 font-bold shadow-md shadow-amber-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-amber-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <Wallet className="w-4 h-4" />
-              <span>Financial Ledger ({transactions.length})</span>
+              <Wallet className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Financial Ledger</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
+                activeTab === 'transactions'
+                  ? 'bg-amber-400 text-slate-950 font-extrabold shadow-sm'
+                  : 'bg-slate-700 text-amber-300 border border-slate-600 font-bold'
+              }`}>
+                {transactions.length}
+              </span>
             </button>
           )}
 
@@ -887,11 +934,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {(isSuperAdmin || isAdmin) && (
             <button
               onClick={() => setActiveTab('create_user')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'create_user' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'create_user'
+                  ? 'bg-emerald-400/20 border-emerald-400 text-emerald-200 ring-1 ring-emerald-400 font-bold shadow-md shadow-emerald-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-emerald-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{isSuperAdmin ? 'Create Any Account' : 'Create Client'}</span>
             </button>
           )}
@@ -900,11 +949,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {(isSuperAdmin || isAdmin || isEmployee) && (
             <button
               onClick={() => setActiveTab('youtube')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'youtube' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'youtube'
+                  ? 'bg-rose-400/20 border-rose-400 text-rose-200 ring-1 ring-rose-400 font-bold shadow-md shadow-rose-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-rose-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <Radio className="w-4 h-4 text-rose-400" />
+              <Radio className="w-4 h-4 text-rose-400 shrink-0" />
               <span>YouTube Live Stream</span>
             </button>
           )}
@@ -913,11 +964,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           {(isSuperAdmin || isAdmin) && (
             <button
               onClick={() => setActiveTab('telegram')}
-              className={`pb-2.5 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === 'telegram' ? 'border-amber-400 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-2 border shadow-sm shrink-0 whitespace-nowrap ${
+                activeTab === 'telegram'
+                  ? 'bg-sky-400/20 border-sky-400 text-sky-200 ring-1 ring-sky-400 font-bold shadow-md shadow-sky-500/15'
+                  : 'bg-slate-800/90 hover:bg-slate-750 border-slate-700 hover:border-sky-400/50 text-slate-100 hover:text-white'
               }`}
             >
-              <Send className="w-4 h-4 text-sky-400" />
+              <Send className="w-4 h-4 text-sky-400 shrink-0" />
               <span>Telegram Bot</span>
             </button>
           )}

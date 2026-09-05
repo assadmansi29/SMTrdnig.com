@@ -337,6 +337,7 @@ export const en = {
   ecomCatAll: 'All Solutions',
   ecomCatSoftware: 'Software & Indicators',
   ecomCatEducation: 'Education & Masterclass',
+  ecomCatStrategies: 'Pro Trading Strategies',
   ecomCatHardware: 'Hardware & Merch',
   ecomSearchPlaceholder: 'Search indicators, algorithms, courses...',
   ecomAddToCart: 'Add to Cart',

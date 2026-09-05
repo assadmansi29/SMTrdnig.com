@@ -106,7 +106,7 @@ export const getEconomicEventsByLanguage = (lang: LanguageCode): EconomicEvent[]
 export interface LocalizedProduct {
   id: string;
   name: string;
-  category: 'Software & Indicators' | 'Education & Masterclass' | 'Hardware & Merch';
+  category: 'Education & Masterclass' | 'Pro Trading Strategies' | 'Software & Indicators' | 'Hardware & Merch';
   price: number;
   originalPrice?: number;
   rating: number;
@@ -193,7 +193,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-4',
         name: 'استراتيجية 144 — دورة تداول مربع جان المتقدمة',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 200,
         originalPrice: 350,
         rating: 4.95,
@@ -213,7 +213,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-5',
         name: 'استراتيجية التداول عبر Bookmap — قراءة السيولة وتدفق الأوامر',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 400,
         originalPrice: 800,
         rating: 4.97,
@@ -233,7 +233,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-6',
         name: 'استراتيجية SMC — تداول المفاهيم المؤسسية المركزة',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 150,
         originalPrice: 300,
         rating: 4.96,
@@ -337,7 +337,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-4',
         name: 'Курс «Стратегия 144» (144 Strategy — Gann Box)',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 200,
         originalPrice: 350,
         rating: 4.95,
@@ -357,7 +357,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-5',
         name: 'Курс «Торговая стратегия Bookmap» (Bookmap Trading Strategy)',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 400,
         originalPrice: 800,
         rating: 4.97,
@@ -377,7 +377,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-6',
         name: 'Стратегия SMC (SMC Strategy)',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 150,
         originalPrice: 300,
         rating: 4.96,
@@ -481,7 +481,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-4',
         name: 'Курс «Стратегія 144» (144 Strategy — Gann Box)',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 200,
         originalPrice: 350,
         rating: 4.95,
@@ -501,7 +501,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-5',
         name: 'Курс «Торгова стратегія Bookmap» (Bookmap Trading Strategy)',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 400,
         originalPrice: 800,
         rating: 4.97,
@@ -521,7 +521,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       {
         id: 'prod-6',
         name: 'Стратегія SMC (SMC Strategy)',
-        category: 'Education & Masterclass',
+        category: 'Pro Trading Strategies',
         price: 150,
         originalPrice: 300,
         rating: 4.96,
@@ -626,7 +626,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
     {
       id: 'prod-4',
       name: '144 Strategy — Gann Box Course',
-      category: 'Education & Masterclass',
+      category: 'Pro Trading Strategies',
       price: 200,
       originalPrice: 350,
       rating: 4.95,
@@ -646,7 +646,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
     {
       id: 'prod-5',
       name: 'Bookmap Trading Strategy',
-      category: 'Education & Masterclass',
+      category: 'Pro Trading Strategies',
       price: 400,
       originalPrice: 800,
       rating: 4.97,
@@ -666,7 +666,7 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
     {
       id: 'prod-6',
       name: 'SMC Strategy',
-      category: 'Education & Masterclass',
+      category: 'Pro Trading Strategies',
       price: 150,
       originalPrice: 300,
       rating: 4.96,
