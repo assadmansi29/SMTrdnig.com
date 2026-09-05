@@ -2,20 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, 
   LineChart, 
-  Layers, 
-  Eye, 
-  TrendingUp, 
-  TrendingDown, 
-  RefreshCw, 
-  Crosshair, 
-  BarChart3,
   ExternalLink,
-  Columns,
-  Maximize2,
-  SlidersHorizontal,
-  Sparkles,
-  Zap,
-  ShieldCheck
+  Clock,
+  Paintbrush
 } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
@@ -28,31 +17,6 @@ interface ChartSimulatorModalProps {
   defaultSymbol?: string;
   onOpenAdminModal?: (tab?: string, symbol?: string, interval?: string) => void;
 }
-
-interface Candle {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  label?: string;
-}
-
-const SAMPLE_CANDLES: Candle[] = [
-  { time: '09:30', open: 5890, high: 5902, low: 5885, close: 5900, volume: 1420 },
-  { time: '10:00', open: 5900, high: 5914, low: 5895, close: 5910, volume: 1950, label: 'Liquidity Sweep' },
-  { time: '10:30', open: 5910, high: 5912, low: 5888, close: 5892, volume: 2400 },
-  { time: '11:00', open: 5892, high: 5898, low: 5880, close: 5885, volume: 3100, label: 'Iceberg Absorption' },
-  { time: '11:30', open: 5885, high: 5905, low: 5882, close: 5902, volume: 2800 },
-  { time: '12:00', open: 5902, high: 5922, low: 5900, close: 5918, volume: 2100 },
-  { time: '12:30', open: 5918, high: 5930, low: 5915, close: 5928, volume: 1800 },
-  { time: '13:00', open: 5928, high: 5945, low: 5924, close: 5942, volume: 3400, label: 'Breakout Expansion' },
-  { time: '13:30', open: 5942, high: 5954, low: 5938, close: 5948, volume: 2900 },
-  { time: '14:00', open: 5948, high: 5962, low: 5944, close: 5958, volume: 3800 },
-  { time: '14:30', open: 5958, high: 5970, low: 5952, close: 5965, volume: 4100 },
-  { time: '15:00', open: 5965, high: 5975, low: 5960, close: 5972, volume: 3600, label: 'Target 2 Met' },
-];
 
 const POPULAR_SYMBOLS = [
   { symbol: 'OANDA:XAUUSD', name: 'Spot Gold / USD', category: 'Metals' },
@@ -67,17 +31,28 @@ const POPULAR_SYMBOLS = [
   { symbol: 'TVC:DXY', name: 'US Dollar Index (DXY)', category: 'Macro' },
 ];
 
+const TIMEFRAMES = [
+  { value: '1', label: '1m' },
+  { value: '5', label: '5m' },
+  { value: '15', label: '15m' },
+  { value: '30', label: '30m' },
+  { value: '60', label: '1H' },
+  { value: '240', label: '4H' },
+  { value: 'D', label: 'DAY' },
+  { value: 'W', label: 'Week' },
+  { value: 'M', label: 'Month' },
+];
+
 export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ 
   isOpen, 
   onClose,
   defaultSymbol = 'OANDA:XAUUSD',
   onOpenAdminModal
 }) => {
-  const { t, isRTL } = useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isStaff = user?.role === 'super_admin' || user?.role === 'admin';
   const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
-  const [viewLayout, setViewLayout] = useState<'split' | 'tv-only' | 'smc-only'>('split');
   const [activeInterval, setActiveInterval] = useState('15');
   
   // Sync selected symbol when defaultSymbol changes or modal opens
@@ -86,29 +61,8 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
       setSelectedSymbol(defaultSymbol);
     }
   }, [defaultSymbol, isOpen]);
-  
-  // SMC Simulator states
-  const [showSMA, setShowSMA] = useState(true);
-  const [showEMA, setShowEMA] = useState(true);
-  const [showOrderBlocks, setShowOrderBlocks] = useState(true);
-  const [showVolume, setShowVolume] = useState(true);
-  const [activeTimeframe, setActiveTimeframe] = useState<'5M' | '15M' | '1H' | '4H' | '1D'>('15M');
-  const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(SAMPLE_CANDLES[SAMPLE_CANDLES.length - 1]);
 
   if (!isOpen) return null;
-
-  // Chart calculation parameters for SMC Simulator
-  const minPrice = 5875;
-  const maxPrice = 5985;
-  const priceRange = maxPrice - minPrice;
-  const chartHeight = 240;
-  const chartWidth = 520;
-
-  const getY = (price: number) => {
-    return chartHeight - ((price - minPrice) / priceRange) * chartHeight;
-  };
-
-  const candleSpacing = chartWidth / SAMPLE_CANDLES.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
@@ -160,12 +114,12 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
           </div>
         </div>
 
-        {/* Global Toolbar & Symbol Bar */}
-        <div className="px-4 sm:px-6 py-2.5 bg-[#090D17] border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Global Toolbar & Symbol / Timeframe Bar */}
+        <div className="px-3 sm:px-6 py-2.5 bg-[#090D17] border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0">
           
           {/* Quick Symbol Switcher */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <span className="text-slate-400 font-mono-num text-[11px] font-semibold uppercase pr-1 hidden sm:inline">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full lg:max-w-[50%]">
+            <span className="text-slate-400 font-mono-num text-[11px] font-semibold uppercase pr-1 hidden sm:inline shrink-0">
               {t('chartSymbol')}:
             </span>
             {POPULAR_SYMBOLS.map((s) => {
@@ -174,7 +128,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 <button
                   key={s.symbol}
                   onClick={() => setSelectedSymbol(s.symbol)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono-num font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono-num font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                     isSelected
                       ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
                       : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800/80'
@@ -186,355 +140,77 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
             })}
           </div>
 
-          {/* View Mode Controls (TradingView Left / SMC Right / Full) */}
-          <div className="flex items-center gap-2">
+          {/* Timeframe Interval Controls */}
+          <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar py-0.5 max-w-full">
             <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-              <button
-                onClick={() => setViewLayout('split')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  viewLayout === 'split'
-                    ? 'bg-amber-400 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Split layout: TradingView.com chart on left + SMC Order Flow on right"
-              >
-                <Columns className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t('chartSplitLayout')}</span>
-                <span className="sm:hidden">Split</span>
-              </button>
-
-              <button
-                onClick={() => setViewLayout('tv-only')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  viewLayout === 'tv-only'
-                    ? 'bg-amber-400 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="TradingView.com 100% Full Chart"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t('chartTvFull')}</span>
-                <span className="sm:hidden">TV</span>
-              </button>
-
-              <button
-                onClick={() => setViewLayout('smc-only')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  viewLayout === 'smc-only'
-                    ? 'bg-amber-400 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Smart Money Concepts Simulator Only"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t('chartSmcEngine')}</span>
-                <span className="sm:hidden">SMC</span>
-              </button>
+              <Clock className="w-3.5 h-3.5 text-slate-400 ml-1 mr-0.5 hidden sm:inline" />
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf.value}
+                  onClick={() => setActiveInterval(tf.value)}
+                  className={`px-2 py-0.5 rounded text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    activeInterval === tf.value
+                      ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Main Chart Canvas Body */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-[#070A10]">
-          <div className={`grid gap-4 h-full ${
-            viewLayout === 'split' 
-              ? 'grid-cols-1 lg:grid-cols-12 min-h-[580px]' 
-              : 'grid-cols-1 min-h-[580px]'
-          }`}>
+        {/* Main Full-Width Chart Canvas Body */}
+        <div className="flex-1 overflow-hidden p-2 sm:p-4 bg-[#070A10] flex flex-col min-h-[580px] sm:min-h-[640px]">
+          <div className="flex-1 flex flex-col bg-[#090D17] rounded-xl border border-slate-800 overflow-hidden shadow-lg w-full">
             
-            {/* LEFT PANEL: TradingView.com Live Chart */}
-            {(viewLayout === 'split' || viewLayout === 'tv-only') && (
-              <div className={`${
-                viewLayout === 'split' ? 'lg:col-span-7' : 'w-full'
-              } flex flex-col bg-[#090D17] rounded-xl border border-slate-800 overflow-hidden shadow-lg min-h-[480px]`}>
-                
-                {/* Panel Label Bar */}
-                <div className="px-4 py-2 bg-[#0A0F1A] border-b border-slate-800/80 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span className="font-bold text-white tracking-wide">
-                      {t('chartLiveTvChart')}
-                    </span>
-                    <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono-num text-[10px] font-bold">
-                      {selectedSymbol}
-                    </span>
-                  </div>
-                  <a
-                    href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(selectedSymbol)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1"
-                  >
-                    {t('chartOpenTv')} <ExternalLink className="w-3 h-3 rtl:rotate-180" />
-                  </a>
-                </div>
-
-                {/* Actual Real-Time TradingView Widget */}
-                <div className="flex-1 w-full h-[520px]">
-                  <TradingViewWidget
-                    key={`${selectedSymbol}_${activeInterval}_${isStaff}`}
-                    symbol={selectedSymbol}
-                    theme="dark"
-                    interval={activeInterval}
-                    timezone="Etc/UTC"
-                    enableDrawingTools={isStaff}
-                    hideSideToolbar={!isStaff}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* RIGHT PANEL: Smart Money Concepts & Order Flow Simulator */}
-            {(viewLayout === 'split' || viewLayout === 'smc-only') && (
-              <div className={`${
-                viewLayout === 'split' ? 'lg:col-span-5' : 'w-full'
-              } flex flex-col bg-[#090D17] rounded-xl border border-slate-800 overflow-hidden shadow-lg`}>
-                
-                {/* Right Panel Subheader */}
-                <div className="px-4 py-2.5 bg-[#0A0F1A] border-b border-slate-800/80 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-                    <div>
-                      <span className="font-bold text-white block">
-                        {t('chartOrderFlowTitle')}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-amber-300 font-medium">
-                          {t('chartSmcArchitecture')}
-                        </span>
-                        <BlueVerifiedBadge size="xs" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Indicators toggle strip */}
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono-num">
-                    <button
-                      onClick={() => setShowOrderBlocks(!showOrderBlocks)}
-                      className={`px-2 py-0.5 rounded border transition-all cursor-pointer ${
-                        showOrderBlocks
-                          ? 'bg-emerald-400/20 text-emerald-300 border-emerald-400/40 font-bold'
-                          : 'bg-slate-900 text-slate-500 border-slate-800'
-                      }`}
-                    >
-                      {t('chartObZones')}
-                    </button>
-                    <button
-                      onClick={() => setShowVolume(!showVolume)}
-                      className={`px-2 py-0.5 rounded border transition-all cursor-pointer ${
-                        showVolume
-                          ? 'bg-purple-400/20 text-purple-300 border-purple-400/40 font-bold'
-                          : 'bg-slate-900 text-slate-500 border-slate-800'
-                      }`}
-                    >
-                      {t('chartVolProfile')}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Candlestick Diagnostics Readout */}
-                {hoveredCandle && (
-                  <div className="px-4 py-2 bg-[#06080E] border-b border-slate-800 text-[10px] font-mono-num flex flex-wrap items-center justify-between gap-2 text-slate-400">
-                    <span>T: <strong className="text-slate-200">{hoveredCandle.time}</strong></span>
-                    <span>O: <strong className="text-slate-200">{hoveredCandle.open}</strong></span>
-                    <span>H: <strong className="text-emerald-400">{hoveredCandle.high}</strong></span>
-                    <span>L: <strong className="text-rose-400">{hoveredCandle.low}</strong></span>
-                    <span>C: <strong className="text-amber-300">{hoveredCandle.close}</strong></span>
-                    <span>V: <strong className="text-slate-200">{hoveredCandle.volume}</strong></span>
-                  </div>
+            {/* Panel Label Bar */}
+            <div className="px-4 py-2 bg-[#0A0F1A] border-b border-slate-800/80 flex items-center justify-between text-xs shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="font-bold text-white tracking-wide">
+                  {t('chartLiveTvChart')}
+                </span>
+                <span className="bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono-num text-[10px] font-bold">
+                  {selectedSymbol}
+                </span>
+                <span className="bg-slate-900 text-cyan-300 px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold border border-cyan-500/30">
+                  {TIMEFRAMES.find(t => t.value === activeInterval)?.label || activeInterval}
+                </span>
+                {isStaff && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/30 font-medium">
+                    <Paintbrush className="w-3 h-3" /> Staff Drawing Suite
+                  </span>
                 )}
-
-                {/* SVG Visualizer Canvas */}
-                <div className="p-4 bg-[#070A10] relative flex-1 flex flex-col justify-center select-none overflow-x-auto">
-                  <svg
-                    viewBox={`0 0 ${chartWidth} ${chartHeight + (showVolume ? 50 : 0)}`}
-                    className="w-full h-[260px] overflow-visible"
-                  >
-                    {/* Background Grid Lines */}
-                    {[5880, 5900, 5920, 5940, 5960].map((level) => {
-                      const y = getY(level);
-                      return (
-                        <g key={level}>
-                          <line
-                            x1="0"
-                            y1={y}
-                            x2={chartWidth}
-                            y2={y}
-                            stroke="#1e293b"
-                            strokeDasharray="4 4"
-                            strokeWidth="1"
-                          />
-                          <text
-                            x={chartWidth - 5}
-                            y={y - 4}
-                            fill="#64748b"
-                            fontSize="9"
-                            textAnchor="end"
-                            fontFamily="JetBrains Mono"
-                          >
-                            {level}.00
-                          </text>
-                        </g>
-                      );
-                    })}
-
-                    {/* Institutional Order Block Demand Zone */}
-                    {showOrderBlocks && (
-                      <g>
-                        <rect
-                          x="0"
-                          y={getY(5895)}
-                          width={chartWidth}
-                          height={getY(5880) - getY(5895)}
-                          fill="rgba(16, 185, 129, 0.12)"
-                          stroke="rgba(16, 185, 129, 0.4)"
-                          strokeDasharray="2 2"
-                        />
-                        <text
-                          x="8"
-                          y={getY(5883)}
-                          fill="#34d399"
-                          fontSize="9"
-                          fontWeight="bold"
-                          fontFamily="JetBrains Mono"
-                        >
-                          SMC Demand Order Block (Abu Asad Model)
-                        </text>
-                      </g>
-                    )}
-
-                    {/* Candles */}
-                    {SAMPLE_CANDLES.map((c, i) => {
-                      const isBullish = c.close >= c.open;
-                      const x = i * candleSpacing + candleSpacing / 2;
-                      const yOpen = getY(c.open);
-                      const yClose = getY(c.close);
-                      const yHigh = getY(c.high);
-                      const yLow = getY(c.low);
-
-                      const topY = Math.min(yOpen, yClose);
-                      const bodyHeight = Math.max(Math.abs(yClose - yOpen), 3);
-                      const color = isBullish ? '#10b981' : '#f43f5e';
-
-                      return (
-                        <g
-                          key={c.time}
-                          onMouseEnter={() => setHoveredCandle(c)}
-                          className="cursor-pointer group"
-                        >
-                          {/* Hover backdrop */}
-                          <rect
-                            x={x - candleSpacing / 2}
-                            y="0"
-                            width={candleSpacing}
-                            height={chartHeight}
-                            fill="transparent"
-                            className="hover:fill-slate-800/40"
-                          />
-
-                          {/* Wick */}
-                          <line
-                            x1={x}
-                            y1={yHigh}
-                            x2={x}
-                            y2={yLow}
-                            stroke={color}
-                            strokeWidth="1.5"
-                          />
-
-                          {/* Candle Body */}
-                          <rect
-                            x={x - 7}
-                            y={topY}
-                            width={14}
-                            height={bodyHeight}
-                            fill={color}
-                            rx="1"
-                          />
-
-                          {/* Volume Bar */}
-                          {showVolume && (
-                            <rect
-                              x={x - 5}
-                              y={chartHeight + 40 - (c.volume / 4500) * 35}
-                              width={10}
-                              height={(c.volume / 4500) * 35}
-                              fill={isBullish ? 'rgba(16, 185, 129, 0.45)' : 'rgba(244, 63, 94, 0.45)'}
-                              rx="1"
-                            />
-                          )}
-
-                          {/* Annotation Flag */}
-                          {c.label && (
-                            <g>
-                              <circle cx={x} cy={yHigh - 10} r="2.5" fill="#f59e0b" />
-                              <line x1={x} y1={yHigh - 7} x2={x} y2={yHigh} stroke="#f59e0b" strokeWidth="1" />
-                            </g>
-                          )}
-                        </g>
-                      );
-                    })}
-
-                    {/* SMA & EMA */}
-                    {showSMA && (
-                      <path
-                        d="M 20 180 Q 130 170, 240 140 T 500 40"
-                        fill="none"
-                        stroke="#fbbf24"
-                        strokeWidth="1.5"
-                        opacity="0.9"
-                      />
-                    )}
-                    {showEMA && (
-                      <path
-                        d="M 20 190 Q 140 185, 260 150 T 500 60"
-                        fill="none"
-                        stroke="#22d3ee"
-                        strokeWidth="1.5"
-                        opacity="0.9"
-                      />
-                    )}
-                  </svg>
-                </div>
-
-                {/* SMC Analytical Insights Box */}
-                <div className="p-3.5 bg-[#0A0E18] border-t border-slate-800 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                      {t('chartSmcChecklist')}
-                    </span>
-                    <span className="text-[10px] font-mono-num text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
-                      {t('chartHighProbEdge')}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono-num">
-                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">{t('chartMarketStructure')}:</span>
-                      <span className="text-emerald-400 font-bold">Bullish BOS Confirmed</span>
-                    </div>
-                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">{t('chartFvgImbalance')}:</span>
-                      <span className="text-amber-300 font-bold">5,898 - 5,906 Filled</span>
-                    </div>
-                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">{t('chartCvdAbsorption')}:</span>
-                      <span className="text-cyan-300 font-bold">+1,420 Delta Inflow</span>
-                    </div>
-                    <div className="p-2 bg-[#06080E] rounded-lg border border-slate-800">
-                      <span className="text-slate-400 block text-[10px]">{t('chartInvalidation')}:</span>
-                      <span className="text-rose-400 font-bold">5,878.50 Swing Low</span>
-                    </div>
-                  </div>
-                </div>
               </div>
-            )}
+              <a
+                href={`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(selectedSymbol)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition-colors"
+              >
+                {t('chartOpenTv')} <ExternalLink className="w-3 h-3 rtl:rotate-180" />
+              </a>
+            </div>
+
+            {/* Actual Real-Time TradingView Widget (Full-Width, High-Precision) */}
+            <div className="flex-1 w-full min-h-[540px] sm:min-h-[600px]">
+              <TradingViewWidget
+                key={`${selectedSymbol}_${activeInterval}_${isStaff}`}
+                symbol={selectedSymbol}
+                theme="dark"
+                interval={activeInterval}
+                timezone="Etc/UTC"
+                enableDrawingTools={isStaff}
+                hideSideToolbar={!isStaff}
+              />
+            </div>
           </div>
         </div>
 
         {/* Footer Summary Bar */}
-        <div className="px-4 sm:px-6 py-3 bg-[#080C14] border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+        <div className="px-4 sm:px-6 py-3 bg-[#080C14] border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400 shrink-0">
           <div className="flex items-center gap-3 flex-wrap text-[11px]">
             <span className="flex items-center gap-1 text-slate-300 font-medium">
               <span className="w-2 h-2 rounded-full bg-amber-400"></span>

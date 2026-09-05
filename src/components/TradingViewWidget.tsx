@@ -22,6 +22,20 @@ import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 // Install TradingView-style Gann Box rendering enhancer
 installGannBoxEnhancer();
 
+function formatIntervalDisplay(inv: string): string {
+  const norm = (inv || '15').trim().toLowerCase();
+  if (norm === '1' || norm === '1m') return '1m';
+  if (norm === '5' || norm === '5m') return '5m';
+  if (norm === '15' || norm === '15m') return '15m';
+  if (norm === '30' || norm === '30m') return '30m';
+  if (norm === '60' || norm === '1h') return '1H';
+  if (norm === '240' || norm === '4h') return '4H';
+  if (norm === 'd' || norm === '1d' || norm === 'day') return 'DAY';
+  if (norm === 'w' || norm === '1w' || norm === 'week') return 'Week';
+  if (norm === 'm' || norm === '1mo' || norm === 'month' || norm === 'monthe') return 'Month';
+  return inv.endsWith('m') ? inv : `${inv}m`;
+}
+
 interface TradingViewWidgetProps {
   symbol?: string;
   theme?: 'dark' | 'light';
@@ -953,7 +967,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="tracking-wide">{symbol}</span>
             <span className="text-[10px] text-amber-400/90 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-              {interval}m
+              {formatIntervalDisplay(interval)}
             </span>
           </div>
 
@@ -1061,7 +1075,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       {/* 5. Chart Footer Attribution */}
       <div className="h-5 bg-[#070A10] border-t border-[#131B2E] px-3 flex items-center justify-between text-[9px] shrink-0 text-slate-500 select-none">
         <span className="font-mono">
-          Lightweight Charts Engine • {symbol} ({interval}m)
+          Lightweight Charts Engine • {symbol} ({formatIntervalDisplay(interval)})
         </span>
         <span>
           {enableDrawingTools ? 'Drawing Toolbar Active' : 'Read-Only Mode'}

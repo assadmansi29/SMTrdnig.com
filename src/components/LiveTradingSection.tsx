@@ -51,11 +51,15 @@ const INSTRUMENTS: InstrumentOption[] = [
 ];
 
 const TIMEFRAMES = [
+  { label: '1m', value: '1' },
   { label: '5m', value: '5' },
   { label: '15m', value: '15' },
-  { label: '1h', value: '60' },
-  { label: '4h', value: '240' },
-  { label: '1D', value: 'D' },
+  { label: '30m', value: '30' },
+  { label: '1H', value: '60' },
+  { label: '4H', value: '240' },
+  { label: 'DAY', value: 'D' },
+  { label: 'Week', value: 'W' },
+  { label: 'Month', value: 'M' },
 ];
 
 interface LiveTradingSectionProps {
@@ -165,12 +169,12 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
             {/* Right: Timeframe & Fullscreen Trigger */}
             <div className="flex items-center gap-2">
               {/* Timeframe selector */}
-              <div className="flex items-center bg-[#0E1526] p-0.5 rounded-xl border border-slate-800 text-xs font-mono-num" dir="ltr">
+              <div className="flex items-center bg-[#0E1526] p-0.5 rounded-xl border border-slate-800 text-xs font-mono-num overflow-x-auto no-scrollbar max-w-[280px] sm:max-w-none" dir="ltr">
                 {TIMEFRAMES.map((tf) => (
                   <button
                     key={tf.value}
                     onClick={() => setSelectedInterval(tf.value)}
-                    className={`px-2 py-1 rounded-lg text-[11px] transition-colors cursor-pointer ${
+                    className={`px-2 py-1 rounded-lg text-[11px] transition-colors cursor-pointer whitespace-nowrap ${
                       selectedInterval === tf.value
                         ? 'bg-amber-400 text-slate-950 font-bold'
                         : 'text-slate-400 hover:text-white'

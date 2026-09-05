@@ -54,10 +54,18 @@ function parseInterval(inv: string): { yahooInterval: string; yahooRange: string
       return { yahooInterval: '60m', yahooRange: '3mo', stepSeconds: 14400 };
     case 'd':
     case '1d':
+    case 'day':
       return { yahooInterval: '1d', yahooRange: '1y', stepSeconds: 86400 };
     case 'w':
     case '1w':
+    case 'week':
       return { yahooInterval: '1wk', yahooRange: '2y', stepSeconds: 604800 };
+    case 'm':
+    case '1m_month':
+    case '1mo':
+    case 'month':
+    case 'monthe':
+      return { yahooInterval: '1mo', yahooRange: '5y', stepSeconds: 2592000 };
     default:
       return { yahooInterval: '15m', yahooRange: '5d', stepSeconds: 900 };
   }
@@ -117,12 +125,16 @@ async function fetchFromYahoo(yahooSymbol: string, interval: string, range: stri
 
 async function fetchFromBinance(binanceSymbol: string, intervalStr: string): Promise<Candle[]> {
   let biInterval = '15m';
-  if (intervalStr === '1' || intervalStr === '1m') biInterval = '1m';
-  else if (intervalStr === '5' || intervalStr === '5m') biInterval = '5m';
-  else if (intervalStr === '15' || intervalStr === '15m') biInterval = '15m';
-  else if (intervalStr === '60' || intervalStr === '1h') biInterval = '1h';
-  else if (intervalStr === '240' || intervalStr === '4h') biInterval = '4h';
-  else if (intervalStr === 'd' || intervalStr === '1d') biInterval = '1d';
+  const s = intervalStr.toLowerCase();
+  if (s === '1' || s === '1m') biInterval = '1m';
+  else if (s === '5' || s === '5m') biInterval = '5m';
+  else if (s === '15' || s === '15m') biInterval = '15m';
+  else if (s === '30' || s === '30m') biInterval = '30m';
+  else if (s === '60' || s === '1h') biInterval = '1h';
+  else if (s === '240' || s === '4h') biInterval = '4h';
+  else if (s === 'd' || s === '1d' || s === 'day') biInterval = '1d';
+  else if (s === 'w' || s === '1w' || s === 'week') biInterval = '1w';
+  else if (s === 'm' || s === '1mo' || s === 'month' || s === 'monthe') biInterval = '1M';
 
   const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${biInterval}&limit=300`;
   const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
