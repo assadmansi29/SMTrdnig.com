@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Palette,
   Settings,
+  Magnet,
 } from 'lucide-react';
 import { DRAWING_TOOLS, COLOR_PALETTE, LINE_WIDTHS } from './toolsConfig';
 import { DrawingToolItem } from './types';
@@ -27,6 +28,8 @@ interface DrawingToolbarProps {
   onColorChange: (color: string) => void;
   currentWidth: number;
   onWidthChange: (width: number) => void;
+  isMagnetActive?: boolean;
+  onToggleMagnet?: () => void;
 }
 
 export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
@@ -40,6 +43,8 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onColorChange,
   currentWidth,
   onWidthChange,
+  isMagnetActive,
+  onToggleMagnet,
 }) => {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
@@ -167,6 +172,25 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
       })}
 
       <div className="w-5 h-[1px] bg-slate-800 my-1" />
+
+      {/* Magnet Mode Toggle (Snap to Candle OHLC) */}
+      {onToggleMagnet && (
+        <button
+          id="btn-chart-magnet-toggle"
+          title={isMagnetActive ? 'Magnet Mode: ON (Snaps to Candle OHLC)' : 'Magnet Mode: OFF (Click to Snap to Candle OHLC)'}
+          onClick={onToggleMagnet}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all my-0.5 relative ${
+            isMagnetActive
+              ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+          }`}
+        >
+          <Magnet className="w-4 h-4" />
+          {isMagnetActive && (
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" />
+          )}
+        </button>
+      )}
 
       {/* 3. Color & Line Width Controller */}
       <div className="relative">

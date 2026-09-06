@@ -22,6 +22,7 @@ export const DRAWING_TOOLS: DrawingToolItem[] = [
   // Gann
   { id: 'gann-box', name: 'Gann Box', category: 'gann', requiredAnchors: 2, description: 'W.D. Gann time and price square matrix' },
   { id: 'gann-fan', name: 'Gann Fan', category: 'gann', requiredAnchors: 2, description: 'Geometric 1x1, 2x1, 1x2 diagonal angle rays' },
+  { id: 'gann-angle', name: 'Gann Angle', category: 'gann', requiredAnchors: 2, description: 'Bidirectional geometric Gann angle with degree measurement' },
   { id: 'gann-square', name: 'Gann Square', category: 'gann', requiredAnchors: 2, description: 'Fixed price and time square divisions' },
 
   // Pitchforks

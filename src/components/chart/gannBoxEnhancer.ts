@@ -94,16 +94,28 @@ export class EnhancedGannBoxRenderer {
     this._drawing = drawing;
   }
 
+  renderer() {
+    return this;
+  }
+
   draw(target: any) {
-    target.useBitmapCoordinateSpace((scope: any) => {
-      this.drawImpl(scope);
-    });
+    if (typeof target?.useBitmapCoordinateSpace === 'function') {
+      target.useBitmapCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    } else if (typeof target?.useMediaCoordinateSpace === 'function') {
+      target.useMediaCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    }
   }
 
   drawImpl(scope: any) {
-    const { context: ctx, horizontalPixelRatio: pr } = scope;
+    const ctx = scope?.context;
+    const pr = scope?.horizontalPixelRatio || window.devicePixelRatio || 1;
     const drawing = this._drawing;
-    const viewport = drawing.getViewport();
+    if (!ctx || !drawing) return;
+    const viewport = typeof drawing.getViewport === 'function' ? drawing.getViewport() : null;
     if (!viewport || drawing.options?.visible === false || !drawing.isValid()) return;
 
     // Check timeframe visibility
@@ -172,7 +184,8 @@ export class EnhancedGannBoxRenderer {
         if (lvl === 0 || lvl === 1) continue; // outer border already drawn
 
         const effectiveLvl = reverse ? (1 - lvl) : lvl;
-        const y = (minY + height * effectiveLvl) * pr;
+        // Bidirectional price level calculated from origin anchor p1 to terminal anchor p2
+        const y = (p1.y + (p2.y - p1.y) * effectiveLvl) * pr;
         const levelColor = useOneColor ? lineColor : getGannRatioColor(lvl);
 
         ctx.strokeStyle = levelColor;
@@ -181,7 +194,7 @@ export class EnhancedGannBoxRenderer {
         ctx.lineTo(maxX * pr, y);
         ctx.stroke();
 
-        // Right side percentage label
+        // Percentage label on the appropriate side
         const pctText = `${(lvl * 100).toFixed(lvl % 1 === 0 ? 0 : 1)}%`;
         ctx.font = `${Math.round(10 * pr)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
         ctx.fillStyle = levelColor;
@@ -206,7 +219,8 @@ export class EnhancedGannBoxRenderer {
         if (lvl === 0 || lvl === 1) continue;
 
         const effectiveLvl = reverse ? (1 - lvl) : lvl;
-        const x = (minX + width * effectiveLvl) * pr;
+        // Bidirectional time level calculated smoothly from origin anchor p1 to terminal anchor p2
+        const x = (p1.x + (p2.x - p1.x) * effectiveLvl) * pr;
         const levelColor = useOneColor ? lineColor : getGannRatioColor(lvl);
 
         ctx.strokeStyle = levelColor;
@@ -283,41 +297,69 @@ export class EnhancedGannBoxRenderer {
       }
     }
 
-    // 7. Angles (Angels) / Geometric Diagonals
+    // 7. Gann Angles (Gann Angels) / Geometric Diagonals
     const showDiagonals = options.showDiagonals !== false && options.angles !== false;
     if (showDiagonals) {
-      ctx.lineWidth = Math.max(1, lineWidth * 0.9);
-      ctx.strokeStyle = useOneColor ? lineColor : '#F59E0B';
+      const anglesColor = options.anglesColor || (useOneColor ? lineColor : '#F59E0B');
+      ctx.lineWidth = Math.max(1, lineWidth * 0.95);
+      ctx.strokeStyle = anglesColor;
       ctx.setLineDash([6 * pr, 4 * pr]);
 
-      // Diagonal 1: Top-Left to Bottom-Right
-      ctx.beginPath();
-      ctx.moveTo(minX * pr, minY * pr);
-      ctx.lineTo(maxX * pr, maxY * pr);
-      ctx.stroke();
+      // Primary Gann Diagonal: Anchor 1 corner to Anchor 2 corner
+      if (options.showDownDiagonal !== false) {
+        ctx.beginPath();
+        ctx.moveTo(p1.x * pr, p1.y * pr);
+        ctx.lineTo(p2.x * pr, p2.y * pr);
+        ctx.stroke();
+      }
 
-      // Diagonal 2: Bottom-Left to Top-Right
-      ctx.beginPath();
-      ctx.moveTo(minX * pr, maxY * pr);
-      ctx.lineTo(maxX * pr, minY * pr);
-      ctx.stroke();
+      // Secondary Gann Diagonal: Opposite corners
+      if (options.showUpDiagonal !== false) {
+        ctx.beginPath();
+        ctx.moveTo(p1.x * pr, p2.y * pr);
+        ctx.lineTo(p2.x * pr, p1.y * pr);
+        ctx.stroke();
+      }
+
+      // Gann Corner Rays / Sub-Angles (quadrant angles radiating from corners to center/subdivisions)
+      if (options.showSubAngles || options.showGannAngles) {
+        ctx.lineWidth = Math.max(0.8, lineWidth * 0.75);
+        ctx.strokeStyle = `${anglesColor}BB`;
+        ctx.setLineDash([3 * pr, 3 * pr]);
+
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+
+        // Rays from 4 corners to center 0.5
+        ctx.beginPath();
+        // Top-left to center
+        ctx.moveTo(minX * pr, minY * pr);
+        ctx.lineTo(midX * pr, midY * pr);
+        // Top-right to center
+        ctx.moveTo(maxX * pr, minY * pr);
+        ctx.lineTo(midX * pr, midY * pr);
+        // Bottom-left to center
+        ctx.moveTo(minX * pr, maxY * pr);
+        ctx.lineTo(midX * pr, midY * pr);
+        // Bottom-right to center
+        ctx.moveTo(maxX * pr, maxY * pr);
+        ctx.lineTo(midX * pr, midY * pr);
+        ctx.stroke();
+      }
     }
 
-    // 8. Interactive Selection & Editing Handles
+    // 8. Interactive Selection & Draggable Corner Handles
     if (drawing.state === 'selected' || drawing.state === 'editing') {
       ctx.setLineDash([]);
-      const handles = [
-        { x: minX * pr, y: minY * pr },
-        { x: maxX * pr, y: minY * pr },
-        { x: maxX * pr, y: maxY * pr },
-        { x: minX * pr, y: maxY * pr },
-        { x: (minX + width * 0.5) * pr, y: minY * pr },
-        { x: (minX + width * 0.5) * pr, y: maxY * pr },
-        { x: minX * pr, y: (minY + height * 0.5) * pr },
-        { x: maxX * pr, y: (minY + height * 0.5) * pr },
+      // Draggable corner handles positioned at true anchor corners
+      const cornerHandles = [
+        { x: p1.x * pr, y: p1.y * pr },
+        { x: p2.x * pr, y: p2.y * pr },
+        { x: p1.x * pr, y: p2.y * pr },
+        { x: p2.x * pr, y: p1.y * pr },
       ];
-      const radius = 4.5 * pr;
-      for (const h of handles) {
+      const radius = 5 * pr;
+      for (const h of cornerHandles) {
         ctx.beginPath();
         ctx.arc(h.x, h.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = '#FFFFFF';
@@ -359,6 +401,28 @@ export function installGannBoxEnhancer() {
       (GannBox.prototype as any).paneViews = function () {
         return [new EnhancedGannBoxPaneView(this)];
       };
+
+      // Ensure GannBox has both getter and setter for gannOptions,
+      // mapping any property assignment directly to setGannOptions
+      // to prevent "Cannot set property gannOptions of #<Mt2> which has only a getter"
+      Object.defineProperty(GannBox.prototype, 'gannOptions', {
+        get() {
+          return (this as any)._gannOptions;
+        },
+        set(opts: any) {
+          if (typeof (this as any).setGannOptions === 'function') {
+            (this as any).setGannOptions(opts);
+          } else {
+            (this as any)._gannOptions = { ...((this as any)._gannOptions || {}), ...(opts || {}) };
+            if (typeof (this as any).requestUpdate === 'function') {
+              (this as any).requestUpdate();
+            }
+          }
+        },
+        configurable: true,
+        enumerable: true,
+      });
+
       console.log('[Gann Box Enhancer] TradingView-style GannBox installed successfully.');
     }
   } catch (err: any) {

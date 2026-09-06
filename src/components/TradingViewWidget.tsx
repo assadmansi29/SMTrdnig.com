@@ -16,11 +16,13 @@ import { DrawingToolbar } from './chart/DrawingToolbar';
 import { DrawingPropertiesDialog } from './chart/DrawingPropertiesDialog';
 import { DRAWING_TOOLS } from './chart/toolsConfig';
 import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
-import { Check, Loader2, X, Database } from 'lucide-react';
+import { Check, Loader2, X, Database, RefreshCw, Save } from 'lucide-react';
 import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
+import { installDirectionalEnhancers } from './chart/drawingDirectionEnhancer';
 
-// Install TradingView-style Gann Box rendering enhancer
+// Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers
 installGannBoxEnhancer();
+installDirectionalEnhancers();
 
 function formatIntervalDisplay(inv: string): string {
   const norm = (inv || '15').trim().toLowerCase();
@@ -78,6 +80,70 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const [currentWidth, setCurrentWidth] = useState<number>(2);
   const [saveStatus, setSaveStatus] = useState<'synced' | 'saving' | 'idle'>('idle');
   const [lastBarInfo, setLastBarInfo] = useState<{ open: number; high: number; low: number; close: number } | null>(null);
+  const [isRefreshingStrategy, setIsRefreshingStrategy] = useState<boolean>(false);
+  const [refreshNotification, setRefreshNotification] = useState<string | null>(null);
+
+  // Magnet Mode State (Snap drawing anchors to candle OHLC levels)
+  const [isMagnetActive, setIsMagnetActive] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('smt_chart_magnet') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const isMagnetActiveRef = useRef<boolean>(isMagnetActive);
+  useEffect(() => {
+    isMagnetActiveRef.current = isMagnetActive;
+    try {
+      localStorage.setItem('smt_chart_magnet', String(isMagnetActive));
+    } catch {}
+  }, [isMagnetActive]);
+
+  const handleToggleMagnet = useCallback(() => {
+    setIsMagnetActive((prev) => !prev);
+  }, []);
+
+  // Snaps given time and price coordinates to the nearest candle's Open, High, Low, or Close
+  const snapToCandleOHLC = useCallback((t: number, p: number): { time: number; price: number } => {
+    const candles = candlesRef.current;
+    if (!candles || candles.length === 0) return { time: t, price: p };
+
+    // 1. Find the candle with the closest timestamp
+    let closestCandle = candles[0];
+    let minTimeDiff = Math.abs((candles[0].time as number) - t);
+
+    for (let i = 1; i < candles.length; i++) {
+      const diff = Math.abs((candles[i].time as number) - t);
+      if (diff < minTimeDiff) {
+        minTimeDiff = diff;
+        closestCandle = candles[i];
+      }
+    }
+
+    // 2. Find the candle OHLC price point closest to cursor price
+    const ohlcLevels = [
+      closestCandle.open,
+      closestCandle.high,
+      closestCandle.low,
+      closestCandle.close,
+    ];
+
+    let closestPrice = ohlcLevels[0];
+    let minPriceDiff = Math.abs(ohlcLevels[0] - p);
+
+    for (let i = 1; i < ohlcLevels.length; i++) {
+      const diff = Math.abs(ohlcLevels[i] - p);
+      if (diff < minPriceDiff) {
+        minPriceDiff = diff;
+        closestPrice = ohlcLevels[i];
+      }
+    }
+
+    return {
+      time: closestCandle.time as number,
+      price: Number(closestPrice.toFixed(2)),
+    };
+  }, []);
 
   // Drawing Properties Dialog State
   const [propertiesDrawing, setPropertiesDrawing] = useState<any | null>(null);
@@ -143,6 +209,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       if (data.status === 'ok' && Array.isArray(data.candles) && data.candles.length > 0) {
         candlesRef.current = data.candles;
+        (window as any).__chartCandles = data.candles;
         if (seriesApiRef.current) {
           seriesApiRef.current.setData(data.candles);
           const last = data.candles[data.candles.length - 1];
@@ -195,10 +262,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             if (restored) {
               (restored as any)._currentChartInterval = interval;
               if (d.type === 'gann-box') {
-                (restored as any).gannOptions = {
+                const combinedGannOpts = {
                   ...(d.options || {}),
                   ...((d as any).gannOptions || {}),
                 };
+                if (typeof (restored as any).setGannOptions === 'function') {
+                  (restored as any).setGannOptions(combinedGannOpts);
+                }
               }
               if (d.options) {
                 const restAny = restored as any;
@@ -325,6 +395,30 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [symbol, interval, getAuthToken]);
   batchSaveRef.current = batchSaveToPostgres;
+
+  // 5.1 Manual Refresh Strategy (fetches & applies latest saved strategy without reloading page, preserving symbol & interval)
+  const handleManualRefreshStrategy = useCallback(async () => {
+    if (isRefreshingStrategy) return;
+    setIsRefreshingStrategy(true);
+    setRefreshNotification(null);
+    try {
+      await loadPostgresDrawings(symbol, interval);
+      setRefreshNotification('Strategy Refreshed');
+      setTimeout(() => {
+        setRefreshNotification(null);
+      }, 2500);
+    } catch (err: any) {
+      console.error('[Financial Chart] Strategy refresh error:', err?.message || err);
+    } finally {
+      setIsRefreshingStrategy(false);
+    }
+  }, [isRefreshingStrategy, loadPostgresDrawings, symbol, interval]);
+
+  // 5.2 Manual Save Strategy (for Super Admin & Admin)
+  const handleManualSaveStrategy = useCallback(async () => {
+    if (saveStatus === 'saving') return;
+    await batchSaveToPostgres();
+  }, [saveStatus, batchSaveToPostgres]);
 
   // 6. Delete Selected Drawing
   const handleDeleteSelected = useCallback(async () => {
@@ -630,15 +724,33 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         const price = viewport.priceScale.coordinateToPrice(point.y);
 
         if (!time && candlesRef.current.length > 0) {
-          const lastCandle = candlesRef.current[candlesRef.current.length - 1];
+          const N = candlesRef.current.length;
+          const lastCandle = candlesRef.current[N - 1];
           const firstCandle = candlesRef.current[0];
-          time = (point.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+          const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
+          const logical = viewport.timeScale.coordinateToLogical ? viewport.timeScale.coordinateToLogical(point.x) : null;
+          if (logical !== null && !isNaN(logical) && logical >= N - 1) {
+            time = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
+          } else if (logical !== null && !isNaN(logical) && logical < 0) {
+            time = (Number(firstCandle.time) + Math.round(logical * step)) as any;
+          } else {
+            time = (point.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+          }
         }
 
         if (time !== null && price !== null && !isNaN(price)) {
+          let finalTime = time;
+          let finalPrice = Number(price.toFixed(2));
+
+          if (isMagnetActiveRef.current) {
+            const snapped = snapToCandleOHLC(time as number, price);
+            finalTime = snapped.time as any;
+            finalPrice = snapped.price;
+          }
+
           dragState.drawing.updateAnchor(dragState.anchorIndex, {
-            time,
-            price: Number(price.toFixed(2)),
+            time: finalTime,
+            price: finalPrice,
           });
           dragState.drawing.requestUpdate();
           (currentManager as any).emit?.('drawing:updated', {
@@ -665,9 +777,18 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           const newPrice = viewport.priceScale.coordinateToPrice(movedPixel.y);
 
           if (!newTime && candlesRef.current.length > 0) {
-            const lastCandle = candlesRef.current[candlesRef.current.length - 1];
+            const N = candlesRef.current.length;
+            const lastCandle = candlesRef.current[N - 1];
             const firstCandle = candlesRef.current[0];
-            newTime = (movedPixel.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+            const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
+            const logical = viewport.timeScale.coordinateToLogical ? viewport.timeScale.coordinateToLogical(movedPixel.x) : null;
+            if (logical !== null && !isNaN(logical) && logical >= N - 1) {
+              newTime = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
+            } else if (logical !== null && !isNaN(logical) && logical < 0) {
+              newTime = (Number(firstCandle.time) + Math.round(logical * step)) as any;
+            } else {
+              newTime = (movedPixel.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+            }
           }
 
           if (newTime === null || newPrice === null || isNaN(newPrice)) {
@@ -832,16 +953,35 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         if (t !== null) {
           time = t as number;
         } else if (candlesRef.current.length > 0) {
-          const lastCandle = candlesRef.current[candlesRef.current.length - 1];
-          time = lastCandle.time;
+          const N = candlesRef.current.length;
+          const lastCandle = candlesRef.current[N - 1];
+          const firstCandle = candlesRef.current[0];
+          const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
+          const logical = chart.timeScale().coordinateToLogical ? chart.timeScale().coordinateToLogical(param.point.x) : null;
+          if (logical !== null && !isNaN(logical) && logical >= N - 1) {
+            time = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
+          } else if (logical !== null && !isNaN(logical) && logical < 0) {
+            time = (Number(firstCandle.time) + Math.round(logical * step)) as any;
+          } else {
+            time = lastCandle.time;
+          }
         }
       }
 
       if (!time) return;
 
+      let finalTime = time;
+      let finalPrice = Number(price.toFixed(2));
+
+      if (isMagnetActiveRef.current) {
+        const snapped = snapToCandleOHLC(time as number, price);
+        finalTime = snapped.time as any;
+        finalPrice = snapped.price;
+      }
+
       const newAnchor: ChartAnchor = {
-        time: time as any,
-        price: Number(price.toFixed(2)),
+        time: finalTime as any,
+        price: finalPrice,
       };
 
       const updatedAnchors = [...pendingAnchorsRef.current, newAnchor];
@@ -1041,10 +1181,44 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           )}
         </div>
 
-        {/* Right Info: Save Status & Role Mode */}
+        {/* Right Info: Strategy Save / Refresh & PostgreSQL Sync Status */}
         <div className="flex items-center gap-2">
+          {refreshNotification && (
+            <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/80 border border-emerald-500/50 px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1">
+              <Check className="w-3 h-3 text-emerald-400" /> {refreshNotification}
+            </span>
+          )}
+
+          {/* Admin / Super Admin Save Strategy Button */}
+          {enableDrawingTools && (
+            <button
+              id="btn-save-strategy"
+              type="button"
+              onClick={handleManualSaveStrategy}
+              disabled={saveStatus === 'saving'}
+              title="Save all drawings to PostgreSQL strategy database"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              <Save className="w-3.5 h-3.5 text-amber-400" />
+              <span>{saveStatus === 'saving' ? 'Saving...' : 'Save Strategy'}</span>
+            </button>
+          )}
+
+          {/* Refresh Strategy Button for Clients and Admins */}
+          <button
+            id="btn-refresh-strategy"
+            type="button"
+            onClick={handleManualRefreshStrategy}
+            disabled={isRefreshingStrategy}
+            title="Fetch and apply latest admin strategy drawings without reloading the page"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-300 hover:text-white bg-blue-600/25 hover:bg-blue-600/40 border border-blue-500/40 hover:border-blue-400 rounded transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
+            <span>{isRefreshingStrategy ? 'Refreshing...' : 'Refresh Strategy'}</span>
+          </button>
+
           {enableDrawingTools ? (
-            <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               {/* PostgreSQL Sync Status */}
               <span className="flex items-center gap-1 text-[10px] font-mono text-slate-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800">
                 <Database className="w-3 h-3 text-amber-400" />
@@ -1054,19 +1228,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                   </span>
                 ) : saveStatus === 'synced' ? (
                   <span className="text-emerald-400 flex items-center gap-1">
-                    <Check className="w-2.5 h-2.5" /> PostgreSQL Synced
+                    <Check className="w-2.5 h-2.5" /> Synced
                   </span>
                 ) : (
-                  <span>PostgreSQL Ready</span>
+                  <span>Ready</span>
                 )}
               </span>
-              <span className="hidden md:inline text-[10px] text-amber-300 font-medium bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-                Admin Analysis Mode
+              <span className="hidden xl:inline text-[10px] text-amber-300 font-medium bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
+                Admin Mode
               </span>
             </div>
           ) : (
-            <span className="text-[10px] text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
-              Published Analysis (View-Only)
+            <span className="hidden md:inline text-[10px] text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
+              Published Analysis
             </span>
           )}
         </div>
@@ -1112,6 +1286,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           onColorChange={handleColorChange}
           currentWidth={currentWidth}
           onWidthChange={handleWidthChange}
+          isMagnetActive={isMagnetActive}
+          onToggleMagnet={handleToggleMagnet}
         />
       )}
 

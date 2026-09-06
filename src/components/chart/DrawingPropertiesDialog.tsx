@@ -159,9 +159,28 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
     if (chartApi && seriesApi) {
       try {
         const timeScale = chartApi.timeScale();
-        const x1 = timeScale.timeToCoordinate(a1.time);
+        const getTimeCoord = (tVal: any) => {
+          const direct = timeScale.timeToCoordinate(tVal);
+          if (direct !== null && !isNaN(direct)) return direct;
+          if (candles && candles.length >= 2 && timeScale.logicalToCoordinate) {
+            const N = candles.length;
+            const lastCandle = candles[N - 1];
+            const prevCandle = candles[N - 2];
+            const step = (Number(lastCandle.time) - Number(prevCandle.time)) || 3600;
+            const t = typeof tVal === 'number' ? tVal : Number(tVal);
+            if (step > 0 && !isNaN(t)) {
+              const barsDiff = (t - Number(lastCandle.time)) / step;
+              const logicalIdx = (N - 1) + barsDiff;
+              const projected = timeScale.logicalToCoordinate(logicalIdx);
+              if (projected !== null && !isNaN(projected)) return projected;
+            }
+          }
+          return null;
+        };
+
+        const x1 = getTimeCoord(a1.time);
         const y1 = seriesApi.priceToCoordinate(a1.price);
-        const x2 = timeScale.timeToCoordinate(a2.time);
+        const x2 = getTimeCoord(a2.time);
         const y2 = seriesApi.priceToCoordinate(a2.price);
         if (x1 !== null && y1 !== null && x2 !== null && y2 !== null) {
           const dx = x2 - x1;
@@ -232,12 +251,6 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
       if (typeof drawing.setChannelOptions === 'function') drawing.setChannelOptions(newOpts);
       if (typeof drawing.setFibOptions === 'function') drawing.setFibOptions(newOpts);
       if (typeof drawing.setGannOptions === 'function') drawing.setGannOptions(newOpts);
-      if (drawing.type === 'gann-box') {
-        (drawing as any).gannOptions = {
-          ...((drawing as any).gannOptions || {}),
-          ...newOpts,
-        };
-      }
       if (typeof drawing.setPitchforkOptions === 'function') drawing.setPitchforkOptions(newOpts);
       if (typeof drawing.setCircleOptions === 'function') drawing.setCircleOptions(newOpts);
       if (typeof drawing.setTriangleOptions === 'function') drawing.setTriangleOptions(newOpts);
@@ -289,14 +302,30 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
     });
   };
 
-  // Helper to find candle index (bar index) from timestamp
+  // Helper to find candle index (bar index) from timestamp (supports future bars beyond latest candle)
   const getBarIndex = (timeVal: any): number => {
     if (!candles || candles.length === 0) return 0;
     const t = typeof timeVal === 'number' ? timeVal : Number(timeVal);
+    const lastIdx = candles.length - 1;
+    const lastTime = Number(candles[lastIdx].time);
+    const firstTime = Number(candles[0].time);
+    const step = candles.length >= 2
+      ? (lastTime - Number(candles[lastIdx - 1].time)) || 3600
+      : 3600;
+
+    // If time is beyond the last candle, project future bar index
+    if (t > lastTime && step > 0) {
+      return lastIdx + Math.round((t - lastTime) / step);
+    }
+    // If time is before the first candle, project prior bar index
+    if (t < firstTime && step > 0) {
+      return Math.round((t - firstTime) / step);
+    }
+
     let bestIdx = 0;
     let minDiff = Infinity;
     for (let i = 0; i < candles.length; i++) {
-      const diff = Math.abs(candles[i].time - t);
+      const diff = Math.abs(Number(candles[i].time) - t);
       if (diff < minDiff) {
         minDiff = diff;
         bestIdx = i;
@@ -305,11 +334,25 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
     return bestIdx;
   };
 
-  // Helper to convert candle index (bar index) back to timestamp
+  // Helper to convert candle index (bar index) back to timestamp (supports adding 144+ bars for Gann cycles)
   const getTimeFromBarIndex = (barIdx: number): number => {
     if (!candles || candles.length === 0) return Math.floor(Date.now() / 1000);
-    const clamped = Math.max(0, Math.min(candles.length - 1, barIdx));
-    return candles[clamped].time;
+    const lastIdx = candles.length - 1;
+    const lastTime = Number(candles[lastIdx].time);
+    const step = candles.length >= 2
+      ? (lastTime - Number(candles[lastIdx - 1].time)) || 3600
+      : 3600;
+
+    // If bar index is beyond the latest loaded candle, extrapolate into future bars
+    if (barIdx > lastIdx) {
+      return Math.round(lastTime + (barIdx - lastIdx) * step);
+    }
+    // If bar index is negative, extrapolate into the past
+    if (barIdx < 0) {
+      const firstTime = Number(candles[0].time);
+      return Math.round(firstTime + barIdx * step);
+    }
+    return Number(candles[barIdx].time);
   };
 
   // Handle Anchor Bar Change
@@ -415,11 +458,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
   // On Apply: commit changes and trigger PostgreSQL batch save
   const handleApply = () => {
     applyLiveUpdates(styleState, optionsState, anchorsState);
-    if (drawing.type === 'gann-box') {
-      (drawing as any).gannOptions = {
-        ...((drawing as any).gannOptions || {}),
-        ...optionsState,
-      };
+    if (drawing.type === 'gann-box' && typeof (drawing as any).setGannOptions === 'function') {
+      (drawing as any).setGannOptions(optionsState);
     }
     onApply(drawing);
     onClose();
@@ -448,6 +488,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
     'extended-line',
     'arrow',
     'trend-angle',
+    'gann-angle',
     'rotated-rectangle',
   ].includes(type);
 
@@ -467,9 +508,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
   ].includes(type);
 
   const isTextTool = ['text-annotation', 'callout'].includes(type);
-  const isLineTool = ['trend-line', 'ray', 'extended-line', 'horizontal-line', 'horizontal-ray', 'arrow', 'trend-angle'].includes(type);
+  const isLineTool = ['trend-line', 'ray', 'extended-line', 'horizontal-line', 'horizontal-ray', 'arrow', 'trend-angle', 'gann-angle'].includes(type);
   const isFibTool = ['fib-retracement', 'fib-extension', 'fib-channel', 'fib-speed-fan'].includes(type);
-  const isGannTool = ['gann-box', 'gann-fan', 'gann-square'].includes(type);
+  const isGannTool = ['gann-box', 'gann-fan', 'gann-square', 'gann-angle'].includes(type);
   const isPitchforkTool = ['andrews-pitchfork', 'schiff-pitchfork'].includes(type);
 
   // Line style representation
@@ -1234,6 +1275,92 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         </div>
                       )}
                     </div>
+
+                    {/* GANN ANGLES (ANGELS) SECTION */}
+                    <div className="p-3 bg-slate-900/70 rounded-lg border border-slate-700/50 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={optionsState.angles !== false && optionsState.showDiagonals !== false}
+                            onChange={(e) => {
+                              updateOptionProp('angles', e.target.checked);
+                              updateOptionProp('showDiagonals', e.target.checked);
+                            }}
+                            className="rounded border-slate-600 text-amber-500 focus:ring-amber-500 w-4 h-4 bg-slate-950"
+                          />
+                          <span className="text-amber-400">GANN ANGLES (ANGELS)</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400 font-mono">1x1 Diagonals & Rays</span>
+                      </div>
+
+                      {optionsState.angles !== false && optionsState.showDiagonals !== false && (
+                        <div className="space-y-2 pt-1 border-t border-slate-800 text-xs">
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                              <input
+                                type="checkbox"
+                                checked={optionsState.showDownDiagonal !== false}
+                                onChange={(e) => updateOptionProp('showDownDiagonal', e.target.checked)}
+                                className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 bg-slate-900"
+                              />
+                              <span>1x1 Primary Angle</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                              <input
+                                type="checkbox"
+                                checked={optionsState.showUpDiagonal !== false}
+                                onChange={(e) => updateOptionProp('showUpDiagonal', e.target.checked)}
+                                className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 bg-slate-900"
+                              />
+                              <span>1x1 Counter Angle</span>
+                            </label>
+                          </div>
+
+                          <div className="pt-1">
+                            <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+                              <input
+                                type="checkbox"
+                                checked={!!optionsState.showSubAngles || !!optionsState.showGannAngles}
+                                onChange={(e) => {
+                                  updateOptionProp('showSubAngles', e.target.checked);
+                                  updateOptionProp('showGannAngles', e.target.checked);
+                                }}
+                                className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 bg-slate-900"
+                              />
+                              <span>Gann Corner Sub-Angles / Rays</span>
+                            </label>
+                          </div>
+
+                          {/* Angles Color Picker */}
+                          <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80">
+                            <span className="text-[11px] text-slate-400">Angle Line Color</span>
+                            <div className="flex items-center gap-1.5">
+                              {['#F59E0B', '#3B82F6', '#10B981', '#EF4444', '#FFFFFF'].map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => updateOptionProp('anglesColor', c)}
+                                  className={`w-4 h-4 rounded-full border transition-transform ${
+                                    (optionsState.anglesColor || '#F59E0B') === c
+                                      ? 'scale-110 border-white ring-1 ring-amber-400'
+                                      : 'border-slate-700 hover:scale-105'
+                                  }`}
+                                  style={{ backgroundColor: c }}
+                                />
+                              ))}
+                              <input
+                                type="color"
+                                value={optionsState.anglesColor || '#F59E0B'}
+                                onChange={(e) => updateOptionProp('anglesColor', e.target.value)}
+                                className="w-5 h-5 rounded cursor-pointer bg-transparent border-0 p-0"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1269,7 +1396,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                 )}
 
                 {/* Trend Angle specific */}
-                {type === 'trend-angle' && (
+                {['trend-angle', 'gann-angle'].includes(type) && (
                   <div className="space-y-2 pt-1 border-t border-slate-700/40">
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
@@ -1375,10 +1502,13 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             <input
                               type="number"
                               step="1"
-                              min="0"
-                              max={Math.max(0, candles.length - 1)}
                               value={barIndex}
-                              onChange={(e) => updateAnchorBar(idx, parseInt(e.target.value, 10))}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val)) {
+                                  updateAnchorBar(idx, val);
+                                }
+                              }}
                               className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-slate-100 font-mono text-xs focus:outline-none focus:border-blue-500 pr-12"
                             />
                             <div className="absolute right-1 flex items-center gap-0.5">
@@ -1391,7 +1521,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               </button>
                               <button
                                 type="button"
-                                onClick={() => updateAnchorBar(idx, Math.max(0, barIndex - 1))}
+                                onClick={() => updateAnchorBar(idx, barIndex - 1)}
                                 className="w-5 h-5 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]"
                               >
                                 -
