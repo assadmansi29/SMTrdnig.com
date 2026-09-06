@@ -388,7 +388,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       });
 
       const res = await fetch('/api/chart-drawings/batch', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -402,6 +402,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       if (res.ok) {
         setSaveStatus('synced');
+      } else {
+        setSaveStatus('idle');
       }
     } catch (err: any) {
       console.error('[Financial Chart] Batch save error:', err.message);
@@ -473,7 +475,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       try {
         setSaveStatus('saving');
         await fetch('/api/chart-drawings/batch', {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,

@@ -32,6 +32,15 @@ export async function ensureChartDrawingsTable(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_chart_drawings_lookup 
       ON chart_drawings (symbol, interval);
     `);
+
+    // Ensure columns accommodate arbitrary string lengths without constraint errors
+    await pool.query(`
+      ALTER TABLE chart_drawings ALTER COLUMN id TYPE TEXT;
+      ALTER TABLE chart_drawings ALTER COLUMN symbol TYPE TEXT;
+      ALTER TABLE chart_drawings ALTER COLUMN interval TYPE TEXT;
+      ALTER TABLE chart_drawings ALTER COLUMN type TYPE TEXT;
+    `).catch(() => {});
+
     console.log('[Chart Drawings DB] Table initialized successfully.');
   } catch (err: any) {
     console.error('[Chart Drawings DB] Table ensure notice:', err.message);
@@ -98,10 +107,11 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 });
 
 /**
- * PUT /api/chart-drawings/batch
- * Admin & Super Admin ONLY: Atomically synchronizes all drawings for a symbol & timeframe.
+ * Atomic batch synchronization handler for chart drawings.
+ * Admin & Super Admin ONLY: Synchronizes drawings for a symbol & timeframe.
+ * Supports both POST /api/chart-drawings/batch and PUT /api/chart-drawings/batch.
  */
-router.put('/batch', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
+async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userRole = req.user?.role;
     if (userRole !== 'super_admin' && userRole !== 'admin') {
@@ -112,26 +122,62 @@ router.put('/batch', authenticateToken, async (req: AuthRequest, res: Response):
     const pool = getDbPool();
     const symbol = normalizeSymbol(String(req.body.symbol || 'OANDA:XAUUSD'));
     const interval = normalizeInterval(String(req.body.interval || '15'));
-    const drawings = Array.isArray(req.body.drawings) ? req.body.drawings : [];
+    const rawDrawings = Array.isArray(req.body.drawings) ? req.body.drawings : [];
     const createdBy = req.user?.username || 'admin';
+
+    // Deduplicate drawings by id, keeping the latest version
+    const drawingMap = new Map<string, any>();
+    for (const d of rawDrawings) {
+      if (!d) continue;
+      const id = String(d.id || '').trim();
+      if (!id) continue;
+      const type = String(d.type || d.options?.type || 'drawing').trim();
+      drawingMap.set(id, {
+        ...d,
+        id,
+        type,
+      });
+    }
+
+    const validDrawings = Array.from(drawingMap.values());
+    const validIds = Array.from(drawingMap.keys());
 
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Remove existing drawings for this symbol and timeframe
       const altSymbol = symbol.includes(':') ? symbol.split(':')[1] : `OANDA:${symbol}`;
-      await client.query(
-        `DELETE FROM chart_drawings WHERE (symbol = $1 OR symbol = $2) AND interval = $3`,
-        [symbol, altSymbol, interval]
-      );
 
-      // Insert updated drawings batch
-      for (const d of drawings) {
-        if (!d || !d.id || !d.type) continue;
+      // 1. Remove drawings for this symbol & interval that are NOT present in the incoming batch
+      if (validIds.length > 0) {
+        const placeholders = validIds.map((_, i) => `$${i + 4}`).join(', ');
+        await client.query(
+          `DELETE FROM chart_drawings 
+           WHERE (symbol = $1 OR symbol = $2) AND interval = $3 
+             AND id NOT IN (${placeholders})`,
+          [symbol, altSymbol, interval, ...validIds]
+        );
+      } else {
+        // If drawings array is empty (e.g. clear all), delete all drawings for this symbol & interval
+        await client.query(
+          `DELETE FROM chart_drawings WHERE (symbol = $1 OR symbol = $2) AND interval = $3`,
+          [symbol, altSymbol, interval]
+        );
+      }
+
+      // 2. Upsert each drawing using ON CONFLICT (id) DO UPDATE
+      // This eliminates duplicate key constraint violations (HTTP 500)
+      for (const d of validDrawings) {
         await client.query(
           `INSERT INTO chart_drawings (id, symbol, interval, type, data, created_by, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+           VALUES ($1, $2, $3, $4, $5, $6, NOW())
+           ON CONFLICT (id) DO UPDATE 
+           SET symbol = EXCLUDED.symbol,
+               interval = EXCLUDED.interval,
+               type = EXCLUDED.type,
+               data = EXCLUDED.data,
+               created_by = EXCLUDED.created_by,
+               updated_at = NOW()`,
           [
             d.id,
             symbol,
@@ -144,7 +190,7 @@ router.put('/batch', authenticateToken, async (req: AuthRequest, res: Response):
       }
 
       await client.query('COMMIT');
-      res.json({ status: 'ok', count: drawings.length });
+      res.json({ status: 'ok', count: validDrawings.length });
     } catch (txErr) {
       await client.query('ROLLBACK');
       throw txErr;
@@ -155,7 +201,14 @@ router.put('/batch', authenticateToken, async (req: AuthRequest, res: Response):
     console.error('[Chart Drawings API] Batch save error:', err.message);
     res.status(500).json({ status: 'error', error: err.message });
   }
-});
+}
+
+/**
+ * POST & PUT /api/chart-drawings/batch
+ * Atomically synchronizes all drawings for a symbol & timeframe.
+ */
+router.post('/batch', authenticateToken, handleBatchSave);
+router.put('/batch', authenticateToken, handleBatchSave);
 
 /**
  * POST /api/chart-drawings
