@@ -108,6 +108,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     const candles = candlesRef.current;
     if (!candles || candles.length === 0) return { time: t, price: p };
 
+    const N = candles.length;
+    const lastCandle = candles[N - 1];
+    const firstCandle = candles[0];
+    const lastTime = Number(lastCandle.time);
+    const firstTime = Number(firstCandle.time);
+
+    // If timestamp is in the future area beyond the last candle, do not clamp or pull time backwards
+    if (t > lastTime) {
+      return { time: t, price: p };
+    }
+    if (t < firstTime) {
+      return { time: t, price: p };
+    }
+
     // 1. Find the candle with the closest timestamp
     let closestCandle = candles[0];
     let minTimeDiff = Math.abs((candles[0].time as number) - t);
@@ -507,12 +521,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         borderColor: '#1e293b',
         timeVisible: true,
         secondsVisible: false,
+        rightOffset: 25,
       },
       width: container.clientWidth || 800,
       height: container.clientHeight || 500,
     });
 
     chartApiRef.current = chart;
+    (window as any).__currentChart = chart;
 
     // Add Candlestick Series
     const series = chart.addSeries(CandlestickSeries, {
@@ -720,6 +736,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       if (dragState.type === 'handle' && dragState.anchorIndex !== undefined) {
         // Resize / reposition corner or edge handle
+        const chartTs = chartApiRef.current?.timeScale?.();
         let time = viewport.timeScale.coordinateToTime(point.x);
         const price = viewport.priceScale.coordinateToPrice(point.y);
 
@@ -728,13 +745,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           const lastCandle = candlesRef.current[N - 1];
           const firstCandle = candlesRef.current[0];
           const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
-          const logical = viewport.timeScale.coordinateToLogical ? viewport.timeScale.coordinateToLogical(point.x) : null;
-          if (logical !== null && !isNaN(logical) && logical >= N - 1) {
-            time = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
-          } else if (logical !== null && !isNaN(logical) && logical < 0) {
-            time = (Number(firstCandle.time) + Math.round(logical * step)) as any;
-          } else {
-            time = (point.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+          const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(point.x) : null;
+          if (logical !== null && !isNaN(logical)) {
+            if (logical >= N - 1) {
+              time = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
+            } else if (logical < 0) {
+              time = (Number(firstCandle.time) + Math.round(logical * step)) as any;
+            } else {
+              const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
+              time = Number(candlesRef.current[idx].time) as any;
+            }
           }
         }
 
@@ -748,10 +768,35 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             finalPrice = snapped.price;
           }
 
-          dragState.drawing.updateAnchor(dragState.anchorIndex, {
-            time: finalTime,
-            price: finalPrice,
-          });
+          const isGannBox = dragState.drawing?.type === 'gann-box' || dragState.drawing?.type === 'gannbox';
+          if (isGannBox && dragState.drawing.anchors?.length >= 2) {
+            const a0 = dragState.drawing.anchors[0];
+            const a1 = dragState.drawing.anchors[1];
+            if (dragState.anchorIndex === 0) {
+              dragState.drawing.updateAnchor(0, { time: finalTime, price: finalPrice });
+            } else if (dragState.anchorIndex === 1) {
+              dragState.drawing.updateAnchor(1, { time: finalTime, price: finalPrice });
+            } else if (dragState.anchorIndex === 2) {
+              // (p2.x, p1.y): horizontal time of anchor 1 (future extension), vertical price of anchor 0
+              dragState.drawing.updateAnchor(1, { time: finalTime, price: a1.price });
+              dragState.drawing.updateAnchor(0, { time: a0.time, price: finalPrice });
+            } else if (dragState.anchorIndex === 3) {
+              // (p1.x, p2.y): horizontal time of anchor 0, vertical price of anchor 1
+              dragState.drawing.updateAnchor(0, { time: finalTime, price: a0.price });
+              dragState.drawing.updateAnchor(1, { time: a1.time, price: finalPrice });
+            } else if (dragState.anchorIndex === 4) {
+              // Right-center handle: extends anchor 1 into future time
+              dragState.drawing.updateAnchor(1, { time: finalTime, price: a1.price });
+            } else if (dragState.anchorIndex === 5) {
+              // Left-center handle: adjusts anchor 0 time
+              dragState.drawing.updateAnchor(0, { time: finalTime, price: a0.price });
+            }
+          } else {
+            dragState.drawing.updateAnchor(dragState.anchorIndex, {
+              time: finalTime,
+              price: finalPrice,
+            });
+          }
           dragState.drawing.requestUpdate();
           (currentManager as any).emit?.('drawing:updated', {
             drawingId: dragState.drawing.id,
@@ -777,17 +822,21 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           const newPrice = viewport.priceScale.coordinateToPrice(movedPixel.y);
 
           if (!newTime && candlesRef.current.length > 0) {
+            const chartTs = chartApiRef.current?.timeScale?.();
             const N = candlesRef.current.length;
             const lastCandle = candlesRef.current[N - 1];
             const firstCandle = candlesRef.current[0];
             const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
-            const logical = viewport.timeScale.coordinateToLogical ? viewport.timeScale.coordinateToLogical(movedPixel.x) : null;
-            if (logical !== null && !isNaN(logical) && logical >= N - 1) {
-              newTime = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
-            } else if (logical !== null && !isNaN(logical) && logical < 0) {
-              newTime = (Number(firstCandle.time) + Math.round(logical * step)) as any;
-            } else {
-              newTime = (movedPixel.x > currentContainer.clientWidth / 2 ? lastCandle.time : firstCandle.time) as any;
+            const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(movedPixel.x) : null;
+            if (logical !== null && !isNaN(logical)) {
+              if (logical >= N - 1) {
+                newTime = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
+              } else if (logical < 0) {
+                newTime = (Number(firstCandle.time) + Math.round(logical * step)) as any;
+              } else {
+                const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
+                newTime = Number(candlesRef.current[idx].time) as any;
+              }
             }
           }
 
@@ -947,24 +996,27 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const price = series.coordinateToPrice(param.point.y);
       if (price === null || isNaN(price)) return;
 
-      let time = param.time as number | undefined;
+      let time: number | null = null;
+      const chartTs = chart.timeScale();
+      const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(param.point.x) : null;
+
+      if (candlesRef.current.length > 0 && logical !== null && !isNaN(logical)) {
+        const N = candlesRef.current.length;
+        const lastCandle = candlesRef.current[N - 1];
+        const firstCandle = candlesRef.current[0];
+        const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
+        if (logical >= N - 1) {
+          // Future area click: project timestamp without clamping
+          time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
+        } else if (logical < 0) {
+          time = Number(firstCandle.time) + Math.round(logical * step);
+        }
+      }
+
       if (!time) {
-        const t = chart.timeScale().coordinateToTime(param.point.x);
-        if (t !== null) {
+        const t = (param.time as number | undefined) || chartTs.coordinateToTime(param.point.x);
+        if (t !== null && t !== undefined) {
           time = t as number;
-        } else if (candlesRef.current.length > 0) {
-          const N = candlesRef.current.length;
-          const lastCandle = candlesRef.current[N - 1];
-          const firstCandle = candlesRef.current[0];
-          const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
-          const logical = chart.timeScale().coordinateToLogical ? chart.timeScale().coordinateToLogical(param.point.x) : null;
-          if (logical !== null && !isNaN(logical) && logical >= N - 1) {
-            time = (Number(lastCandle.time) + Math.round((logical - (N - 1)) * step)) as any;
-          } else if (logical !== null && !isNaN(logical) && logical < 0) {
-            time = (Number(firstCandle.time) + Math.round(logical * step)) as any;
-          } else {
-            time = lastCandle.time;
-          }
         }
       }
 

@@ -792,6 +792,28 @@ class DenseGannAngleGridPaneView {
 }
 
 // -----------------------------------------------------------------------------
+function projectLogicalCoordinate(timeScale: any, logicalIdx: number): number | null {
+  if (!timeScale?.logicalToCoordinate || isNaN(logicalIdx)) return null;
+
+  const floorIdx = Math.floor(logicalIdx);
+  const ceilIdx = Math.ceil(logicalIdx);
+
+  if (floorIdx === ceilIdx) {
+    const coord = timeScale.logicalToCoordinate(floorIdx);
+    return coord !== null && !isNaN(coord) ? coord : null;
+  }
+
+  const coordFloor = timeScale.logicalToCoordinate(floorIdx);
+  const coordCeil = timeScale.logicalToCoordinate(ceilIdx);
+
+  if (coordFloor !== null && coordCeil !== null && !isNaN(coordFloor) && !isNaN(coordCeil)) {
+    return coordFloor + (logicalIdx - floorIdx) * (coordCeil - coordFloor);
+  }
+  if (coordFloor !== null && !isNaN(coordFloor)) return coordFloor;
+  if (coordCeil !== null && !isNaN(coordCeil)) return coordCeil;
+  return null;
+}
+
 // 4. Prototype Patching & Registry Installation
 // -----------------------------------------------------------------------------
 export function installDirectionalEnhancers() {
@@ -826,9 +848,19 @@ export function installDirectionalEnhancers() {
             const targetTime = typeof anchor.time === 'number' ? anchor.time : Number(anchor.time);
             if (step > 0 && !isNaN(targetTime)) {
               const lastTime = Number(lastCandle.time);
-              const barsDiff = (targetTime - lastTime) / step;
-              const logicalIdx = (N - 1) + barsDiff;
-              const projectedX = timeScale.logicalToCoordinate(logicalIdx);
+              const firstTime = Number(candles[0].time);
+              let logicalIdx: number;
+              if (targetTime >= lastTime) {
+                const barsDiff = (targetTime - lastTime) / step;
+                logicalIdx = (N - 1) + barsDiff;
+              } else if (targetTime < firstTime) {
+                const barsDiff = (targetTime - firstTime) / step;
+                logicalIdx = barsDiff;
+              } else {
+                const barsDiff = (targetTime - firstTime) / step;
+                logicalIdx = barsDiff;
+              }
+              const projectedX = projectLogicalCoordinate(timeScale, logicalIdx);
               if (projectedX !== null && !isNaN(projectedX)) {
                 x = projectedX;
               }
@@ -840,6 +872,48 @@ export function installDirectionalEnhancers() {
           return null;
         }
         return { x, y };
+      };
+
+      const origPixelToAnchor = (Drawing.prototype as any).pixelToAnchor;
+      (Drawing.prototype as any).pixelToAnchor = function (point: any, viewport: any) {
+        if (!point || !viewport) return null;
+        const direct = origPixelToAnchor ? origPixelToAnchor.call(this, point, viewport) : null;
+        if (direct && direct.time !== null && direct.time !== undefined && direct.price !== null && !isNaN(direct.price)) {
+          return direct;
+        }
+        const timeScale = viewport.timeScale;
+        const priceScale = viewport.priceScale;
+        if (!timeScale || !priceScale) return direct;
+
+        const price = direct?.price ?? priceScale.coordinateToPrice?.(point.y);
+        if (price === null || isNaN(price)) return null;
+
+        let time = direct?.time;
+        if (!time) {
+          const chart = (window as any).__currentChart;
+          const rawTs = chart?.timeScale?.() || timeScale;
+          const logical = rawTs?.coordinateToLogical ? rawTs.coordinateToLogical(point.x) : null;
+          const candles = (window as any).__chartCandles;
+          if (logical !== null && logical !== undefined && !isNaN(logical) && Array.isArray(candles) && candles.length > 0) {
+            const N = candles.length;
+            const lastCandle = candles[N - 1];
+            const firstCandle = candles[0];
+            const step = N >= 2 ? (Number(lastCandle.time) - Number(candles[N - 2].time)) || 3600 : 3600;
+            if (logical >= N - 1) {
+              time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
+            } else if (logical < 0) {
+              time = Number(firstCandle.time) + Math.round(logical * step);
+            } else {
+              const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
+              time = Number(candles[idx].time);
+            }
+          }
+        }
+
+        if (time === null || time === undefined || price === null || isNaN(price)) {
+          return null;
+        }
+        return { time, price: Number(price.toFixed(2)) };
       };
     }
 

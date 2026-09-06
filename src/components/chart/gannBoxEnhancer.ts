@@ -351,12 +351,15 @@ export class EnhancedGannBoxRenderer {
     // 8. Interactive Selection & Draggable Corner Handles
     if (drawing.state === 'selected' || drawing.state === 'editing') {
       ctx.setLineDash([]);
-      // Draggable corner handles positioned at true anchor corners
+      const midY = (p1.y + p2.y) / 2;
+      // Draggable corner handles and side handles positioned at true anchor corners and edges
       const cornerHandles = [
         { x: p1.x * pr, y: p1.y * pr },
         { x: p2.x * pr, y: p2.y * pr },
         { x: p1.x * pr, y: p2.y * pr },
         { x: p2.x * pr, y: p1.y * pr },
+        { x: p2.x * pr, y: midY * pr }, // Right-center handle for extending into future
+        { x: p1.x * pr, y: midY * pr }, // Left-center handle
       ];
       const radius = 5 * pr;
       for (const h of cornerHandles) {
@@ -400,6 +403,32 @@ export function installGannBoxEnhancer() {
     if (GannBox && GannBox.prototype) {
       (GannBox.prototype as any).paneViews = function () {
         return [new EnhancedGannBoxPaneView(this)];
+      };
+
+      // Patch getControlPoints to support dragging/extending into future area from any corner or edge
+      (GannBox.prototype as any).getControlPoints = function (viewport: any) {
+        if (!this._anchors || this._anchors.length < 2) {
+          const t: any[] = [];
+          for (let s = 0; s < (this._anchors?.length || 0); s++) {
+            const e = this._anchors[s], n = this.anchorToPixel(e, viewport);
+            if (n) t.push({ index: s, x: n.x, y: n.y, radius: 6 });
+          }
+          return t;
+        }
+
+        const p1 = this.anchorToPixel(this._anchors[0], viewport);
+        const p2 = this.anchorToPixel(this._anchors[1], viewport);
+        if (!p1 || !p2) return [];
+
+        const midY = (p1.y + p2.y) / 2;
+        return [
+          { index: 0, x: p1.x, y: p1.y, radius: 6 },
+          { index: 1, x: p2.x, y: p2.y, radius: 6 },
+          { index: 2, x: p2.x, y: p1.y, radius: 6 },
+          { index: 3, x: p1.x, y: p2.y, radius: 6 },
+          { index: 4, x: p2.x, y: midY, radius: 6 },
+          { index: 5, x: p1.x, y: midY, radius: 6 },
+        ];
       };
 
       // Ensure GannBox has both getter and setter for gannOptions,

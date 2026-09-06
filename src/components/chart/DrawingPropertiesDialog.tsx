@@ -171,6 +171,15 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
             if (step > 0 && !isNaN(t)) {
               const barsDiff = (t - Number(lastCandle.time)) / step;
               const logicalIdx = (N - 1) + barsDiff;
+              const floorIdx = Math.floor(logicalIdx);
+              const ceilIdx = Math.ceil(logicalIdx);
+              const cFloor = timeScale.logicalToCoordinate(floorIdx);
+              const cCeil = timeScale.logicalToCoordinate(ceilIdx);
+              if (cFloor !== null && cCeil !== null && !isNaN(cFloor) && !isNaN(cCeil)) {
+                return cFloor + (logicalIdx - floorIdx) * (cCeil - cFloor);
+              }
+              if (cFloor !== null && !isNaN(cFloor)) return cFloor;
+              if (cCeil !== null && !isNaN(cCeil)) return cCeil;
               const projected = timeScale.logicalToCoordinate(logicalIdx);
               if (projected !== null && !isNaN(projected)) return projected;
             }
@@ -406,6 +415,17 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
           const newPrice = seriesApi.coordinateToPrice(newY2);
           let newTime = timeScale.coordinateToTime(newX2);
+          if (!newTime && candles && candles.length >= 2 && timeScale.coordinateToLogical) {
+            const logical = timeScale.coordinateToLogical(newX2);
+            if (logical !== null && !isNaN(logical)) {
+              const N = candles.length;
+              const lastCandle = candles[N - 1];
+              const step = (Number(lastCandle.time) - Number(candles[N - 2].time)) || 3600;
+              if (logical >= N - 1) {
+                newTime = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
+              }
+            }
+          }
           if (!newTime) newTime = a2.time;
 
           if (newPrice !== null && !isNaN(newPrice)) {
