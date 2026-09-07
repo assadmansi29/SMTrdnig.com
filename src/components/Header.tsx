@@ -108,16 +108,6 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
               </button>
-
-              {/* Head of Site: Professional Real-Time Market Status Indicator */}
-              <div className="hidden sm:flex items-center">
-                <MarketStatusIndicator
-                  id="site-head-market-status-button"
-                  symbol="OANDA:XAUUSD"
-                  showSymbolTag={true}
-                  align="left"
-                />
-              </div>
             </div>
 
             {/* Central Head: Search, Language, Admin Desk, Profile & Trading Tools Hub */}
@@ -234,15 +224,6 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Top Right Utilities (< md) */}
             <div className="flex md:hidden items-center gap-1.5 shrink-0">
-              {/* Mobile Head: Market Status Indicator */}
-              <div className="flex sm:hidden items-center">
-                <MarketStatusIndicator
-                  id="mobile-site-head-market-status-button"
-                  symbol="OANDA:XAUUSD"
-                  compact={true}
-                  align="right"
-                />
-              </div>
               {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
                 <button
                   onClick={onOpenAdmin}
@@ -332,10 +313,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. Institutional Tagline Bar */}
-      <div className="bg-[#080C13] border-b border-slate-800/60 py-1.5 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-center text-center text-xs">
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/80 border border-slate-800/80 px-2.5 sm:px-3 py-0.5 rounded-full shadow-inner truncate">
+      {/* 2. Institutional Tagline Bar & Compact Market Status */}
+      <div className="bg-[#080C13] border-b border-slate-800/60 py-1.5 px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-start gap-2 sm:gap-3 text-xs">
+          {/* Main Title Area Tagline: Smart Money Trading + Order Flow & SMC */}
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/80 border border-slate-800/80 px-2.5 py-0.5 rounded-full shadow-inner shrink-0">
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -344,10 +326,17 @@ export const Header: React.FC<HeaderProps> = ({
               {t('brandSubtitle')}
             </span>
             <span className="text-slate-600 shrink-0">•</span>
-            <span className="text-slate-300 font-medium text-[10px] sm:text-[11px] tracking-wide truncate">
+            <span className="text-slate-300 font-medium text-[10px] sm:text-[11px] tracking-wide shrink-0">
               {t('brandTagline')}
             </span>
           </div>
+
+          {/* Compact Professional Market Status aligned on LEFT side, next to/near Order Flow & SMC */}
+          <MarketStatusIndicator
+            id="brand-bar-market-status"
+            compact={true}
+            align="left"
+          />
         </div>
       </div>
 
