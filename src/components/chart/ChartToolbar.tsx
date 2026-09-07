@@ -17,6 +17,7 @@ import {
   BarChart2,
   Globe,
 } from 'lucide-react';
+import { MarketStatusIndicator } from './MarketStatusIndicator';
 
 export interface ChartInstrument {
   symbol: string;
@@ -495,8 +496,15 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
 
       </div>
 
-      {/* RIGHT SECTION: Quick Actions */}
-      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+      {/* RIGHT SECTION: Market Status & Quick Actions */}
+      <div className="flex items-center gap-2 shrink-0 ml-auto">
+        {/* Professional Market Status Indicator */}
+        <MarketStatusIndicator 
+          id="chart-toolbar-market-status-button"
+          symbol={currentSymbol} 
+          align="right"
+        />
+
         {/* External TradingView Link */}
         <a
           href={getTradingViewExternalUrl(currentSymbol)}

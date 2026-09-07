@@ -21,10 +21,12 @@ import { DrawingPropertiesDialog } from './chart/DrawingPropertiesDialog';
 import { ObjectTreePanel, ObjectTreeItem } from './chart/ObjectTreePanel';
 import { DRAWING_TOOLS } from './chart/toolsConfig';
 import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
-import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw, ZoomIn, ZoomOut, Zap, Radio } from 'lucide-react';
 import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawingDirectionEnhancer';
 import { useAuth } from '../context/AuthContext';
+import { MarketStreamClient } from '../services/marketStreamClient';
+import { MarketStatusIndicator } from './chart/MarketStatusIndicator';
 
 // Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers
 installGannBoxEnhancer();
@@ -249,6 +251,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const [lastBarInfo, setLastBarInfo] = useState<{ open: number; high: number; low: number; close: number } | null>(null);
   const [isRefreshingStrategy, setIsRefreshingStrategy] = useState<boolean>(false);
   const [refreshNotification, setRefreshNotification] = useState<string | null>(null);
+  const [streamStatus, setStreamStatus] = useState<'connecting' | 'connected' | 'reconnecting' | 'error'>('connecting');
 
   // Magnet Mode State (Snap drawing anchors to candle OHLC levels)
   const [isMagnetActive, setIsMagnetActive] = useState<boolean>(() => {
@@ -2377,14 +2380,61 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [activeStrategy, symbol, interval, handleSelectTool, loadPostgresDrawings]);
 
-  // Periodic candle refresh (every 15 seconds) to keep stream live - completely silent, preserves zoom/pan!
+  // Persistent real-time market data stream (WebSocket with auto-fallback to SSE) for lowest possible latency (0s delay)
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!dragStateRef.current && !drawingCreationRef.current && !activeToolRef.current && chartApiRef.current) {
+    const handleStreamEvent = (data: any) => {
+      if (!seriesApiRef.current || !candlesRef.current || candlesRef.current.length === 0) {
+        return;
+      }
+
+      if (data.type === 'bar' && data.bar) {
+        const updatedBar = data.bar;
+        const current = candlesRef.current;
+        const lastIdx = current.length - 1;
+        if (lastIdx >= 0) {
+          if (current[lastIdx].time === updatedBar.time) {
+            current[lastIdx] = updatedBar;
+          } else if (Number(updatedBar.time) > Number(current[lastIdx].time)) {
+            current.push(updatedBar);
+          }
+        }
+        seriesApiRef.current.update(updatedBar as any);
+        setLastBarInfo({ open: updatedBar.open, high: updatedBar.high, low: updatedBar.low, close: updatedBar.close });
+      } else if (data.type === 'tick' && typeof data.price === 'number' && !isNaN(data.price) && data.price > 0) {
+        const price = data.price;
+        const current = candlesRef.current;
+        if (current.length > 0) {
+          const last = current[current.length - 1];
+          const updatedBar: CandleData = {
+            ...last,
+            close: price,
+            high: Math.max(last.high, price),
+            low: Math.min(last.low, price),
+          };
+          current[current.length - 1] = updatedBar;
+          seriesApiRef.current.update(updatedBar as any);
+          setLastBarInfo({ open: updatedBar.open, high: updatedBar.high, low: updatedBar.low, close: updatedBar.close });
+        }
+      }
+    };
+
+    const client = new MarketStreamClient(handleStreamEvent, (status) => {
+      setStreamStatus(status);
+    });
+    client.subscribe(symbol, interval);
+
+    // Visibility change handler: when user returns to tab after sleeping, quietly re-sync completed candles
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && chartApiRef.current && !dragStateRef.current) {
         fetchCandles(symbol, interval, true);
       }
-    }, 15000);
-    return () => clearInterval(timer);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      client.destroy();
+    };
   }, [symbol, interval, fetchCandles]);
 
   // Handle color change for selected drawing
@@ -2427,16 +2477,39 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         {/* Symbol & Interval */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 font-semibold text-slate-200">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                streamStatus === 'connected'
+                  ? 'bg-emerald-400 animate-pulse'
+                  : streamStatus === 'reconnecting'
+                  ? 'bg-amber-400 animate-ping'
+                  : 'bg-slate-400'
+              }`}
+              title={streamStatus === 'connected' ? 'Real-Time Stream Active (0s delay)' : 'Connecting stream...'}
+            />
             <span className="tracking-wide">{symbol}</span>
             <span className="text-[10px] text-amber-400/90 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
               {formatIntervalDisplay(interval)}
             </span>
+            <span
+              className={`hidden md:inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                streamStatus === 'connected'
+                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                  : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+              }`}
+              title="Persistent market streaming feed"
+            >
+              <Zap className="w-2.5 h-2.5" />
+              <span>{streamStatus === 'connected' ? 'Live Stream' : 'Syncing'}</span>
+            </span>
           </div>
+
+          {/* Market Status Indicator: Live OPEN / CLOSED / Real-Time Countdown */}
+          <MarketStatusIndicator symbol={symbol} />
 
           {/* OHLC readout */}
           {lastBarInfo && (
-            <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-slate-400">
+            <div className="hidden lg:flex items-center gap-2 text-[11px] font-mono text-slate-400">
               <span>O: <strong className="text-slate-300">{lastBarInfo.open}</strong></span>
               <span>H: <strong className="text-emerald-400">{lastBarInfo.high}</strong></span>
               <span>L: <strong className="text-rose-400">{lastBarInfo.low}</strong></span>

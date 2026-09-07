@@ -18,11 +18,15 @@ import chartDrawingsRoutes, { ensureChartDrawingsTable } from './server/routes/c
 import marketRoutes from './server/routes/marketRoutes';
 import { ensureChartAnalysisTable } from './server/db/chartAnalysisDb';
 import { economicScheduler } from './server/services/economicScheduler';
+import { marketStreamManager } from './server/services/marketStreamService';
 
 async function startServer() {
   const app = express();
   const server = http.createServer(app);
   const PORT = 3000;
+
+  // Initialize Real-time Market Data WebSocket Server on /api/market/ws
+  marketStreamManager.initWebSocketServer(server);
 
   // Initialize PostgreSQL schema in background to ensure port 3000 binds immediately
   if (process.env.DATABASE_URL) {

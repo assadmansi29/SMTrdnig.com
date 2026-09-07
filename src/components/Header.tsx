@@ -17,6 +17,7 @@ import { useTranslation } from '../context/LanguageContext';
 import { TranslationKey } from '../locales';
 import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from './UserAvatar';
+import { MarketStatusIndicator } from './chart/MarketStatusIndicator';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -79,8 +80,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Main Flex Row: Left Brand Logo, Central Head Controls, Mobile Right Controls */}
           <div className="flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
             
-            {/* Left: Brand Identity Logo */}
-            <div className="flex items-center min-w-0 shrink-0">
+            {/* Left: Brand Identity Logo & Professional Market Status */}
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
               <button 
                 onClick={() => onSelectCategory('All')}
                 className="flex items-center gap-2 sm:gap-3 text-left ltr:text-left rtl:text-right group focus:outline-none cursor-pointer"
@@ -107,6 +108,16 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
               </button>
+
+              {/* Head of Site: Professional Real-Time Market Status Indicator */}
+              <div className="hidden sm:flex items-center">
+                <MarketStatusIndicator
+                  id="site-head-market-status-button"
+                  symbol="OANDA:XAUUSD"
+                  showSymbolTag={true}
+                  align="left"
+                />
+              </div>
             </div>
 
             {/* Central Head: Search, Language, Admin Desk, Profile & Trading Tools Hub */}
@@ -223,6 +234,15 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Top Right Utilities (< md) */}
             <div className="flex md:hidden items-center gap-1.5 shrink-0">
+              {/* Mobile Head: Market Status Indicator */}
+              <div className="flex sm:hidden items-center">
+                <MarketStatusIndicator
+                  id="mobile-site-head-market-status-button"
+                  symbol="OANDA:XAUUSD"
+                  compact={true}
+                  align="right"
+                />
+              </div>
               {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
                 <button
                   onClick={onOpenAdmin}
