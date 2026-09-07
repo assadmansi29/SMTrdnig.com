@@ -445,7 +445,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             title="144 Strategy: Open clean chart view with saved 144 Strategy analysis"
           >
             <Grid3X3 className={`w-3.5 h-3.5 ${activeStrategy === '144' ? 'text-amber-300' : 'text-amber-400'}`} />
-            <span>144 Strategy</span>
+            <span className="hidden sm:inline">144 Strategy</span>
+            <span className="sm:hidden">144</span>
             {activeStrategy === '144' && (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             )}
@@ -466,7 +467,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             title="SMC Strategy: Open clean chart view with saved SMC Strategy analysis"
           >
             <Layers className={`w-3.5 h-3.5 ${activeStrategy === 'smc' ? 'text-sky-300' : 'text-sky-400'}`} />
-            <span>SMC Strategy</span>
+            <span className="hidden sm:inline">SMC Strategy</span>
+            <span className="sm:hidden">SMC</span>
             {activeStrategy === 'smc' && (
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
             )}
@@ -487,7 +489,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             title="Fibonacci Strategy: Open clean chart view with saved Fibonacci Strategy analysis"
           >
             <Divide className={`w-3.5 h-3.5 ${activeStrategy === 'fib' ? 'text-emerald-300' : 'text-emerald-400'}`} />
-            <span>Fibonacci Strategy</span>
+            <span className="hidden sm:inline">Fibonacci Strategy</span>
+            <span className="sm:hidden">Fib</span>
             {activeStrategy === 'fib' && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             )}

@@ -2464,6 +2464,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   const activeToolDef = activeTool ? DRAWING_TOOLS.find((t) => t.id === activeTool) : null;
 
+  // Derive broker name and clean ticker symbol from composite symbol (e.g. BLACKBULL:XAUUSD -> BlackBull + XAUUSD)
+  const [rawBroker, rawTicker] = symbol.includes(':') ? symbol.split(':') : ['', symbol];
+  const brokerName = rawBroker === 'BLACKBULL' ? 'BlackBull' : rawBroker === 'CME_MINI' ? 'CME' : rawBroker === 'TVC' ? 'TVC' : rawBroker;
+  const displayTicker = rawTicker || symbol;
+
   return (
     <div
       className={`tradingview-widget-container w-full flex-1 min-h-0 min-w-0 bg-[#090D17] flex flex-col relative overflow-hidden ${
@@ -2471,10 +2476,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       }`}
       style={height ? { height } : undefined}
     >
-      {/* 1. Header Bar: Symbol Info, Live OHLC, and Role Status */}
+      {/* 1. Header Bar: Broker, Symbol, Timeframe, Live OHLC, and Role Status */}
       <div className="h-9 bg-[#070A10] border-b border-[#131B2E] px-3 flex items-center justify-between text-xs shrink-0 select-none z-10">
-        {/* Symbol & Interval */}
-        <div className="flex items-center gap-3">
+        {/* Broker, Symbol & Timeframe Interval */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="flex items-center gap-1.5 font-semibold text-slate-200">
             <span
               className={`w-2 h-2 rounded-full ${
@@ -2486,8 +2491,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               }`}
               title={streamStatus === 'connected' ? 'Real-Time Stream Active (0s delay)' : 'Connecting stream...'}
             />
-            <span className="tracking-wide">{symbol}</span>
-            <span className="text-[10px] text-amber-400/90 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+            {brokerName && (
+              <span 
+                className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800/90 text-amber-300 border border-slate-700/60 font-semibold shrink-0" 
+                title={`Market Feed Broker: ${brokerName}`}
+              >
+                {brokerName}
+              </span>
+            )}
+            <span className="tracking-wide font-bold text-white">{displayTicker}</span>
+            <span 
+              className="text-[10px] text-amber-400/90 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-semibold shrink-0"
+              title={`Chart Timeframe: ${formatIntervalDisplay(interval)}`}
+            >
               {formatIntervalDisplay(interval)}
             </span>
             <span
