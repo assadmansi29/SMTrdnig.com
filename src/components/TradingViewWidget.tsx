@@ -50,10 +50,11 @@ if (GannBox && (GannBox as any).prototype) {
 
 function formatIntervalDisplay(inv: string): string {
   const raw = (inv || '15').trim();
-  if (raw === '1M' || raw === 'M' || raw.toLowerCase() === '1mo' || raw.toLowerCase() === 'month') return 'Month';
-  if (raw === '1W' || raw === 'W' || raw.toLowerCase() === 'week') return 'Week';
-  if (raw === '1D' || raw === 'D' || raw.toLowerCase() === 'day') return 'DAY';
+  if (raw === '1M' || raw === 'M' || raw.toLowerCase() === '1mo' || raw.toLowerCase() === 'month') return '1M';
+  if (raw === '1W' || raw === 'W' || raw.toLowerCase() === 'week') return '1W';
+  if (raw === '1D' || raw === 'D' || raw.toLowerCase() === 'day') return '1D';
   if (raw === '240' || raw.toLowerCase() === '4h') return '4H';
+  if (raw === '120' || raw.toLowerCase() === '2h') return '2H';
   if (raw === '60' || raw.toLowerCase() === '1h') return '1H';
   if (raw === '30' || raw.toLowerCase() === '30m') return '30m';
   if (raw === '15' || raw.toLowerCase() === '15m') return '15m';
@@ -65,10 +66,11 @@ function formatIntervalDisplay(inv: string): string {
   if (norm === '15' || norm === '15m') return '15m';
   if (norm === '30' || norm === '30m') return '30m';
   if (norm === '60' || norm === '1h') return '1H';
+  if (norm === '120' || norm === '2h') return '2H';
   if (norm === '240' || norm === '4h') return '4H';
-  if (norm === 'd' || norm === '1d' || norm === 'day') return 'DAY';
-  if (norm === 'w' || norm === '1w' || norm === 'week') return 'Week';
-  if (norm === 'm' || norm === '1mo' || norm === 'month') return 'Month';
+  if (norm === 'd' || norm === '1d' || norm === 'day') return '1D';
+  if (norm === 'w' || norm === '1w' || norm === 'week') return '1W';
+  if (norm === 'm' || norm === '1mo' || norm === 'month') return '1M';
   return inv.endsWith('m') ? inv : `${inv}m`;
 }
 
@@ -76,6 +78,7 @@ interface TradingViewWidgetProps {
   symbol?: string;
   theme?: 'dark' | 'light';
   interval?: string;
+  onSelectInterval?: (interval: string) => void;
   timezone?: string;
   hideSideToolbar?: boolean;
   enableDrawingTools?: boolean;
@@ -197,6 +200,7 @@ export function generateFutureWhitespaceScale(
 export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   symbol = 'OANDA:XAUUSD',
   interval = '15',
+  onSelectInterval,
   enableDrawingTools = false,
   hideSideToolbar,
   height,
@@ -752,7 +756,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
             hasInitialFitCompletedRef.current = true;
           } else if (isTimeframeChange) {
-            // Timeframe change: update future whitespace and dataset while strictly preserving the user's visible real-world time range
+            // Timeframe change: update future whitespace and dataset
             const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
             if (whitespaceSeriesApiRef.current) {
               const fullTimeline = [
@@ -763,23 +767,33 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             }
             seriesApiRef.current.setData(incomingCandles);
 
-            // Timeframe-independent viewport preservation:
-            // Convert the previous visible real-world time range to logical coordinates on the new candles
+            // Cleanly position viewport to display the latest price action with optimal density.
+            // If the previous visible range safely maps to a healthy bar count on the new timeframe,
+            // maintain that range; otherwise, reset to standard 100 visible bars + 20 future margin.
+            const totalReal = incomingCandles.length;
+            let appliedValidRange = false;
             if (prevTimeRange && typeof prevTimeRange.from === 'number' && typeof prevTimeRange.to === 'number' && prevTimeRange.to > prevTimeRange.from) {
               try {
                 const logicalFrom = timeToLogicalIndex(prevTimeRange.from, incomingCandles);
                 const logicalTo = timeToLogicalIndex(prevTimeRange.to, incomingCandles);
-                if (!isNaN(logicalFrom) && !isNaN(logicalTo) && logicalTo > logicalFrom) {
+                const barCount = logicalTo - logicalFrom;
+                if (!isNaN(logicalFrom) && !isNaN(logicalTo) && barCount >= 25 && barCount <= 250 && logicalFrom >= -10 && logicalTo <= totalReal + 80) {
                   chartApiRef.current?.timeScale().setVisibleLogicalRange({ from: logicalFrom, to: logicalTo });
-                } else {
-                  chartApiRef.current?.timeScale().setVisibleRange(prevTimeRange);
+                  appliedValidRange = true;
                 }
               } catch {
-                try {
-                  chartApiRef.current?.timeScale().setVisibleRange(prevTimeRange);
-                } catch {}
+                appliedValidRange = false;
               }
             }
+
+            if (!appliedValidRange) {
+              const visibleBars = Math.min(100, Math.max(30, totalReal));
+              const futureMargin = 20;
+              const from = Math.max(0, totalReal - visibleBars + futureMargin);
+              const to = totalReal + futureMargin;
+              chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
+            }
+            chartApiRef.current?.priceScale('right')?.applyOptions({ autoScale: true });
           } else {
             // Live candle updates / background streaming polling:
             // The chart must NEVER automatically call fitContent, reset the visible range,
@@ -2546,22 +2560,22 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               onClick={handleManualSaveStrategy}
               disabled={saveStatus === 'saving'}
               title="Save all drawings to PostgreSQL strategy database"
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-200 hover:text-amber-100 bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-amber-500/10 hover:from-amber-500/30 hover:via-amber-600/25 hover:to-amber-500/20 border border-amber-500/40 hover:border-amber-400/80 rounded-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.12)] hover:shadow-[0_0_16px_rgba(245,158,11,0.25)] group"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/60 rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group"
             >
               {saveStatus === 'saving' ? (
-                <Loader2 className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+                <Loader2 className="w-3 h-3 text-amber-300 animate-spin" />
               ) : (
-                <Save className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
+                <Save className="w-3 h-3 text-amber-400 group-hover:scale-105 transition-transform" />
               )}
               <span className="tracking-tight">
                 {saveStatus === 'saving'
                   ? 'Saving...'
                   : activeStrategy === '144'
-                  ? 'Save 144 Strategy'
+                  ? 'Save (144)'
                   : activeStrategy === 'smc'
-                  ? 'Save SMC Strategy'
+                  ? 'Save (SMC)'
                   : activeStrategy === 'fib'
-                  ? 'Save Fibonacci Strategy'
+                  ? 'Save (Fib)'
                   : 'Save Strategy'}
               </span>
             </button>
@@ -2574,19 +2588,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             onClick={handleManualRefreshStrategy}
             disabled={isRefreshingStrategy}
             title="Fetch and apply latest admin strategy drawings without reloading the page"
-            className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-cyan-200 hover:text-cyan-100 bg-gradient-to-r from-cyan-500/15 via-blue-600/15 to-indigo-600/15 hover:from-cyan-500/25 hover:via-blue-600/25 hover:to-indigo-600/25 border border-cyan-500/40 hover:border-cyan-400/80 rounded-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.12)] hover:shadow-[0_0_16px_rgba(6,182,212,0.25)] group"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/60 rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-cyan-300 group-hover:rotate-180 transition-transform duration-500 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 text-cyan-400 group-hover:rotate-180 transition-transform duration-500 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
             <span className="tracking-tight">
               {isRefreshingStrategy
                 ? 'Refreshing...'
                 : activeStrategy === '144'
-                ? 'Refresh 144'
+                ? 'Refresh (144)'
                 : activeStrategy === 'smc'
-                ? 'Refresh SMC'
+                ? 'Refresh (SMC)'
                 : activeStrategy === 'fib'
-                ? 'Refresh Fibonacci'
-                : 'Refresh Strategy'}
+                ? 'Refresh (Fib)'
+                : 'Refresh'}
             </span>
           </button>
 

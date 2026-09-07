@@ -58,6 +58,7 @@ const TIMEFRAMES = [
   { label: '30m', value: '30' },
   { label: '1H', value: '60' },
   { label: '4H', value: '240' },
+  { label: '1D', value: '1D' },
 ];
 
 interface LiveTradingSectionProps {
@@ -168,6 +169,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
             <TradingViewWidget
               symbol={selectedSymbol}
               interval={selectedInterval}
+              onSelectInterval={setSelectedInterval}
               enableDrawingTools={canAnalyzeCharts}
               hideSideToolbar={!canAnalyzeCharts}
               activeStrategy={activeStrategy}

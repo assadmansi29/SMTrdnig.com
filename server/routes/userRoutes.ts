@@ -857,7 +857,7 @@ router.get('/trading-data', requireActiveSubscription, async (req: AuthRequest, 
 });
 
 // GET /api/user/coaching-progress (Proprietary Student Coaching & Certified Mentor Milestones)
-router.get('/coaching-progress', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/coaching-progress', async (req: AuthRequest, res: Response): Promise<void> => {
   const user = await Database.findUserById(req.user!.id);
   if (!user) {
     res.status(404).json({ error: 'User profile not found.' });

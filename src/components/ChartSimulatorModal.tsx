@@ -143,6 +143,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
             symbol={selectedSymbol}
             theme="dark"
             interval={activeInterval}
+            onSelectInterval={setActiveInterval}
             timezone="Etc/UTC"
             enableDrawingTools={isStaff}
             hideSideToolbar={!isStaff}

@@ -401,6 +401,17 @@ function safeIsoDate(val: any, fallback = new Date().toISOString()): string {
   return isNaN(d.getTime()) ? fallback : d.toISOString();
 }
 
+function safeJsonParse<T = any>(val: any, fallback: T): T {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'object') return val;
+  if (typeof val !== 'string' || !val.trim()) return fallback;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return fallback;
+  }
+}
+
 function mapUserRow(row: any): UserRecord {
   return {
     id: row.id,
@@ -426,8 +437,8 @@ function mapUserRow(row: any): UserRecord {
     assignedCoachId: row.assigned_coach_id || undefined,
     coachSpecialty: row.coach_specialty || undefined,
     trainingStatus: row.training_status || undefined,
-    trainingProgress: typeof row.training_progress === 'string' ? JSON.parse(row.training_progress) : (row.training_progress || undefined),
-    permissions: typeof row.permissions === 'string' ? JSON.parse(row.permissions) : (row.permissions || undefined),
+    trainingProgress: safeJsonParse(row.training_progress, undefined),
+    permissions: safeJsonParse(row.permissions, undefined),
     timezone: row.timezone || undefined,
     telegramChatId: row.telegram_chat_id || undefined,
     telegramNotificationsEnabled: row.telegram_notifications_enabled !== false,

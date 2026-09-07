@@ -45,7 +45,7 @@ export const ALL_INSTRUMENTS: ChartInstrument[] = [
 export interface ChartTimeframe {
   value: string;
   label: string;
-  group: 'Minutes' | 'Hours';
+  group: 'Minutes' | 'Hours' | 'Daily';
 }
 
 export const ALL_TIMEFRAMES: ChartTimeframe[] = [
@@ -56,6 +56,16 @@ export const ALL_TIMEFRAMES: ChartTimeframe[] = [
   { value: '60', label: '1H', group: 'Hours' },
   { value: '120', label: '2H', group: 'Hours' },
   { value: '240', label: '4H', group: 'Hours' },
+  { value: '1D', label: '1D', group: 'Daily' },
+];
+
+export const QUICK_TIMEFRAMES: { value: string; label: string }[] = [
+  { value: '1', label: '1m' },
+  { value: '5', label: '5m' },
+  { value: '15', label: '15m' },
+  { value: '60', label: '1H' },
+  { value: '240', label: '4H' },
+  { value: '1D', label: '1D' },
 ];
 
 export type ChartStrategyType = '144' | 'smc' | 'fib' | null;
@@ -408,105 +418,134 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
           )}
         </div>
 
-        {/* 2. ONE Compact Clickable Timeframe Button with Dropdown */}
-        <div className="relative" ref={timeframeDropdownRef}>
-          <button
-            id="btn-timeframe-selector"
-            type="button"
-            onClick={() => {
-              setIsTimeframeMenuOpen((prev) => !prev);
-              setIsInstrumentMenuOpen(false);
-            }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.98] ${
-              isTimeframeMenuOpen
-                ? 'bg-slate-800 border-amber-500/60 text-white ring-1 ring-amber-500/30'
-                : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-slate-600 text-amber-300'
-            }`}
-            title="Click to change chart timeframe"
-          >
-            <Clock className="w-3.5 h-3.5 text-amber-400/80" />
-            <span className="tracking-wide text-xs">{currentTimeframe.label}</span>
-            <ChevronDown
-              className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
-                isTimeframeMenuOpen ? 'rotate-180 text-amber-400' : ''
+        {/* 2. Direct Quick Timeframe Switcher (1m, 5m, 15m, 1H, 4H, 1D) + Dropdown */}
+        <div className="flex items-center bg-[#0E1526] p-0.5 rounded-lg border border-[#1E293B]">
+          <div className="flex items-center gap-0.5">
+            {QUICK_TIMEFRAMES.map((tf) => {
+              const isSelected = tf.value === currentInterval;
+              return (
+                <button
+                  key={tf.value}
+                  id={`btn-timeframe-${tf.value}`}
+                  type="button"
+                  onClick={() => onSelectInterval(tf.value)}
+                  className={`px-2 py-1 rounded text-xs font-mono font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/70 border border-transparent'
+                  }`}
+                  title={`Switch to ${tf.label} timeframe`}
+                >
+                  {tf.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-4 w-px bg-slate-800 mx-0.5" />
+
+          {/* More Timeframes Dropdown Button */}
+          <div className="relative" ref={timeframeDropdownRef}>
+            <button
+              id="btn-timeframe-selector"
+              type="button"
+              onClick={() => {
+                setIsTimeframeMenuOpen((prev) => !prev);
+                setIsInstrumentMenuOpen(false);
+              }}
+              className={`p-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-0.5 ${
+                isTimeframeMenuOpen || !QUICK_TIMEFRAMES.some((q) => q.value === currentInterval)
+                  ? 'text-amber-400 bg-slate-800'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
-            />
-          </button>
-
-          {/* Centered Timeframe Selector Modal */}
-          {isTimeframeMenuOpen && typeof document !== 'undefined' && createPortal(
-            <div
-              id="modal-timeframe-selector"
-              className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
-              onClick={() => setIsTimeframeMenuOpen(false)}
+              title="All Timeframes"
             >
-              <div
-                className="w-full max-w-sm bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 text-slate-200"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Handle Bar on mobile */}
-                <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+              {!QUICK_TIMEFRAMES.some((q) => q.value === currentInterval) && (
+                <span className="text-xs font-mono font-bold text-amber-300 px-1">{currentTimeframe.label}</span>
+              )}
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  isTimeframeMenuOpen ? 'rotate-180 text-amber-400' : ''
+                }`}
+              />
+            </button>
 
-                {/* Header */}
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
-                    <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
-                      <Clock className="w-5 h-5" />
+            {/* Centered Timeframe Selector Modal */}
+            {isTimeframeMenuOpen && typeof document !== 'undefined' && createPortal(
+              <div
+                id="modal-timeframe-selector"
+                className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+                onClick={() => setIsTimeframeMenuOpen(false)}
+              >
+                <div
+                  className="w-full max-w-sm bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 text-slate-200"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Handle Bar on mobile */}
+                  <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+                      <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-bold text-white truncate">Select Timeframe</h3>
+                        <p className="text-xs text-slate-400 font-mono truncate">Chart Interval Scale</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-bold text-white truncate">Select Timeframe</h3>
-                      <p className="text-xs text-slate-400 font-mono truncate">Chart Interval Scale</p>
-                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsTimeframeMenuOpen(false)}
+                      className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                      aria-label="Close timeframe selector"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsTimeframeMenuOpen(false)}
-                    className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                    aria-label="Close timeframe selector"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  {/* Grouped Timeframes */}
+                  {(['Minutes', 'Hours', 'Daily'] as const).map((group) => {
+                    const groupItems = ALL_TIMEFRAMES.filter((tf) => tf.group === group);
+                    if (groupItems.length === 0) return null;
+                    return (
+                      <div key={group} className="space-y-1.5">
+                        <div className="text-xs font-mono uppercase text-slate-400 px-1 py-0.5 tracking-wider font-semibold">
+                          {group}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {groupItems.map((tf) => {
+                            const isSelected = tf.value === currentInterval;
+                            return (
+                              <button
+                                key={tf.value}
+                                type="button"
+                                onClick={() => {
+                                  onSelectInterval(tf.value);
+                                  setIsTimeframeMenuOpen(false);
+                                }}
+                                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs'
+                                    : 'bg-[#0E1524] hover:bg-slate-800 text-slate-300 border-slate-800'
+                                }`}
+                              >
+                                <span>{tf.label}</span>
+                                {isSelected && <Check className="w-4 h-4 text-amber-400 stroke-[3]" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {/* Grouped Timeframes */}
-                {(['Minutes', 'Hours'] as const).map((group) => {
-                  const groupItems = ALL_TIMEFRAMES.filter((tf) => tf.group === group);
-                  return (
-                    <div key={group} className="space-y-1.5">
-                      <div className="text-xs font-mono uppercase text-slate-400 px-1 py-0.5 tracking-wider font-semibold">
-                        {group}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {groupItems.map((tf) => {
-                          const isSelected = tf.value === currentInterval;
-                          return (
-                            <button
-                              key={tf.value}
-                              type="button"
-                              onClick={() => {
-                                onSelectInterval(tf.value);
-                                setIsTimeframeMenuOpen(false);
-                              }}
-                              className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
-                                isSelected
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs'
-                                  : 'bg-[#0E1524] hover:bg-slate-800 text-slate-300 border-slate-800'
-                              }`}
-                            >
-                              <span>{tf.label}</span>
-                              {isSelected && <Check className="w-4 h-4 text-amber-400 stroke-[3]" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>,
-            document.body
-          )}
+              </div>,
+              document.body
+            )}
+          </div>
         </div>
 
         {/* Subtle Divider */}
