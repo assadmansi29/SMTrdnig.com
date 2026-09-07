@@ -58,9 +58,6 @@ const TIMEFRAMES = [
   { label: '30m', value: '30' },
   { label: '1H', value: '60' },
   { label: '4H', value: '240' },
-  { label: 'DAY', value: '1D' },
-  { label: 'Week', value: '1W' },
-  { label: 'Month', value: '1M' },
 ];
 
 interface LiveTradingSectionProps {

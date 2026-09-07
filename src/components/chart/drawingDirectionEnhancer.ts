@@ -861,27 +861,34 @@ export function projectLogicalCoordinate(timeScale: any, logicalIdx: number, cha
   const realTs = chart?.timeScale?.() || (typeof window !== 'undefined' && (window as any).__currentChart?.timeScale?.()) || timeScale;
   if (!realTs) return null;
 
-  // 1. Primary method: visible logical range and exact bar spacing from the real chart time scale
-  // This continuous calculation NEVER returns null, even for off-screen, past, future, or fractional indices!
+  // 1. If integer logical index, test direct coordinate conversion
+  if (Number.isInteger(logicalIdx)) {
+    const direct = realTs.logicalToCoordinate?.(logicalIdx);
+    if (direct !== null && direct !== undefined && !isNaN(direct)) {
+      return direct;
+    }
+  }
+
+  // 2. Primary method: continuous linear calculation using two visible integer indices
+  // Lightweight Charts time scale is strictly linear in logical index space:
+  // coordinate = x1 + (logicalIdx - i1) * barSpacing
   try {
     const range = realTs.getVisibleLogicalRange?.();
-    if (range && typeof range.from === 'number' && typeof range.to === 'number' && range.to !== range.from) {
-      const xFrom = realTs.logicalToCoordinate?.(range.from);
-      const xTo = realTs.logicalToCoordinate?.(range.to);
-      if (xFrom !== null && xTo !== null && !isNaN(xFrom) && !isNaN(xTo)) {
-        const barSpacing = (xTo - xFrom) / (range.to - range.from);
-        if (barSpacing > 0) {
-          return xFrom + (logicalIdx - range.from) * barSpacing;
+    if (range && typeof range.from === 'number' && typeof range.to === 'number' && range.to > range.from) {
+      const i1 = Math.ceil(range.from) + 1;
+      const i2 = Math.floor(range.to) - 1;
+      if (i2 > i1) {
+        const x1 = realTs.logicalToCoordinate?.(i1);
+        const x2 = realTs.logicalToCoordinate?.(i2);
+        if (x1 !== null && x2 !== null && !isNaN(x1) && !isNaN(x2)) {
+          const barSpacing = (x2 - x1) / (i2 - i1);
+          if (barSpacing > 0) {
+            return x1 + (logicalIdx - i1) * barSpacing;
+          }
         }
       }
     }
   } catch {}
-
-  // 2. Direct coordinate calculation
-  const direct = realTs.logicalToCoordinate?.(logicalIdx);
-  if (direct !== null && direct !== undefined && !isNaN(direct)) {
-    return direct;
-  }
 
   // 3. Interpolation between floor and ceil indices
   const floorIdx = Math.floor(logicalIdx);
@@ -889,17 +896,28 @@ export function projectLogicalCoordinate(timeScale: any, logicalIdx: number, cha
 
   if (floorIdx === ceilIdx) {
     const coord = realTs.logicalToCoordinate?.(floorIdx);
-    return coord !== null && coord !== undefined && !isNaN(coord) ? coord : null;
+    if (coord !== null && coord !== undefined && !isNaN(coord)) return coord;
+  } else {
+    const coordFloor = realTs.logicalToCoordinate?.(floorIdx);
+    const coordCeil = realTs.logicalToCoordinate?.(ceilIdx);
+    if (coordFloor !== null && coordCeil !== null && !isNaN(coordFloor) && !isNaN(coordCeil)) {
+      return coordFloor + (logicalIdx - floorIdx) * (coordCeil - coordFloor);
+    }
   }
 
-  const coordFloor = realTs.logicalToCoordinate?.(floorIdx);
-  const coordCeil = realTs.logicalToCoordinate?.(ceilIdx);
+  // 4. Fallback: native barSpacing and visible midpoint
+  try {
+    const barSpacing = realTs.options?.()?.barSpacing || 6;
+    const range = realTs.getVisibleLogicalRange?.();
+    if (range) {
+      const midInt = Math.round((range.from + range.to) / 2);
+      const midX = realTs.logicalToCoordinate?.(midInt);
+      if (midX !== null && midX !== undefined && !isNaN(midX)) {
+        return midX + (logicalIdx - midInt) * barSpacing;
+      }
+    }
+  } catch {}
 
-  if (coordFloor !== null && coordCeil !== null && !isNaN(coordFloor) && !isNaN(coordCeil)) {
-    return coordFloor + (logicalIdx - floorIdx) * (coordCeil - coordFloor);
-  }
-  if (coordFloor !== null && !isNaN(coordFloor)) return coordFloor;
-  if (coordCeil !== null && !isNaN(coordCeil)) return coordCeil;
   return null;
 }
 
@@ -930,13 +948,15 @@ export function installDirectionalEnhancers() {
         if (!timeScale) return null;
 
         // Price coordinate (Y): map absolute anchor.price to the current price scale
+        // Check series first because it correctly resolves firstValue for PriceScale
         let y: number | null = null;
         const priceNum = typeof anchor.price === 'number' ? anchor.price : parseFloat(anchor.price);
         if (!isNaN(priceNum)) {
-          if (priceScale?.priceToCoordinate) {
-            y = priceScale.priceToCoordinate(priceNum);
-          } else if (series?.priceToCoordinate) {
+          if (series?.priceToCoordinate) {
             y = series.priceToCoordinate(priceNum);
+          }
+          if ((y === null || y === undefined || isNaN(y)) && priceScale?.priceToCoordinate) {
+            y = priceScale.priceToCoordinate(priceNum);
           }
         }
         if (y === null || isNaN(y)) {
@@ -955,13 +975,13 @@ export function installDirectionalEnhancers() {
         }
 
         if (!isNaN(targetTime)) {
-          // 1. First check direct native timeToCoordinate - instant and accurate for visible bars!
+          // 1. First check direct native timeToCoordinate - instant and accurate for visible bars matching candle timestamps!
           const directTimeX = timeScale?.timeToCoordinate?.(targetTime) ?? chart?.timeScale?.().timeToCoordinate?.(targetTime);
           if (directTimeX !== null && directTimeX !== undefined && !isNaN(directTimeX)) {
             x = directTimeX;
           } else {
-            // 2. Continuous logical projection for future projection or timestamps between candles
-            const candles = (typeof window !== 'undefined' && (window as any).__chartCandles) || [];
+            // 2. Continuous logical projection for future projection, past projection, or timestamps between candles
+            const candles = (chart as any)?._candles || (typeof window !== 'undefined' && (window as any).__chartCandles) || [];
             if (Array.isArray(candles) && candles.length > 0) {
               const logicalIdx = timeToLogicalIndex(targetTime, candles);
               const projectedX = projectLogicalCoordinate(timeScale, logicalIdx, chart);
@@ -995,9 +1015,11 @@ export function installDirectionalEnhancers() {
         const priceScale = viewport.priceScale || series;
         if (!timeScale || !priceScale) return null;
 
-        let price = priceScale.coordinateToPrice?.(point.y);
-        if (price === null || price === undefined || isNaN(price)) {
-          price = series?.coordinateToPrice?.(point.y);
+        let price: number | null = null;
+        if (series?.coordinateToPrice) {
+          price = series.coordinateToPrice(point.y);
+        } else if (priceScale.coordinateToPrice) {
+          price = priceScale.coordinateToPrice(point.y);
         }
         if (price === null || price === undefined || isNaN(price)) return null;
 
@@ -1010,7 +1032,7 @@ export function installDirectionalEnhancers() {
 
         if (!time) {
           const logical = rawTs?.coordinateToLogical ? rawTs.coordinateToLogical(point.x) : null;
-          const candles = typeof window !== 'undefined' ? (window as any).__chartCandles : undefined;
+          const candles = (chart as any)?._candles || (typeof window !== 'undefined' ? (window as any).__chartCandles : undefined);
           if (logical !== null && logical !== undefined && !isNaN(logical) && Array.isArray(candles) && candles.length > 0) {
             const N = candles.length;
             const lastCandle = candles[N - 1];

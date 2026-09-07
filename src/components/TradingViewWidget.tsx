@@ -23,7 +23,8 @@ import { DRAWING_TOOLS } from './chart/toolsConfig';
 import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
 import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
-import { installDirectionalEnhancers } from './chart/drawingDirectionEnhancer';
+import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawingDirectionEnhancer';
+import { useAuth } from '../context/AuthContext';
 
 // Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers
 installGannBoxEnhancer();
@@ -79,8 +80,8 @@ interface TradingViewWidgetProps {
   enableDrawingTools?: boolean;
   height?: string;
   className?: string;
-  activeStrategy?: 'smc' | '144' | 'fib' | null;
-  onSelectStrategy?: (strategy: 'smc' | '144' | 'fib' | null) => void;
+  activeStrategy?: '144' | 'smc' | 'fib' | null;
+  onSelectStrategy?: (strategy: '144' | 'smc' | 'fib' | null) => void;
 }
 
 interface CandleData {
@@ -92,20 +93,46 @@ interface CandleData {
   volume?: number;
 }
 
-const saveStrategyDrawingsLocal = (sym: string, drawings: any[]) => {
+const getStrategyStorageKey = (sym: string, strategy?: string | null): string => {
+  const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
+  const stratKey = (strategy || 'default').toLowerCase();
+  return `tv_drawings_${cleanSym}_${stratKey}`;
+};
+
+const saveStrategyDrawingsLocal = (
+  sym: string,
+  arg2: string | null | undefined | any[],
+  arg3?: any[]
+) => {
   try {
-    const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
-    localStorage.setItem(`tv_drawings_${cleanSym}`, JSON.stringify(drawings || []));
+    let strategy: string | null | undefined = 'default';
+    let drawings: any[] = [];
+    if (Array.isArray(arg2)) {
+      drawings = arg2;
+      strategy = typeof arg3 === 'string' ? arg3 : undefined;
+    } else {
+      strategy = arg2;
+      drawings = arg3 || [];
+    }
+    const key = getStrategyStorageKey(sym, strategy);
+    localStorage.setItem(key, JSON.stringify(drawings || []));
   } catch (err) {
     console.warn('[Financial Chart] Local storage save failed:', err);
   }
 };
 
-const loadStrategyDrawingsLocal = (sym: string): any[] => {
+const loadStrategyDrawingsLocal = (sym: string, strategy?: string | null): any[] => {
   try {
-    const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
-    const raw = localStorage.getItem(`tv_drawings_${cleanSym}`);
-    return raw ? JSON.parse(raw) : [];
+    const key = getStrategyStorageKey(sym, strategy);
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+    // Legacy fallback for default view
+    if (!strategy || strategy === 'default') {
+      const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
+      const legacy = localStorage.getItem(`tv_drawings_${cleanSym}`);
+      return legacy ? JSON.parse(legacy) : [];
+    }
+    return [];
   } catch {
     return [];
   }
@@ -170,11 +197,30 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   symbol = 'OANDA:XAUUSD',
   interval = '15',
   enableDrawingTools = false,
+  hideSideToolbar,
   height,
   className,
   activeStrategy = null,
   onSelectStrategy,
 }) => {
+  const { user, token: authToken } = useAuth();
+  const isOwnerOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.email === 'am29multibrand@gmail.com';
+  const isOwnerOrAdminRef = useRef<boolean>(isOwnerOrAdmin);
+  isOwnerOrAdminRef.current = isOwnerOrAdmin;
+
+  const activeStrategyRef = useRef<'144' | 'smc' | 'fib' | null>(activeStrategy);
+  activeStrategyRef.current = activeStrategy;
+
+  // View-Only enforcement for strategy views:
+  // ONLY admin/owner can create, edit, move, delete, or save drawings inside these 3 strategy views.
+  // Regular visitors/users are strictly VIEW-ONLY.
+  const effectiveDrawingTools = Boolean(
+    isOwnerOrAdmin
+      ? enableDrawingTools || Boolean(activeStrategy)
+      : enableDrawingTools && !activeStrategy
+  );
+  const effectiveHideSideToolbar = hideSideToolbar !== undefined ? hideSideToolbar : !effectiveDrawingTools;
+
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const seriesApiRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -319,8 +365,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   currentColorRef.current = currentColor;
   const currentWidthRef = useRef<number>(currentWidth);
   currentWidthRef.current = currentWidth;
-  const enableDrawingToolsRef = useRef<boolean>(enableDrawingTools || Boolean(activeStrategy));
-  enableDrawingToolsRef.current = enableDrawingTools || Boolean(activeStrategy);
+  const enableDrawingToolsRef = useRef<boolean>(effectiveDrawingTools);
+  enableDrawingToolsRef.current = effectiveDrawingTools;
 
   // Track active drawing drag state (anchor handle resize/move or whole drawing reposition)
   const dragStateRef = useRef<{
@@ -571,8 +617,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 1. Get Auth Token for persistent PostgreSQL saving
   const getAuthToken = useCallback((): string | null => {
-    return localStorage.getItem('smtrading_token');
-  }, []);
+    return authToken || localStorage.getItem('smtrading_token');
+  }, [authToken]);
 
   // Track currently active symbol and interval loaded in chart series
   const lastLoadedKeyRef = useRef<string>('');
@@ -704,7 +750,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
             hasInitialFitCompletedRef.current = true;
           } else if (isTimeframeChange) {
-            // Timeframe change: update future whitespace and dataset while strictly preserving the user's visible range
+            // Timeframe change: update future whitespace and dataset while strictly preserving the user's visible real-world time range
             const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
             if (whitespaceSeriesApiRef.current) {
               const fullTimeline = [
@@ -713,12 +759,24 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               ];
               whitespaceSeriesApiRef.current.setData(fullTimeline);
             }
-            const currentLogical = chartApiRef.current?.timeScale().getVisibleLogicalRange();
             seriesApiRef.current.setData(incomingCandles);
-            if (currentLogical && chartApiRef.current) {
+
+            // Timeframe-independent viewport preservation:
+            // Convert the previous visible real-world time range to logical coordinates on the new candles
+            if (prevTimeRange && typeof prevTimeRange.from === 'number' && typeof prevTimeRange.to === 'number' && prevTimeRange.to > prevTimeRange.from) {
               try {
-                chartApiRef.current.timeScale().setVisibleLogicalRange(currentLogical);
-              } catch {}
+                const logicalFrom = timeToLogicalIndex(prevTimeRange.from, incomingCandles);
+                const logicalTo = timeToLogicalIndex(prevTimeRange.to, incomingCandles);
+                if (!isNaN(logicalFrom) && !isNaN(logicalTo) && logicalTo > logicalFrom) {
+                  chartApiRef.current?.timeScale().setVisibleLogicalRange({ from: logicalFrom, to: logicalTo });
+                } else {
+                  chartApiRef.current?.timeScale().setVisibleRange(prevTimeRange);
+                }
+              } catch {
+                try {
+                  chartApiRef.current?.timeScale().setVisibleRange(prevTimeRange);
+                } catch {}
+              }
             }
           } else {
             // Live candle updates / background streaming polling:
@@ -736,6 +794,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           setLastBarInfo({ open: last.open, high: last.high, low: last.low, close: last.close });
         }
 
+        if (chartApiRef.current) {
+          (chartApiRef.current as any)._candles = incomingCandles;
+          (chartApiRef.current as any)._currentInterval = inv;
+        }
+
         // Immediately recalculate screen positions for all drawings on the new timeframe
         const manager = drawingManagerRef.current;
         if (manager) {
@@ -744,6 +807,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             d._currentChartInterval = inv;
             d.requestUpdate?.();
           });
+          requestAnimationFrame(() => {
+            all.forEach((d: any) => d.requestUpdate?.());
+          });
+          setTimeout(() => {
+            all.forEach((d: any) => d.requestUpdate?.());
+          }, 80);
         }
         syncDrawingsList();
         lastLoadedKeyRef.current = requestKey;
@@ -767,22 +836,29 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [syncDrawingsList]);
 
-  // 3. Fetch Published Drawings (PostgreSQL with LocalStorage fallback)
-  const loadPostgresDrawings = useCallback(async (sym: string, inv: string, force: boolean = false) => {
+  // 3. Fetch Published Drawings (PostgreSQL with LocalStorage fallback) partitioned by Strategy View
+  const loadPostgresDrawings = useCallback(async (
+    sym: string,
+    inv: string,
+    force: boolean = false,
+    targetStrategy: '144' | 'smc' | 'fib' | null = activeStrategyRef.current
+  ) => {
     try {
       const manager = drawingManagerRef.current;
       if (!manager) return;
 
-      // If not forcing a reload and we already have drawings loaded for this symbol, keep them!
+      const stratKey = (targetStrategy || 'default').toLowerCase();
+
+      // If not forcing a reload and we already have drawings loaded for this symbol & strategy, keep them
       if (!force && (manager.getAllDrawings() || []).length > 0) {
         return;
       }
 
       let rawDrawings: SerializedDrawingPayload[] = [];
       try {
-        const res = await fetch(`/api/chart-drawings?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}`);
+        const res = await fetch(`/api/chart-drawings?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}&strategy=${encodeURIComponent(stratKey)}`);
         const data = await res.json();
-        if (data.status === 'ok' && Array.isArray(data.drawings) && data.drawings.length > 0) {
+        if (data.status === 'ok' && Array.isArray(data.drawings)) {
           rawDrawings = data.drawings;
         }
       } catch (networkErr: any) {
@@ -791,15 +867,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       // Fallback to local storage if PostgreSQL returns empty
       if (rawDrawings.length === 0) {
-        const localList = loadStrategyDrawingsLocal(sym);
+        const localList = loadStrategyDrawingsLocal(sym, targetStrategy);
         if (Array.isArray(localList) && localList.length > 0) {
           rawDrawings = localList;
         }
       }
 
-      if (rawDrawings.length > 0 || force) {
-        manager.clearAll();
+      // Clear previous drawings to render a clean, isolated strategy view
+      manager.clearAll();
+
+      if (rawDrawings.length > 0) {
         const registry = ToolRegistry.getInstance();
+        // Regular visitors/users in a strategy view are strictly view-only (drawings locked)
+        const isReadOnlyView = Boolean(targetStrategy) && !isOwnerOrAdminRef.current;
 
         rawDrawings.forEach((d: SerializedDrawingPayload) => {
           if (!d.type || !d.anchors || d.anchors.length === 0) return;
@@ -811,7 +891,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               else if (actualType === 'gann-angle') actualType = 'trend-angle';
             }
 
-            const isLocked = !enableDrawingTools;
+            const isLocked = isReadOnlyView || !enableDrawingToolsRef.current;
             const restored = registry.createDrawing(
               actualType,
               d.id,
@@ -822,6 +902,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
             if (restored) {
               (restored as any)._currentChartInterval = inv;
+              (restored as any)._strategy = stratKey;
               if (actualType === 'gann-box' || actualType === 'gannbox') {
                 const combinedGannOpts = {
                   ...(d.options || {}),
@@ -859,21 +940,24 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             console.warn('[Financial Chart] Failed to restore drawing:', d.id, restoreErr.message);
           }
         });
-
-        setSaveStatus('synced');
-        syncDrawingsList();
       }
+
+      setSaveStatus('synced');
+      syncDrawingsList();
     } catch (err: any) {
       console.error('[Financial Chart] Error loading drawings:', err.message);
     }
-  }, [enableDrawingTools, syncDrawingsList]);
+  }, [syncDrawingsList]);
 
-  // 4. Save Single Drawing (Local Storage & PostgreSQL)
+  // 4. Save Single Drawing (Local Storage & PostgreSQL) partitioned by Strategy View
   const saveDrawingToPostgres = useCallback(async (drawingPayload: any) => {
     const manager = drawingManagerRef.current;
+    const currentStrat = activeStrategyRef.current;
     if (manager) {
-      saveStrategyDrawingsLocal(symbol, manager.exportDrawings());
+      saveStrategyDrawingsLocal(symbol, currentStrat, manager.exportDrawings());
     }
+
+    if (!isOwnerOrAdminRef.current) return;
 
     const token = getAuthToken();
     if (!token) return;
@@ -904,6 +988,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         body: JSON.stringify({
           symbol,
           interval,
+          strategy: (currentStrat || 'default').toLowerCase(),
           drawing: finalPayload,
         }),
       });
@@ -917,11 +1002,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [symbol, interval, getAuthToken]);
 
-  // 5. Batch Save Drawings (Local Storage & PostgreSQL)
+  // 5. Batch Save Drawings (Local Storage & PostgreSQL) partitioned by Strategy View
   const batchSaveToPostgres = useCallback(async () => {
     const manager = drawingManagerRef.current;
     if (!manager) return;
 
+    const currentStrat = activeStrategyRef.current;
     const allDrawings = manager.exportDrawings().map((d: any) => {
       const live = manager.getDrawing(d.id);
       if (live && (live as any).gannOptions) {
@@ -937,7 +1023,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       return d;
     });
 
-    saveStrategyDrawingsLocal(symbol, allDrawings);
+    saveStrategyDrawingsLocal(symbol, currentStrat, allDrawings);
+
+    if (!isOwnerOrAdminRef.current) {
+      setSaveStatus('synced');
+      return;
+    }
 
     const token = getAuthToken();
     if (!token) {
@@ -956,6 +1047,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         body: JSON.stringify({
           symbol,
           interval,
+          strategy: (currentStrat || 'default').toLowerCase(),
           drawings: allDrawings,
         }),
       });
@@ -978,8 +1070,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     setIsRefreshingStrategy(true);
     setRefreshNotification(null);
     try {
-      await loadPostgresDrawings(symbol, interval, true);
-      setRefreshNotification('Strategy Refreshed');
+      await loadPostgresDrawings(symbol, interval, true, activeStrategy);
+      const stratLabel = activeStrategy === '144' ? '144 Strategy' : activeStrategy === 'smc' ? 'SMC Strategy' : activeStrategy === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
+      setRefreshNotification(`${stratLabel} Refreshed`);
       setTimeout(() => {
         setRefreshNotification(null);
       }, 2500);
@@ -988,7 +1081,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     } finally {
       setIsRefreshingStrategy(false);
     }
-  }, [isRefreshingStrategy, loadPostgresDrawings, symbol, interval]);
+  }, [isRefreshingStrategy, loadPostgresDrawings, symbol, interval, activeStrategy]);
 
   // 5.2 Manual Save Strategy (for Super Admin & Admin)
   const handleManualSaveStrategy = useCallback(async () => {
@@ -1072,10 +1165,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     const manager = drawingManagerRef.current;
     if (manager) {
       manager.removeDrawing(selectedDrawingId);
+      saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, manager.exportDrawings());
     }
 
     const token = getAuthToken();
-    if (token) {
+    if (token && isOwnerOrAdminRef.current) {
       try {
         setSaveStatus('saving');
         await fetch(`/api/chart-drawings/${encodeURIComponent(selectedDrawingId)}`, {
@@ -1092,7 +1186,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     setSelectedDrawingId(null);
     syncDrawingsList();
-  }, [selectedDrawingId, getAuthToken, syncDrawingsList]);
+  }, [selectedDrawingId, getAuthToken, symbol, syncDrawingsList]);
 
   // 7. Clear All Drawings
   const handleClearAll = useCallback(async () => {
@@ -1100,10 +1194,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     const manager = drawingManagerRef.current;
     if (manager) {
       manager.clearAll();
+      saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, []);
     }
 
     const token = getAuthToken();
-    if (token) {
+    if (token && isOwnerOrAdminRef.current) {
       try {
         setSaveStatus('saving');
         await fetch('/api/chart-drawings/batch', {
@@ -1115,6 +1210,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           body: JSON.stringify({
             symbol,
             interval,
+            strategy: (activeStrategyRef.current || 'default').toLowerCase(),
             drawings: [],
           }),
         });
@@ -1392,8 +1488,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           } else if (logical < 0) {
             time = Number(firstCandle.time) + Math.round(logical * step);
           } else {
-            const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
-            time = Number(candlesRef.current[idx].time);
+            const floor = Math.floor(logical);
+            const ceil = Math.ceil(logical);
+            if (floor === ceil || !candlesRef.current[ceil]) {
+              const idx = Math.max(0, Math.min(N - 1, floor));
+              time = Number(candlesRef.current[idx].time);
+            } else {
+              const t0 = Number(candlesRef.current[floor].time);
+              const t1 = Number(candlesRef.current[ceil].time);
+              time = Math.round(t0 + (logical - floor) * (t1 - t0));
+            }
           }
         }
       }
@@ -1462,7 +1566,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             currentManager.selectDrawing(creation.drawing.id);
             setSelectedDrawingId(creation.drawing.id);
             saveDrawingToPostgres(creation.drawing.toJSON());
-            saveStrategyDrawingsLocal(symbol, currentManager.exportDrawings());
+            saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager.exportDrawings());
             unlockCameraAfterInteraction(currentChart, false);
             currentContainer.style.cursor = '';
             setActiveTool(null);
@@ -1519,7 +1623,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               currentManager.selectDrawing(drawing.id);
               setSelectedDrawingId(drawing.id);
               saveDrawingToPostgres(drawing.toJSON());
-              saveStrategyDrawingsLocal(symbol, currentManager.exportDrawings());
+              saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager.exportDrawings());
               pushUndoSnapshot();
               syncDrawingsList();
             }
@@ -1573,7 +1677,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               currentManager.selectDrawing(drawing.id);
               setSelectedDrawingId(drawing.id);
               saveDrawingToPostgres(drawing.toJSON());
-              saveStrategyDrawingsLocal(symbol, currentManager.exportDrawings());
+              saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager.exportDrawings());
               pushUndoSnapshot();
               syncDrawingsList();
             }
@@ -1966,7 +2070,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               currentManager?.selectDrawing(creation.drawing.id);
               setSelectedDrawingId(creation.drawing.id);
               saveDrawingToPostgres(creation.drawing.toJSON());
-              saveStrategyDrawingsLocal(symbol, currentManager?.exportDrawings());
+              saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager?.exportDrawings());
               if (currentChart) unlockCameraAfterInteraction(currentChart, false);
               if (currentContainer) currentContainer.style.cursor = '';
               setActiveTool(null);
@@ -2242,40 +2346,36 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         drawingManagerRef.current?.clearAll();
       }
       fetchCandles(symbol, interval, false, false, isSymbolChange);
-      loadPostgresDrawings(symbol, interval, true);
+      loadPostgresDrawings(symbol, interval, true, activeStrategy);
     } else {
-      // Only interval changed: drawings are shared across all timeframes for the same symbol!
+      // Only interval changed: drawings are shared across all timeframes for the same symbol & strategy!
       // Persist any in-memory tweaks, fetch new candles, and reproject existing drawings onto the new timeframe
       batchSaveRef.current?.();
       fetchCandles(symbol, interval, false, true, false);
       // Only fetch from database if the manager currently has no drawings loaded
       const manager = drawingManagerRef.current;
       if (!manager || (manager.getAllDrawings() || []).length === 0) {
-        loadPostgresDrawings(symbol, interval, false);
+        loadPostgresDrawings(symbol, interval, false, activeStrategy);
       }
     }
-  }, [symbol, interval, fetchCandles, loadPostgresDrawings]);
+  }, [symbol, interval, activeStrategy, fetchCandles, loadPostgresDrawings]);
 
-  // Handle Strategy Activation
+  // Switch Independent Strategy Chart View (144 Strategy, SMC Strategy, Fibonacci Strategy)
+  const prevStrategyRef = useRef<string | null>(activeStrategy);
   useEffect(() => {
-    if (!activeStrategy) {
-      if (activeTool === 'rectangle' || activeTool === 'gann-box' || activeTool === 'fib-retracement') {
-        handleSelectTool(null);
-      }
-      return;
-    }
+    if (prevStrategyRef.current !== activeStrategy) {
+      prevStrategyRef.current = activeStrategy;
 
-    if (activeStrategy === 'smc') {
-      handleSelectTool('rectangle');
-      setCurrentColor('#38bdf8');
-    } else if (activeStrategy === '144') {
-      handleSelectTool('gann-box');
-      setCurrentColor('#f59e0b');
-    } else if (activeStrategy === 'fib') {
-      handleSelectTool('fib-retracement');
-      setCurrentColor('#10b981');
+      // Disarm any active drawing tool & pending clicks
+      handleSelectTool(null);
+      setPendingAnchors([]);
+      setSelectedDrawingId(null);
+      setIsPropertiesOpen(false);
+
+      // Open a clean chart view containing only the drawings for this independent strategy view
+      loadPostgresDrawings(symbol, interval, true, activeStrategy);
     }
-  }, [activeStrategy, handleSelectTool]);
+  }, [activeStrategy, symbol, interval, handleSelectTool, loadPostgresDrawings]);
 
   // Periodic candle refresh (every 15 seconds) to keep stream live - completely silent, preserves zoom/pan!
   useEffect(() => {
@@ -2354,7 +2454,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           )}
 
           {/* Admin / Super Admin Save Strategy Button */}
-          {enableDrawingTools && (
+          {isOwnerOrAdmin && (
             <button
               id="btn-save-strategy"
               type="button"
@@ -2368,7 +2468,17 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               ) : (
                 <Save className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
               )}
-              <span className="tracking-tight">{saveStatus === 'saving' ? 'Saving...' : 'Save Strategy'}</span>
+              <span className="tracking-tight">
+                {saveStatus === 'saving'
+                  ? 'Saving...'
+                  : activeStrategy === '144'
+                  ? 'Save 144 Strategy'
+                  : activeStrategy === 'smc'
+                  ? 'Save SMC Strategy'
+                  : activeStrategy === 'fib'
+                  ? 'Save Fibonacci Strategy'
+                  : 'Save Strategy'}
+              </span>
             </button>
           )}
 
@@ -2382,10 +2492,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-cyan-200 hover:text-cyan-100 bg-gradient-to-r from-cyan-500/15 via-blue-600/15 to-indigo-600/15 hover:from-cyan-500/25 hover:via-blue-600/25 hover:to-indigo-600/25 border border-cyan-500/40 hover:border-cyan-400/80 rounded-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.12)] hover:shadow-[0_0_16px_rgba(6,182,212,0.25)] group"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-cyan-300 group-hover:rotate-180 transition-transform duration-500 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
-            <span className="tracking-tight">{isRefreshingStrategy ? 'Refreshing...' : 'Refresh Strategy'}</span>
+            <span className="tracking-tight">
+              {isRefreshingStrategy
+                ? 'Refreshing...'
+                : activeStrategy === '144'
+                ? 'Refresh 144'
+                : activeStrategy === 'smc'
+                ? 'Refresh SMC'
+                : activeStrategy === 'fib'
+                ? 'Refresh Fibonacci'
+                : 'Refresh Strategy'}
+            </span>
           </button>
 
-          {enableDrawingTools ? (
+          {isOwnerOrAdmin ? (
             <div className="hidden lg:flex items-center gap-2">
               {/* PostgreSQL Sync Status */}
               <span className="flex items-center gap-1 text-[10px] font-mono text-slate-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800">
@@ -2415,7 +2535,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       </div>
 
       {/* 2. Active Tool Guide Banner (when user or admin is placing anchors) */}
-      {(enableDrawingTools || activeStrategy) && activeToolDef && (
+      {effectiveDrawingTools && activeToolDef && (
         <div className="absolute top-10 left-14 z-30 bg-amber-500/95 text-slate-950 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1 border border-amber-400">
           <span>
             <strong>{activeToolDef.name}:</strong> Click chart to place point {pendingAnchors.length + 1} of {activeToolDef.requiredAnchors}
@@ -2424,7 +2544,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             onClick={() => {
               setActiveTool(null);
               setPendingAnchors([]);
-              onSelectStrategy?.(null);
             }}
             className="hover:bg-amber-600/50 p-0.5 rounded transition-colors"
             title="Cancel"
@@ -2436,22 +2555,47 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       {/* 2.1 Active Strategy Mode Pill Banner */}
       {activeStrategy && !activeToolDef && (
-        <div className="absolute top-10 left-14 z-30 bg-slate-900/90 text-slate-200 text-xs font-medium px-3 py-1 rounded-md shadow-lg flex items-center gap-2 border border-slate-700 animate-in fade-in">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="absolute top-10 left-14 z-30 bg-[#090E1B]/95 text-slate-200 text-xs font-medium px-3.5 py-1.5 rounded-xl shadow-xl flex items-center gap-2.5 border border-slate-700/80 backdrop-blur-md animate-in fade-in">
+          <span
+            className={`w-2 h-2 rounded-full animate-pulse ${
+              activeStrategy === '144'
+                ? 'bg-amber-400'
+                : activeStrategy === 'smc'
+                ? 'bg-sky-400'
+                : 'bg-emerald-400'
+            }`}
+          />
           <span>
-            Strategy: <strong className="text-white capitalize">{activeStrategy === 'smc' ? 'SMC (Smart Money)' : activeStrategy === '144' ? '144 Strategy (Gann)' : 'Fibonacci Retracement'}</strong>
+            Strategy View:{' '}
+            <strong className="text-white font-semibold">
+              {activeStrategy === '144'
+                ? '144 Strategy'
+                : activeStrategy === 'smc'
+                ? 'SMC Strategy'
+                : 'Fibonacci Strategy'}
+            </strong>
+            {isOwnerOrAdmin ? (
+              <span className="ml-2 text-[10px] text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
+                Admin Edit Mode
+              </span>
+            ) : (
+              <span className="ml-2 text-[10px] text-sky-300 bg-sky-500/15 px-1.5 py-0.5 rounded border border-sky-500/30">
+                Published Analysis • View Only
+              </span>
+            )}
           </span>
           <button
             onClick={() => onSelectStrategy?.(null)}
-            className="hover:bg-slate-800 p-0.5 rounded text-slate-400 hover:text-white"
+            className="hover:bg-slate-800 p-1 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer ml-1"
+            title="Exit Strategy View (Return to Normal Chart)"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* 3. Sleek Left Drawing Toolbar (Visible ONLY to Admin & Super Admin) */}
-      {enableDrawingTools && (
+      {/* 3. Sleek Left Drawing Toolbar (Visible ONLY when user has edit permissions) */}
+      {effectiveDrawingTools && !effectiveHideSideToolbar && (
         <DrawingToolbar
           activeTool={activeTool}
           onSelectTool={(toolId) => {

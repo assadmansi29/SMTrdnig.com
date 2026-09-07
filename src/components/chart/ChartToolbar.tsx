@@ -43,7 +43,7 @@ export const ALL_INSTRUMENTS: ChartInstrument[] = [
 export interface ChartTimeframe {
   value: string;
   label: string;
-  group: 'Minutes' | 'Hours' | 'Days';
+  group: 'Minutes' | 'Hours';
 }
 
 export const ALL_TIMEFRAMES: ChartTimeframe[] = [
@@ -54,12 +54,9 @@ export const ALL_TIMEFRAMES: ChartTimeframe[] = [
   { value: '60', label: '1H', group: 'Hours' },
   { value: '120', label: '2H', group: 'Hours' },
   { value: '240', label: '4H', group: 'Hours' },
-  { value: '1D', label: '1D', group: 'Days' },
-  { value: '1W', label: '1W', group: 'Days' },
-  { value: '1M', label: '1M', group: 'Days' },
 ];
 
-export type ChartStrategyType = 'smc' | '144' | 'fib' | null;
+export type ChartStrategyType = '144' | 'smc' | 'fib' | null;
 
 interface ChartToolbarProps {
   currentSymbol: string;
@@ -390,12 +387,12 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
           {isTimeframeMenuOpen && (
             <div className="absolute top-full left-0 mt-1.5 w-44 bg-[#0A0F1D] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
               {/* Grouped Timeframes */}
-              {(['Minutes', 'Hours', 'Days'] as const).map((group) => {
+              {(['Minutes', 'Hours'] as const).map((group) => {
                 const groupItems = ALL_TIMEFRAMES.filter((tf) => tf.group === group);
                 return (
                   <div key={group} className="space-y-1">
                     <div className="text-[10px] font-mono uppercase text-slate-400 px-2 py-0.5 tracking-wider font-semibold">
-                      {group === 'Days' ? 'Days & Weeks' : group}
+                      {group}
                     </div>
                     <div className="grid grid-cols-2 gap-1">
                       {groupItems.map((tf) => {
@@ -430,30 +427,9 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
         {/* Subtle Divider */}
         <div className="h-5 w-px bg-slate-800/80 mx-0.5 hidden sm:block" />
 
-        {/* 3. Three Functional Strategy Buttons: SMC, 144 Strategy, Fibonacci */}
+        {/* 3. Three Independent Strategy Views: 144 Strategy, SMC Strategy, Fibonacci Strategy */}
         <div className="flex items-center gap-1.5">
-          {/* SMC Button */}
-          <button
-            id="btn-strategy-smc"
-            type="button"
-            onClick={() => {
-              onSelectStrategy(activeStrategy === 'smc' ? null : 'smc');
-            }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.98] ${
-              activeStrategy === 'smc'
-                ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.25)] ring-1 ring-sky-400/40'
-                : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-sky-500/40 text-slate-300 hover:text-sky-300'
-            }`}
-            title="Smart Money Concepts (SMC): Draw Order Blocks, Liquidity Sweeps, and FVG zones"
-          >
-            <Layers className={`w-3.5 h-3.5 ${activeStrategy === 'smc' ? 'text-sky-300' : 'text-sky-400'}`} />
-            <span>SMC</span>
-            {activeStrategy === 'smc' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            )}
-          </button>
-
-          {/* 144 Strategy Button */}
+          {/* 144 Strategy View */}
           <button
             id="btn-strategy-144"
             type="button"
@@ -465,7 +441,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-amber-500/40 text-slate-300 hover:text-amber-300'
             }`}
-            title="144 Strategy: W.D. Gann Box time & price square cycle matrix"
+            title="144 Strategy: Open clean chart view with saved 144 Strategy analysis"
           >
             <Grid3X3 className={`w-3.5 h-3.5 ${activeStrategy === '144' ? 'text-amber-300' : 'text-amber-400'}`} />
             <span>144 Strategy</span>
@@ -474,7 +450,28 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             )}
           </button>
 
-          {/* Fibonacci Button */}
+          {/* SMC Strategy View */}
+          <button
+            id="btn-strategy-smc"
+            type="button"
+            onClick={() => {
+              onSelectStrategy(activeStrategy === 'smc' ? null : 'smc');
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.98] ${
+              activeStrategy === 'smc'
+                ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.25)] ring-1 ring-sky-400/40'
+                : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-sky-500/40 text-slate-300 hover:text-sky-300'
+            }`}
+            title="SMC Strategy: Open clean chart view with saved SMC Strategy analysis"
+          >
+            <Layers className={`w-3.5 h-3.5 ${activeStrategy === 'smc' ? 'text-sky-300' : 'text-sky-400'}`} />
+            <span>SMC Strategy</span>
+            {activeStrategy === 'smc' && (
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+            )}
+          </button>
+
+          {/* Fibonacci Strategy View */}
           <button
             id="btn-strategy-fib"
             type="button"
@@ -486,10 +483,10 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300'
             }`}
-            title="Fibonacci Retracement: Calculate golden ratio levels (0.382, 0.5, 0.618, 0.786)"
+            title="Fibonacci Strategy: Open clean chart view with saved Fibonacci Strategy analysis"
           >
             <Divide className={`w-3.5 h-3.5 ${activeStrategy === 'fib' ? 'text-emerald-300' : 'text-emerald-400'}`} />
-            <span>Fibonacci</span>
+            <span>Fibonacci Strategy</span>
             {activeStrategy === 'fib' && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             )}

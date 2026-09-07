@@ -22,6 +22,7 @@ export async function ensureChartDrawingsTable(): Promise<void> {
         id VARCHAR(128) PRIMARY KEY,
         symbol VARCHAR(64) NOT NULL,
         interval VARCHAR(16) NOT NULL,
+        strategy VARCHAR(32) DEFAULT 'default',
         type VARCHAR(64) NOT NULL,
         data JSONB NOT NULL,
         created_by VARCHAR(64) DEFAULT 'admin',
@@ -39,6 +40,8 @@ export async function ensureChartDrawingsTable(): Promise<void> {
       ALTER TABLE chart_drawings ALTER COLUMN symbol TYPE TEXT;
       ALTER TABLE chart_drawings ALTER COLUMN interval TYPE TEXT;
       ALTER TABLE chart_drawings ALTER COLUMN type TYPE TEXT;
+      ALTER TABLE chart_drawings ADD COLUMN IF NOT EXISTS strategy VARCHAR(32) DEFAULT 'default';
+      CREATE INDEX IF NOT EXISTS idx_chart_drawings_strategy ON chart_drawings (symbol, strategy);
     `).catch(() => {});
 
     console.log('[Chart Drawings DB] Table initialized successfully.');
@@ -61,28 +64,37 @@ function normalizeInterval(inv: string): string {
   return clean;
 }
 
+function normalizeStrategy(strat?: string): string {
+  if (!strat) return 'default';
+  const clean = strat.trim().toLowerCase();
+  if (clean === '144' || clean === 'smc' || clean === 'fib') return clean;
+  return 'default';
+}
+
 /**
  * GET /api/chart-drawings
- * Public route for all visitors and users to fetch published admin drawings for a symbol & timeframe.
+ * Public route for all visitors and users to fetch published admin drawings for a symbol, timeframe, and strategy.
  */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const pool = getDbPool();
     const symbol = normalizeSymbol(String(req.query.symbol || 'OANDA:XAUUSD'));
     const interval = normalizeInterval(String(req.query.interval || 'ALL'));
+    const strategy = normalizeStrategy(req.query.strategy ? String(req.query.strategy) : undefined);
 
     // Match symbol exact or stripped prefix (e.g. XAUUSD vs OANDA:XAUUSD)
     const altSymbol = symbol.includes(':') ? symbol.split(':')[1] : `OANDA:${symbol}`;
 
-    // Drawings are shared across ALL timeframes for the same Instrument + Strategy
+    // Drawings are strictly partitioned by Strategy View (144, SMC, Fibonacci, or default)
     const query = `
-      SELECT id, symbol, interval, type, data, created_by, updated_at
+      SELECT id, symbol, interval, strategy, type, data, created_by, updated_at
       FROM chart_drawings
       WHERE (symbol = $1 OR symbol = $2)
+        AND (strategy = $3 OR ($3 = 'default' AND (strategy IS NULL OR strategy = 'default')))
       ORDER BY created_at ASC
     `;
 
-    const result = await pool.query(query, [symbol, altSymbol]);
+    const result = await pool.query(query, [symbol, altSymbol, strategy]);
 
     const drawings = result.rows.map(row => {
       // Ensure data is parsed object
@@ -91,6 +103,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         ...parsed,
         id: row.id,
         type: row.type || parsed.type,
+        strategy: row.strategy || 'default',
       };
     });
 
@@ -98,6 +111,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       status: 'ok',
       symbol,
       interval,
+      strategy,
       count: drawings.length,
       drawings,
     });
@@ -109,7 +123,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
 /**
  * Atomic batch synchronization handler for chart drawings.
- * Admin & Super Admin ONLY: Synchronizes drawings for a symbol & timeframe.
+ * Admin & Super Admin ONLY: Synchronizes drawings for a symbol & strategy view.
  * Supports both POST /api/chart-drawings/batch and PUT /api/chart-drawings/batch.
  */
 async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
@@ -123,6 +137,7 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
     const pool = getDbPool();
     const symbol = normalizeSymbol(String(req.body.symbol || 'OANDA:XAUUSD'));
     const interval = normalizeInterval(String(req.body.interval || '15'));
+    const strategy = normalizeStrategy(req.body.strategy ? String(req.body.strategy) : undefined);
     const rawDrawings = Array.isArray(req.body.drawings) ? req.body.drawings : [];
     const createdBy = req.user?.username || 'admin';
 
@@ -137,6 +152,7 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
         ...d,
         id,
         type,
+        strategy,
       });
     }
 
@@ -149,32 +165,35 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
 
       const altSymbol = symbol.includes(':') ? symbol.split(':')[1] : `OANDA:${symbol}`;
 
-      // 1. Remove drawings for this symbol that are NOT present in the incoming batch
+      // 1. Remove drawings for this symbol & strategy that are NOT present in the incoming batch
       if (validIds.length > 0) {
-        const placeholders = validIds.map((_, i) => `$${i + 3}`).join(', ');
+        const placeholders = validIds.map((_, i) => `$${i + 4}`).join(', ');
         await client.query(
           `DELETE FROM chart_drawings 
            WHERE (symbol = $1 OR symbol = $2)
+             AND (strategy = $3 OR ($3 = 'default' AND (strategy IS NULL OR strategy = 'default')))
              AND id NOT IN (${placeholders})`,
-          [symbol, altSymbol, ...validIds]
+          [symbol, altSymbol, strategy, ...validIds]
         );
       } else {
-        // If drawings array is empty (e.g. clear all), delete all drawings for this symbol
+        // If drawings array is empty (e.g. clear all), delete all drawings for this symbol & strategy
         await client.query(
-          `DELETE FROM chart_drawings WHERE (symbol = $1 OR symbol = $2)`,
-          [symbol, altSymbol]
+          `DELETE FROM chart_drawings 
+           WHERE (symbol = $1 OR symbol = $2)
+             AND (strategy = $3 OR ($3 = 'default' AND (strategy IS NULL OR strategy = 'default')))`,
+          [symbol, altSymbol, strategy]
         );
       }
 
-      // 2. Upsert each drawing using ON CONFLICT (id) DO UPDATE with interval = 'ALL'
-      // This eliminates duplicate key constraint violations (HTTP 500)
+      // 2. Upsert each drawing using ON CONFLICT (id) DO UPDATE with strategy
       for (const d of validDrawings) {
         await client.query(
-          `INSERT INTO chart_drawings (id, symbol, interval, type, data, created_by, updated_at)
-           VALUES ($1, $2, 'ALL', $3, $4, $5, NOW())
+          `INSERT INTO chart_drawings (id, symbol, interval, strategy, type, data, created_by, updated_at)
+           VALUES ($1, $2, 'ALL', $3, $4, $5, $6, NOW())
            ON CONFLICT (id) DO UPDATE 
            SET symbol = EXCLUDED.symbol,
                interval = 'ALL',
+               strategy = EXCLUDED.strategy,
                type = EXCLUDED.type,
                data = EXCLUDED.data,
                created_by = EXCLUDED.created_by,
@@ -182,6 +201,7 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
           [
             d.id,
             symbol,
+            strategy,
             d.type,
             JSON.stringify(d),
             createdBy,
@@ -190,7 +210,7 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
       }
 
       await client.query('COMMIT');
-      res.json({ status: 'ok', count: validDrawings.length });
+      res.json({ status: 'ok', strategy, count: validDrawings.length });
     } catch (txErr) {
       await client.query('ROLLBACK');
       throw txErr;
@@ -205,14 +225,14 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
 
 /**
  * POST & PUT /api/chart-drawings/batch
- * Atomically synchronizes all drawings for a symbol across timeframes.
+ * Atomically synchronizes all drawings for a symbol and strategy view across timeframes.
  */
 router.post('/batch', authenticateToken, handleBatchSave);
 router.put('/batch', authenticateToken, handleBatchSave);
 
 /**
  * POST /api/chart-drawings
- * Admin & Super Admin ONLY: Create or update a single drawing (shared across timeframes).
+ * Admin & Super Admin ONLY: Create or update a single drawing (shared across timeframes in this strategy view).
  */
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -224,6 +244,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response): Pro
 
     const pool = getDbPool();
     const symbol = normalizeSymbol(String(req.body.symbol || 'OANDA:XAUUSD'));
+    const strategy = normalizeStrategy(req.body.strategy ? String(req.body.strategy) : undefined);
     const drawing = req.body.drawing;
 
     if (!drawing || !drawing.id || !drawing.type) {
@@ -234,11 +255,12 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response): Pro
     const createdBy = req.user?.username || 'admin';
 
     await pool.query(
-      `INSERT INTO chart_drawings (id, symbol, interval, type, data, created_by, updated_at)
-       VALUES ($1, $2, 'ALL', $3, $4, $5, NOW())
+      `INSERT INTO chart_drawings (id, symbol, interval, strategy, type, data, created_by, updated_at)
+       VALUES ($1, $2, 'ALL', $3, $4, $5, $6, NOW())
        ON CONFLICT (id) DO UPDATE 
        SET symbol = EXCLUDED.symbol,
            interval = 'ALL',
+           strategy = EXCLUDED.strategy,
            type = EXCLUDED.type,
            data = EXCLUDED.data,
            created_by = EXCLUDED.created_by,
@@ -246,13 +268,14 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response): Pro
       [
         drawing.id,
         symbol,
+        strategy,
         drawing.type,
         JSON.stringify(drawing),
         createdBy,
       ]
     );
 
-    res.json({ status: 'ok', id: drawing.id });
+    res.json({ status: 'ok', strategy, id: drawing.id });
   } catch (err: any) {
     console.error('[Chart Drawings API] POST error:', err.message);
     res.status(500).json({ status: 'error', error: err.message });
