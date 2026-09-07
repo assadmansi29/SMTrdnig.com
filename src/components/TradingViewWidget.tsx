@@ -26,7 +26,6 @@ import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawingDirectionEnhancer';
 import { useAuth } from '../context/AuthContext';
 import { MarketStreamClient } from '../services/marketStreamClient';
-import { MarketStatusIndicator } from './chart/MarketStatusIndicator';
 
 // Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers
 installGannBoxEnhancer();
@@ -2503,9 +2502,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               <span>{streamStatus === 'connected' ? 'Live Stream' : 'Syncing'}</span>
             </span>
           </div>
-
-          {/* Market Status Indicator: Live OPEN / CLOSED / Real-Time Countdown */}
-          <MarketStatusIndicator symbol={symbol} />
 
           {/* OHLC readout */}
           {lastBarInfo && (

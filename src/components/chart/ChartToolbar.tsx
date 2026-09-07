@@ -498,10 +498,11 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
 
       {/* RIGHT SECTION: Market Status & Quick Actions */}
       <div className="flex items-center gap-2 shrink-0 ml-auto">
-        {/* Professional Market Status Indicator */}
+        {/* Professional Compact Market Status Indicator */}
         <MarketStatusIndicator 
           id="chart-toolbar-market-status-button"
           symbol={currentSymbol} 
+          compact={true}
           align="right"
         />
 
