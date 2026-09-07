@@ -1560,6 +1560,23 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             : String(anchor.time)}
                         </span>
                       </div>
+
+                      {/* Gann 144 Cycle Quick Preset Button for Opposite Anchor */}
+                      {type === 'gann-box' && isPoint2 && (
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const baseBar = getBarIndex(anchorsState[0]?.time);
+                              updateAnchorBar(idx, baseBar + 144);
+                            }}
+                            className="text-[10px] font-semibold px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
+                            title="Set Anchor #2 exactly 144 candles into future time (W.D. Gann full 144-candle time cycle)"
+                          >
+                            <span>⚡ +144 Cycle (Gann 144 Bars into Future)</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

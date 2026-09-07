@@ -2,6 +2,7 @@ import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   createChart,
   CandlestickSeries,
+  LineSeries,
   ColorType,
   IChartApi,
   ISeriesApi,
@@ -110,6 +111,61 @@ const loadStrategyDrawingsLocal = (sym: string): any[] => {
   }
 };
 
+export function parseIntervalToSeconds(inv: string): number {
+  const norm = (inv || '15').trim().toLowerCase();
+  if (norm === '1' || norm === '1m') return 60;
+  if (norm === '5' || norm === '5m') return 300;
+  if (norm === '15' || norm === '15m') return 900;
+  if (norm === '30' || norm === '30m') return 1800;
+  if (norm === '60' || norm === '1h') return 3600;
+  if (norm === '240' || norm === '4h') return 14400;
+  if (norm === 'd' || norm === '1d' || norm === 'day') return 86400;
+  if (norm === 'w' || norm === '1w' || norm === 'week') return 604800;
+  if (norm === 'm' || norm === '1m' || norm === '1mo' || norm === 'month') return 2592000;
+  const num = parseInt(norm, 10);
+  return !isNaN(num) && num > 0 ? num * 60 : 900;
+}
+
+export function calculateCandleStepSeconds(candles: any[], interval?: string): number {
+  if (Array.isArray(candles) && candles.length >= 2) {
+    const diffs: number[] = [];
+    const N = candles.length;
+    const samples = Math.min(N - 1, 30);
+    for (let i = N - 1; i > N - 1 - samples; i--) {
+      const d = Number(candles[i].time) - Number(candles[i - 1].time);
+      if (d > 0) diffs.push(d);
+    }
+    diffs.sort((a, b) => a - b);
+    if (diffs.length > 0) {
+      return diffs[Math.floor(diffs.length / 2)];
+    }
+  }
+  return parseIntervalToSeconds(interval || '15');
+}
+
+/**
+ * Generates continuous future time scale timestamps (whitespace data) beyond the latest market candle.
+ * Provides a continuous real-time coordinate system for drawing tools like a 144-candle Gann Box without fake price candles.
+ */
+export function generateFutureWhitespaceScale(
+  realCandles: any[],
+  interval: string,
+  futureCount = 500
+): { time: any }[] {
+  if (!realCandles || realCandles.length === 0) return [];
+  const N = realCandles.length;
+  const lastTime = Number(realCandles[N - 1].time);
+  const step = calculateCandleStepSeconds(realCandles, interval);
+
+  const whitespaceItems: { time: any }[] = [];
+  for (let i = 1; i <= futureCount; i++) {
+    whitespaceItems.push({
+      time: (lastTime + i * step) as any,
+    });
+  }
+  return whitespaceItems;
+}
+
 export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   symbol = 'OANDA:XAUUSD',
   interval = '15',
@@ -122,6 +178,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const seriesApiRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const whitespaceSeriesApiRef = useRef<ISeriesApi<'Line'> | null>(null);
   const drawingManagerRef = useRef<DrawingManager | null>(null);
   const candlesRef = useRef<CandleData[]>([]);
 
@@ -610,18 +667,52 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
         if (seriesApiRef.current) {
           if (isSymbolChange) {
-            // Explicit symbol change initiated by user: reset viewport once for new symbol
+            // Explicit symbol change initiated by user: initialize future whitespace and set comfortable initial viewport
+            const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
+            if (whitespaceSeriesApiRef.current) {
+              const fullTimeline = [
+                ...incomingCandles.map((c: any) => ({ time: c.time })),
+                ...futureWhitespace,
+              ];
+              whitespaceSeriesApiRef.current.setData(fullTimeline);
+            }
             seriesApiRef.current.setData(incomingCandles);
-            chartApiRef.current?.timeScale().fitContent();
+            const totalReal = incomingCandles.length;
+            const visibleBars = 100;
+            const futureMargin = 25;
+            const from = Math.max(0, totalReal - visibleBars + futureMargin);
+            const to = totalReal + futureMargin;
+            chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
             userHasManuallyInteractedRef.current = false;
             hasInitialFitCompletedRef.current = true;
           } else if (isColdMount && !hasInitialFitCompletedRef.current && !userHasManuallyInteractedRef.current) {
-            // First time loading candles on cold start: fitContent once
+            // First time loading candles on cold start: initialize future whitespace and set comfortable initial viewport once
+            const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
+            if (whitespaceSeriesApiRef.current) {
+              const fullTimeline = [
+                ...incomingCandles.map((c: any) => ({ time: c.time })),
+                ...futureWhitespace,
+              ];
+              whitespaceSeriesApiRef.current.setData(fullTimeline);
+            }
             seriesApiRef.current.setData(incomingCandles);
-            chartApiRef.current?.timeScale().fitContent();
+            const totalReal = incomingCandles.length;
+            const visibleBars = 100;
+            const futureMargin = 25;
+            const from = Math.max(0, totalReal - visibleBars + futureMargin);
+            const to = totalReal + futureMargin;
+            chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
             hasInitialFitCompletedRef.current = true;
           } else if (isTimeframeChange) {
-            // Timeframe change: update dataset and preserve the visible logical range without resetting
+            // Timeframe change: update future whitespace and dataset while strictly preserving the user's visible range
+            const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
+            if (whitespaceSeriesApiRef.current) {
+              const fullTimeline = [
+                ...incomingCandles.map((c: any) => ({ time: c.time })),
+                ...futureWhitespace,
+              ];
+              whitespaceSeriesApiRef.current.setData(fullTimeline);
+            }
             const currentLogical = chartApiRef.current?.timeScale().getVisibleLogicalRange();
             seriesApiRef.current.setData(incomingCandles);
             if (currentLogical && chartApiRef.current) {
@@ -630,28 +721,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               } catch {}
             }
           } else {
-            // Silent background polling / live candle updates:
+            // Live candle updates / background streaming polling:
             // The chart must NEVER automatically call fitContent, reset the visible range,
             // recreate the chart, or restore the default viewport after the user manually zooms or pans.
-            // Live candle updates must update the data only and must not change the user's current viewport.
-            if (existingCandles.length > 0 && incomingCandles.length > 0) {
-              const lastExistingTime = existingCandles[existingCandles.length - 1].time;
-              const barsToUpdate = incomingCandles.filter((c: any) => c.time >= lastExistingTime);
-              if (barsToUpdate.length > 0) {
-                for (const bar of barsToUpdate) {
-                  seriesApiRef.current.update(bar);
-                }
-              } else {
-                seriesApiRef.current.update(incomingCandles[incomingCandles.length - 1]);
-              }
-            } else {
-              const currentRange = chartApiRef.current?.timeScale().getVisibleLogicalRange();
-              seriesApiRef.current.setData(incomingCandles);
-              if (currentRange && chartApiRef.current) {
-                try {
-                  chartApiRef.current.timeScale().setVisibleLogicalRange(currentRange);
-                } catch {}
-              }
+            // Live candle updates update the data only (via series.update) and must not change the user's current viewport.
+            // Never call setData on either series or touch the viewport during live updates.
+            if (incomingCandles.length > 0) {
+              const lastIncoming = incomingCandles[incomingCandles.length - 1];
+              seriesApiRef.current.update(lastIncoming);
             }
           }
 
@@ -926,7 +1003,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       userHasManuallyInteractedRef.current = false;
       hasInitialFitCompletedRef.current = false;
       chartApiRef.current.timeScale().resetTimeScale();
-      chartApiRef.current.timeScale().fitContent();
+      const totalReal = candlesRef.current.length;
+      if (totalReal > 0) {
+        const visibleBars = 100;
+        const futureMargin = 25;
+        const from = Math.max(0, totalReal - visibleBars + futureMargin);
+        const to = totalReal + futureMargin;
+        chartApiRef.current.timeScale().setVisibleLogicalRange({ from, to });
+      } else {
+        chartApiRef.current.timeScale().fitContent();
+      }
       chartApiRef.current.priceScale('right')?.applyOptions({
         autoScale: true,
       });
@@ -1187,6 +1273,17 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     seriesApiRef.current = series;
 
+    // Add invisible auxiliary Whitespace Series to extend the horizontal time axis
+    // into future time coordinates (without fake price candles or affecting price scale)
+    const whitespaceSeries = chart.addSeries(LineSeries, {
+      visible: false,
+      lastValueVisible: false,
+      priceLineVisible: false,
+      crosshairMarkerVisible: false,
+      autoscaleInfoProvider: () => null,
+    });
+    whitespaceSeriesApiRef.current = whitespaceSeries;
+
     // Attach Drawing Manager
     const manager = new DrawingManager();
     manager.attach(chart, series, container);
@@ -1268,26 +1365,37 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       const chartTs = currentChart.timeScale();
       let time: number | null = null;
-      const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(px) : null;
 
-      if (candlesRef.current.length > 0 && logical !== null && !isNaN(logical)) {
-        const N = candlesRef.current.length;
-        const lastCandle = candlesRef.current[N - 1];
-        const firstCandle = candlesRef.current[0];
-        const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
-        if (logical >= N - 1) {
-          time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
-        } else if (logical < 0) {
-          time = Number(firstCandle.time) + Math.round(logical * step);
-        } else {
-          const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
-          time = Number(candlesRef.current[idx].time);
+      // 1. Direct native coordinateToTime from continuous timeScale (works seamlessly across all real & future bars!)
+      const directTime = chartTs?.coordinateToTime ? chartTs.coordinateToTime(px) : null;
+      if (directTime !== null && directTime !== undefined) {
+        if (typeof directTime === 'number') {
+          time = directTime;
+        } else if (typeof directTime === 'string') {
+          time = Math.floor(new Date(directTime).getTime() / 1000);
+        } else if (typeof directTime === 'object' && directTime && 'year' in (directTime as any)) {
+          const bd = directTime as any;
+          time = Math.floor(Date.UTC(bd.year, bd.month - 1, bd.day) / 1000);
         }
       }
 
-      if (!time) {
-        const t = chartTs.coordinateToTime(px);
-        if (t !== null && t !== undefined) time = t as number;
+      // 2. Fallback logical projection if coordinate is beyond the future whitespace runway
+      if (!time && candlesRef.current.length > 0) {
+        const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(px) : null;
+        if (logical !== null && !isNaN(logical)) {
+          const N = candlesRef.current.length;
+          const lastCandle = candlesRef.current[N - 1];
+          const firstCandle = candlesRef.current[0];
+          const step = calculateCandleStepSeconds(candlesRef.current, interval);
+          if (logical >= N - 1) {
+            time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
+          } else if (logical < 0) {
+            time = Number(firstCandle.time) + Math.round(logical * step);
+          } else {
+            const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
+            time = Number(candlesRef.current[idx].time);
+          }
+        }
       }
 
       if (!time) return null;
@@ -2028,6 +2136,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     // Keep drawings synchronized during zoom / pan without delay
     const handleVisibleRangeChange = () => {
+      userHasManuallyInteractedRef.current = true;
       manager.getAllDrawings().forEach((d: any) => d.requestUpdate?.());
     };
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
@@ -2109,6 +2218,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       chart.remove();
       chartApiRef.current = null;
       seriesApiRef.current = null;
+      whitespaceSeriesApiRef.current = null;
       drawingManagerRef.current = null;
     };
   }, []);
