@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { AvatarProvider } from './context/AvatarContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
+import { MarketStatusProvider } from './context/MarketStatusContext';
 import './index.css';
 
 // Guard against third-party cross-origin script errors (e.g., TradingView iframe scripts)
@@ -54,7 +55,9 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <LanguageProvider>
           <AvatarProvider>
-            <App />
+            <MarketStatusProvider>
+              <App />
+            </MarketStatusProvider>
           </AvatarProvider>
         </LanguageProvider>
       </AuthProvider>

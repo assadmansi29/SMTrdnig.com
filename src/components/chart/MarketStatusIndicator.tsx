@@ -2,12 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, Globe, X, ChevronDown, AlertTriangle, ShieldCheck } from 'lucide-react';
 import {
-  getMarketScheduleStatus,
-  MarketStatusResult,
-  getWorldMarketSessions,
-  WorldSessionInfo,
   BenchmarkMarketId,
 } from '../../utils/marketSchedule';
+import { useMarketStatus } from '../../context/MarketStatusContext';
 
 export interface MarketStatusIndicatorProps {
   marketId?: BenchmarkMarketId | string;
@@ -29,7 +26,7 @@ const BENCHMARK_OPTIONS: { id: BenchmarkMarketId; label: string; sub: string; ex
 ];
 
 export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
-  marketId: initialMarketId = 'us_core',
+  marketId: _initialMarketId,
   symbol,
   className = '',
   compact = false,
@@ -37,30 +34,21 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
   align = 'left',
   id,
 }) => {
-  // Use either the explicit marketId, or map symbol if provided, default to 'us_core' (Core Global Market)
-  const [selectedMarketId, setSelectedMarketId] = useState<string>(symbol || initialMarketId);
-  const [status, setStatus] = useState<MarketStatusResult>(() =>
-    getMarketScheduleStatus(symbol || initialMarketId)
-  );
-  const [worldSessions, setWorldSessions] = useState<WorldSessionInfo[]>(() => getWorldMarketSessions());
+  const {
+    activeMarketId,
+    setActiveMarketId,
+    status,
+    worldSessions,
+  } = useMarketStatus();
+
   const [showDetails, setShowDetails] = useState<boolean>(false);
 
-  // Sync when props change
+  // Sync symbol to shared market status when symbol prop is provided
   useEffect(() => {
-    setSelectedMarketId(symbol || initialMarketId);
-  }, [symbol, initialMarketId]);
-
-  // Update schedule status and world sessions every second in real time
-  useEffect(() => {
-    const update = () => {
-      setStatus(getMarketScheduleStatus(selectedMarketId));
-      setWorldSessions(getWorldMarketSessions());
-    };
-
-    update();
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
-  }, [selectedMarketId]);
+    if (symbol && symbol !== activeMarketId) {
+      setActiveMarketId(symbol);
+    }
+  }, [symbol, activeMarketId, setActiveMarketId]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -342,12 +330,12 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
               </div>
               <div className="grid grid-cols-3 gap-1.5">
                 {BENCHMARK_OPTIONS.map((item) => {
-                  const isSelected = selectedMarketId === item.id;
+                  const isSelected = activeMarketId === item.id;
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setSelectedMarketId(item.id)}
+                      onClick={() => setActiveMarketId(item.id)}
                       className={`p-1.5 rounded-lg text-left transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold shadow-sm'
