@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Sparkles, CheckCircle2, ShieldCheck, Mail } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
 
@@ -12,6 +13,25 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({ isOpen, onClos
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
+  // Lock body scroll and listen for Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,21 +44,32 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({ isOpen, onClos
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="bg-[#0D121F] border border-amber-500/40 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-slate-200 relative my-auto">
+  const content = (
+    <div
+      id="modal-newsletter"
+      className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg bg-[#0C111C] border-t sm:border border-amber-500/40 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[88vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 text-slate-200 relative"
+        onClick={(e) => e.stopPropagation()}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        {/* Handle Bar on mobile */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 rtl:right-auto rtl:left-3.5 min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md active:scale-95 z-20"
+          className="absolute top-4 right-4 rtl:right-auto rtl:left-4 min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md active:scale-95 z-20"
           aria-label="Close newsletter modal"
         >
           <X className="w-5 h-5" />
         </button>
 
         {subscribed ? (
-          <div className="p-8 text-center space-y-4">
+          <div className="p-6 text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
@@ -47,15 +78,16 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({ isOpen, onClos
               {t('newsSuccessBody')} <strong className="text-amber-300">{email}</strong>.
             </p>
             <button
+              type="button"
               onClick={onClose}
-              className="mt-4 px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer"
+              className="mt-4 px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer transition-all"
             >
               {t('newsBackBtn')}
             </button>
           </div>
         ) : (
-          <div className="p-6 sm:p-8 space-y-6">
-            <div className="space-y-2">
+          <div className="space-y-5 pt-1">
+            <div className="space-y-2 pr-12 rtl:pr-0 rtl:pl-12">
               <div className="inline-flex items-center gap-1.5 bg-amber-400/10 text-amber-300 text-[11px] font-bold px-2.5 py-1 rounded-md border border-amber-400/30">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 {t('newsBadge')}
@@ -113,5 +145,10 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({ isOpen, onClos
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+  return content;
 };
 

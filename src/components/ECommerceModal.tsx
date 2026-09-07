@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   ShoppingBag, 
@@ -110,9 +111,43 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
     setCart([]);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto">
-      <div className="bg-[#090D17] border border-slate-800/90 rounded-2xl w-full max-w-5xl shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[92vh] relative">
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      id="modal-ecommerce-store"
+      className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-5xl bg-[#090D17] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black overflow-hidden text-slate-100 flex flex-col max-h-[90vh] relative animate-in slide-in-from-bottom-8 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Handle Bar on mobile */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mt-2.5 mb-1" />
         
         {/* Top Header Bar */}
         <div className="p-3.5 sm:p-5 bg-[#0C1220] border-b border-slate-800 flex items-center justify-between gap-3 sticky top-0 z-20 shrink-0">
@@ -532,6 +567,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

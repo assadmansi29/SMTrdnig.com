@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { ReferralData, Transaction } from '../types';
 import { 
@@ -120,6 +121,25 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setEditUsername(user.username || '');
     }
   }, [user]);
+
+  // Lock body scroll and listen for Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Profile verification code countdown
   useEffect(() => {
@@ -374,9 +394,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const formattedExpiry = expiresDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   const isExpired = user.subscriptionStatus === 'expired' || (user.role === 'client' && expiresDate < new Date());
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#0C111E] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh]">
+  const content = (
+    <div
+      id="modal-user-profile"
+      className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-4xl bg-[#0C111E] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-8 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Handle Bar on mobile */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mt-3" />
         
         {/* Modal Top Header */}
         <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800/80 flex items-center justify-between bg-[#080C14] gap-2 shrink-0 sticky top-0 z-20">
@@ -1525,4 +1554,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       />
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+  return content;
 };

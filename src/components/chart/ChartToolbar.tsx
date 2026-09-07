@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChevronDown,
   Search,
@@ -126,6 +127,18 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  // Lock body scroll when any toolbar modal is open
+  useEffect(() => {
+    if (isInstrumentMenuOpen || isTimeframeMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isInstrumentMenuOpen, isTimeframeMenuOpen]);
 
   // Auto-focus search input when instrument dropdown opens
   useEffect(() => {
@@ -261,101 +274,137 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             />
           </button>
 
-          {/* Instrument Dropdown Menu */}
-          {isInstrumentMenuOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-[310px] sm:w-[380px] bg-[#0A0F1D] border border-slate-700/80 rounded-xl shadow-2xl p-2.5 z-50 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
-              {/* Search Bar */}
-              <div className="relative flex items-center">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={instrumentSearch}
-                  onChange={(e) => setInstrumentSearch(e.target.value)}
-                  placeholder="Search symbol (e.g. Gold, US30, BTC)..."
-                  className="w-full bg-[#11192E] border border-slate-700/90 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all font-mono"
-                />
-                {instrumentSearch && (
-                  <button
-                    onClick={() => setInstrumentSearch('')}
-                    className="absolute right-2 text-slate-400 hover:text-white p-0.5 rounded"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+          {/* Centered Instrument Selector Modal */}
+          {isInstrumentMenuOpen && typeof document !== 'undefined' && createPortal(
+            <div
+              id="modal-instrument-selector"
+              className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+              onClick={() => setIsInstrumentMenuOpen(false)}
+            >
+              <div
+                className="w-full max-w-lg bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 text-slate-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Handle Bar on mobile */}
+                <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
 
-              {/* Category Pills Filter */}
-              <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none text-[10px] border-b border-slate-800/80">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategoryFilter(cat)}
-                    className={`px-2 py-0.5 rounded-md whitespace-nowrap transition-colors font-medium cursor-pointer ${
-                      selectedCategoryFilter === cat
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              {/* Instruments List */}
-              <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
-                {filteredInstruments.length === 0 ? (
-                  <div className="py-6 text-center text-slate-500 text-xs">
-                    No instruments found matching "{instrumentSearch}"
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+                    <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+                      <BarChart2 className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-bold text-white truncate">Select Market Instrument</h3>
+                      <p className="text-xs text-slate-400 font-mono truncate">Live Institutional Multi-Asset Feed</p>
+                    </div>
                   </div>
-                ) : (
-                  filteredInstruments.map((inst) => {
-                    const isSelected = inst.symbol === currentSymbol;
-                    return (
-                      <button
-                        key={inst.symbol}
-                        type="button"
-                        onClick={() => {
-                          onSelectSymbol(inst.symbol);
-                          setIsInstrumentMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-all duration-150 cursor-pointer ${
-                          isSelected
-                            ? 'bg-amber-500/15 border border-amber-500/40 text-amber-200 shadow-sm'
-                            : 'hover:bg-[#131C33] text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="p-1 rounded bg-slate-800/80 shrink-0">
-                            {getCategoryIcon(inst.category)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono font-bold text-xs text-white">
-                                {inst.ticker}
-                              </span>
-                              <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-slate-800/90 text-slate-400 border border-slate-700/50">
-                                {inst.category}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-slate-400 truncate">
-                              {inst.name}
-                            </div>
-                          </div>
-                        </div>
 
-                        {isSelected && (
-                          <div className="p-1 rounded-full bg-amber-500/20 text-amber-400 shrink-0">
-                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <button
+                    type="button"
+                    onClick={() => setIsInstrumentMenuOpen(false)}
+                    className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                    aria-label="Close instrument selector"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative flex items-center">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={instrumentSearch}
+                    onChange={(e) => setInstrumentSearch(e.target.value)}
+                    placeholder="Search symbol (e.g. Gold, US30, BTC, EURUSD)..."
+                    className="w-full bg-[#11192E] border border-slate-700/90 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all font-mono"
+                  />
+                  {instrumentSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setInstrumentSearch('')}
+                      className="absolute right-3 text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs border-b border-slate-800/80">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(cat)}
+                      className={`px-3 py-1 rounded-lg whitespace-nowrap transition-colors font-medium cursor-pointer ${
+                        selectedCategoryFilter === cat
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Instruments List */}
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+                  {filteredInstruments.length === 0 ? (
+                    <div className="py-8 text-center text-slate-500 text-xs">
+                      No instruments found matching "{instrumentSearch}"
+                    </div>
+                  ) : (
+                    filteredInstruments.map((inst) => {
+                      const isSelected = inst.symbol === currentSymbol;
+                      return (
+                        <button
+                          key={inst.symbol}
+                          type="button"
+                          onClick={() => {
+                            onSelectSymbol(inst.symbol);
+                            setIsInstrumentMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                            isSelected
+                              ? 'bg-amber-500/15 border border-amber-500/40 text-amber-200 shadow-sm'
+                              : 'hover:bg-[#131C33] text-slate-200 border border-slate-800/60 bg-[#0E1524]/60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-slate-800/90 shrink-0">
+                              {getCategoryIcon(inst.category)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-xs text-white">
+                                  {inst.ticker}
+                                </span>
+                                <span className="text-[10px] uppercase px-1.5 py-0.2 rounded bg-slate-800/90 text-slate-400 border border-slate-700/50">
+                                  {inst.category}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-400 truncate">
+                                {inst.name}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </button>
-                    );
-                  })
-                )}
+
+                          {isSelected && (
+                            <div className="p-1 rounded-full bg-amber-500/20 text-amber-400 shrink-0">
+                              <Check className="w-4 h-4 stroke-[2.5]" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
@@ -384,44 +433,79 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             />
           </button>
 
-          {/* Timeframe Dropdown Menu */}
-          {isTimeframeMenuOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-44 bg-[#0A0F1D] border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
-              {/* Grouped Timeframes */}
-              {(['Minutes', 'Hours'] as const).map((group) => {
-                const groupItems = ALL_TIMEFRAMES.filter((tf) => tf.group === group);
-                return (
-                  <div key={group} className="space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-slate-400 px-2 py-0.5 tracking-wider font-semibold">
-                      {group}
+          {/* Centered Timeframe Selector Modal */}
+          {isTimeframeMenuOpen && typeof document !== 'undefined' && createPortal(
+            <div
+              id="modal-timeframe-selector"
+              className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+              onClick={() => setIsTimeframeMenuOpen(false)}
+            >
+              <div
+                className="w-full max-w-sm bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 text-slate-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Handle Bar on mobile */}
+                <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+                    <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+                      <Clock className="w-5 h-5" />
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {groupItems.map((tf) => {
-                        const isSelected = tf.value === currentInterval;
-                        return (
-                          <button
-                            key={tf.value}
-                            type="button"
-                            onClick={() => {
-                              onSelectInterval(tf.value);
-                              setIsTimeframeMenuOpen(false);
-                            }}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-xs'
-                                : 'hover:bg-[#131C33] text-slate-300 border border-transparent'
-                            }`}
-                          >
-                            <span>{tf.label}</span>
-                            {isSelected && <Check className="w-3 h-3 text-amber-400 stroke-[3]" />}
-                          </button>
-                        );
-                      })}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-bold text-white truncate">Select Timeframe</h3>
+                      <p className="text-xs text-slate-400 font-mono truncate">Chart Interval Scale</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsTimeframeMenuOpen(false)}
+                    className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                    aria-label="Close timeframe selector"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Grouped Timeframes */}
+                {(['Minutes', 'Hours'] as const).map((group) => {
+                  const groupItems = ALL_TIMEFRAMES.filter((tf) => tf.group === group);
+                  return (
+                    <div key={group} className="space-y-1.5">
+                      <div className="text-xs font-mono uppercase text-slate-400 px-1 py-0.5 tracking-wider font-semibold">
+                        {group}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {groupItems.map((tf) => {
+                          const isSelected = tf.value === currentInterval;
+                          return (
+                            <button
+                              key={tf.value}
+                              type="button"
+                              onClick={() => {
+                                onSelectInterval(tf.value);
+                                setIsTimeframeMenuOpen(false);
+                              }}
+                              className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-xs'
+                                  : 'bg-[#0E1524] hover:bg-slate-800 text-slate-300 border-slate-800'
+                              }`}
+                            >
+                              <span>{tf.label}</span>
+                              {isSelected && <Check className="w-4 h-4 text-amber-400 stroke-[3]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>,
+            document.body
           )}
         </div>
 

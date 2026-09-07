@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Check,
@@ -542,19 +543,41 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
   const currentLineStyle = getLineStyleName(styleState.lineDash);
 
-  return (
+  // Lock body scroll and listen for Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const content = (
     <div
       id="drawing-properties-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) handleCancel();
       }}
     >
       <div
         id="drawing-properties-modal"
-        className="w-full max-w-md bg-[#1e222d] border border-slate-700/80 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-slate-200 select-none animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[85vh] text-slate-200 select-none animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Handle Bar on mobile */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mt-3" />
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-700/70 bg-[#171b26]">
           <div className="flex items-center gap-2.5">
@@ -1872,4 +1895,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+  return content;
 };

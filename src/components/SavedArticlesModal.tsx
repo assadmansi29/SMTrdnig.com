@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Bookmark, Trash2, ArrowRight, BookOpen } from 'lucide-react';
 import { Article } from '../types';
 import { useTranslation, getLocalizedCategory } from '../locales';
@@ -20,19 +21,49 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
 }) => {
   const { t, isRTL } = useTranslation();
 
+  // Lock body scroll and listen for Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="bg-[#0D121F] border border-slate-700/80 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden text-slate-200 my-auto flex flex-col max-h-[90vh]">
+  const content = (
+    <div
+      id="modal-saved-articles"
+      className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[88vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 duration-200 text-slate-200"
+        onClick={(e) => e.stopPropagation()}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        {/* Handle Bar on mobile */}
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
+
         {/* Header */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 bg-[#090D17] gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+            <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
               <Bookmark className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-sm sm:text-base text-white truncate">{t('savedModalTitle')}</h3>
+              <h3 className="font-bold text-base text-white truncate">{t('savedModalTitle')}</h3>
               <p className="text-xs text-slate-400 truncate">
                 {savedArticles.length} {t('savedModalSubtitle')}
               </p>
@@ -49,7 +80,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3">
+        <div className="overflow-y-auto flex-1 space-y-2.5 pr-1">
           {savedArticles.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <BookOpen className="w-10 h-10 text-slate-600 mx-auto" />
@@ -62,7 +93,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
             savedArticles.map((art) => (
               <div
                 key={art.id}
-                className="p-3.5 bg-[#090D17] border border-slate-800/80 hover:border-amber-400/30 rounded-xl flex items-center justify-between gap-4 group"
+                className="p-3 bg-[#090D17] border border-slate-800/80 hover:border-amber-400/30 rounded-xl flex items-center justify-between gap-3 group"
               >
                 <div 
                   className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
@@ -88,6 +119,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
+                    type="button"
                     onClick={() => {
                       onSelectArticle(art);
                       onClose();
@@ -98,6 +130,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
                     <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => onRemoveBookmark(art.id)}
                     className="p-2 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
                     title={t('savedRemove')}
@@ -111,10 +144,11 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-[#090D17] border-t border-slate-800 flex justify-end">
+        <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+            className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-all"
           >
             {t('savedClose')}
           </button>
@@ -122,5 +156,10 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
       </div>
     </div>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+  return content;
 };
 

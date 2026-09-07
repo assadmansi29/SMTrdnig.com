@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Globe, Calendar, X, ChevronDown, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Clock, Globe, X, ChevronDown, AlertTriangle, ShieldCheck } from 'lucide-react';
 import {
   getMarketScheduleStatus,
   MarketStatusResult,
@@ -43,7 +44,6 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
   );
   const [worldSessions, setWorldSessions] = useState<WorldSessionInfo[]>(() => getWorldMarketSessions());
   const [showDetails, setShowDetails] = useState<boolean>(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
 
   // Sync when props change
   useEffect(() => {
@@ -62,19 +62,27 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
     return () => clearInterval(timer);
   }, [selectedMarketId]);
 
-  // Close popover when clicking outside
+  // Lock body scroll when modal is open
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+    if (showDetails) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showDetails]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showDetails) {
         setShowDetails(false);
       }
     };
-    if (showDetails) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showDetails]);
 
   // Styling based strictly on the 4 canonical market states:
@@ -193,7 +201,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
   };
 
   return (
-    <div className={`relative inline-flex items-center ${className}`} ref={popoverRef}>
+    <div className={`relative inline-flex items-center ${className}`}>
       {/* Professional Market Status Trigger Button */}
       <button
         id={id || 'market-status-indicator-button'}
@@ -218,152 +226,166 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         <ChevronDown className={`w-2.5 h-2.5 text-slate-400 group-hover:text-slate-200 transition-transform duration-200 shrink-0 ${showDetails ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Institutional Market Status Popover Modal */}
-      {showDetails && (
+      {/* Centered Modal rendered into document.body - Standardized with Header Trading Tools positioning */}
+      {showDetails && typeof document !== 'undefined' && createPortal(
         <div
-          className={`absolute top-full mt-2 w-92 sm:w-96 bg-[#0B0F19]/98 border border-[#1E293B] rounded-2xl shadow-2xl shadow-black/90 z-50 p-4 text-xs text-slate-300 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          id={`modal-market-status-${id || 'global'}`}
+          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setShowDetails(false)}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-[#1A2338]">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-[#131D33] text-amber-400 shadow-inner">
-                <Clock className="w-4 h-4" />
-              </span>
-              <div>
-                <h4 className="font-bold text-slate-100 text-sm leading-none flex items-center gap-1.5">
-                  Real-Time Market Status
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                </h4>
-                <p className="text-[10px] text-slate-400 mt-1">Institutional Multi-Session Schedule Engine</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowDetails(false)}
-              className="p-1 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-[#1A2338] transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <div
+            className="w-full max-w-lg bg-[#0C111C] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-200 text-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle Bar on mobile */}
+            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mb-2" />
 
-          {/* Current Dynamic Status Highlight Banner */}
-          <div className={`my-3 p-3 rounded-xl border flex flex-col gap-1.5 ${styles.badgeBg} ${styles.badgeBorder}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${styles.dot} ${styles.dotAnimation}`} />
-                <span className={`text-xs ${styles.titleText}`}>{status.status}</span>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400">{status.localTimeFormatted}</span>
-            </div>
-
-            <p className="text-[11px] text-slate-300 leading-snug">
-              {status.nextEventDescription}
-            </p>
-
-            {status.isHoliday && (
-              <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
-                <AlertTriangle className="w-3 h-3 text-amber-400" />
-                <span>US Market Holiday: {status.holidayName || 'Observed Holiday'}</span>
-              </div>
-            )}
-          </div>
-
-          {/* World Market Sessions Live Tracker */}
-          <div className="mb-3.5">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <Globe className="w-3 h-3 text-cyan-400" />
-                Global World Sessions (Live)
-              </span>
-              <span className="text-[9px] text-slate-500">Auto-sync 1s</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {worldSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className={`p-2 rounded-xl border transition-all ${
-                    session.isOpen
-                      ? 'bg-emerald-950/30 border-emerald-500/30'
-                      : 'bg-[#0E1524] border-slate-800/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[11px] text-slate-200 flex items-center gap-1">
-                      <span>{session.flag}</span>
-                      <span>{session.name}</span>
-                    </span>
-                    <span
-                      className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
-                        session.isOpen
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
-                      }`}
-                    >
-                      {session.statusText}
-                    </span>
-                  </div>
-                  <div className="text-[10px] font-mono text-slate-400 mt-1 flex items-center justify-between">
-                    <span>{session.hours}</span>
-                  </div>
-                  <div className="text-[9px] font-mono text-slate-500 mt-0.5">
-                    Time: {session.localTime}
-                  </div>
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-2">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-emerald-400/20 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-inner">
+                  <Clock className="w-5 h-5 text-amber-400" />
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-white tracking-tight truncate flex items-center gap-1.5">
+                    Real-Time Market Status
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono truncate">
+                    Institutional Multi-Session Schedule Engine
+                  </p>
+                </div>
+              </div>
 
-          {/* Market Benchmark Selector */}
-          <div className="mb-3">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Active Benchmark Schedule:
+              <button
+                type="button"
+                onClick={() => setShowDetails(false)}
+                className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                aria-label="Close market status"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {BENCHMARK_OPTIONS.map((item) => {
-                const isSelected = selectedMarketId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedMarketId(item.id)}
-                    className={`p-1.5 rounded-lg text-left transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold shadow-sm'
-                        : 'bg-[#0E1524] hover:bg-[#151F33] text-slate-300 border border-slate-800'
+
+            {/* Current Dynamic Status Highlight Banner */}
+            <div className={`my-2 p-3 rounded-xl border flex flex-col gap-1.5 ${styles.badgeBg} ${styles.badgeBorder}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${styles.dot} ${styles.dotAnimation}`} />
+                  <span className={`text-xs ${styles.titleText}`}>{status.status}</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-400">{status.localTimeFormatted}</span>
+              </div>
+
+              <p className="text-[11px] text-slate-300 leading-snug">
+                {status.nextEventDescription}
+              </p>
+
+              {status.isHoliday && (
+                <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
+                  <AlertTriangle className="w-3 h-3 text-amber-400" />
+                  <span>US Market Holiday: {status.holidayName || 'Observed Holiday'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* World Market Sessions Live Tracker */}
+            <div className="mb-2">
+              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Globe className="w-3 h-3 text-cyan-400" />
+                  Global World Sessions (Live)
+                </span>
+                <span className="text-[9px] text-slate-500">Auto-sync 1s</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {worldSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className={`p-2 rounded-xl border transition-all ${
+                      session.isOpen
+                        ? 'bg-emerald-950/30 border-emerald-500/30'
+                        : 'bg-[#0E1524] border-slate-800/80'
                     }`}
                   >
-                    <div className="text-[10px] font-mono truncate">{item.label}</div>
-                    <div className="text-[8px] text-slate-400 truncate">{item.sub}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Active Schedule Details */}
-          <div className="pt-2 border-t border-[#1A2338] space-y-1.5 text-[10px] text-slate-400 font-mono">
-            <div className="flex justify-between">
-              <span>Exchange / Market:</span>
-              <span className="text-slate-200">{status.metadata.exchangeName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Session Timezone:</span>
-              <span className="text-slate-200">{status.metadata.timeZoneLabel}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Trading Hours:</span>
-              <span className="text-slate-200">{status.metadata.regularHoursSummary}</span>
-            </div>
-            {status.metadata.dailyBreakSummary && (
-              <div className="flex justify-between text-amber-300/90">
-                <span>Break Schedule:</span>
-                <span>{status.metadata.dailyBreakSummary}</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[11px] text-slate-200 flex items-center gap-1">
+                        <span>{session.flag}</span>
+                        <span>{session.name}</span>
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                          session.isOpen
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                        }`}
+                      >
+                        {session.statusText}
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-1 flex items-center justify-between">
+                      <span>{session.hours}</span>
+                    </div>
+                    <div className="text-[9px] font-mono text-slate-500 mt-0.5">
+                      Time: {session.localTime}
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+
+            {/* Market Benchmark Selector */}
+            <div className="mb-2">
+              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Active Benchmark Schedule:
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {BENCHMARK_OPTIONS.map((item) => {
+                  const isSelected = selectedMarketId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedMarketId(item.id)}
+                      className={`p-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold shadow-sm'
+                          : 'bg-[#0E1524] hover:bg-[#151F33] text-slate-300 border border-slate-800'
+                      }`}
+                    >
+                      <div className="text-[10px] font-mono truncate">{item.label}</div>
+                      <div className="text-[8px] text-slate-400 truncate">{item.sub}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Active Schedule Details */}
+            <div className="pt-2 border-t border-[#1A2338] space-y-1.5 text-[10px] text-slate-400 font-mono">
+              <div className="flex justify-between">
+                <span>Exchange / Market:</span>
+                <span className="text-slate-200">{status.metadata.exchangeName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Session Timezone:</span>
+                <span className="text-slate-200">{status.metadata.timeZoneLabel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Trading Hours:</span>
+                <span className="text-slate-200">{status.metadata.regularHoursSummary}</span>
+              </div>
+              {status.metadata.dailyBreakSummary && (
+                <div className="flex justify-between text-amber-300/90">
+                  <span>Break Schedule:</span>
+                  <span>{status.metadata.dailyBreakSummary}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
