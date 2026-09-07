@@ -351,9 +351,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             axisDoubleClickReset: true,
           },
         });
-        chart.priceScale('right')?.applyOptions({
-          autoScale: true,
-        });
       }
       cameraSnapshotRef.current = null;
     } catch (e: any) {
@@ -409,9 +406,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           axisPressedMouseMove: true,
           axisDoubleClickReset: true,
         },
-      });
-      chart?.priceScale('right')?.applyOptions({
-        autoScale: true,
       });
       if (container) {
         container.style.cursor = '';
@@ -531,7 +525,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const prevSymbolRef = useRef<string>('');
 
   // 2. Fetch Candle Data
-  const fetchCandles = useCallback(async (sym: string, inv: string, isSilent: boolean = false, isTimeframeChange: boolean = false) => {
+  const fetchCandles = useCallback(async (
+    sym: string,
+    inv: string,
+    isSilent: boolean = false,
+    isTimeframeChange: boolean = false,
+    isSymbolChange: boolean = false,
+  ) => {
     // If user is actively drawing or dragging, suppress silent candle updates to keep chart coordinates locked
     if (isSilent && (dragStateRef.current || drawingCreationRef.current)) {
       return;
@@ -539,34 +539,113 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     const requestKey = `${sym}_${inv}`;
     const isColdMount = candlesRef.current.length === 0;
 
-    // Capture visible time window before updating so camera stays locked across timeframes
-    const prevRange = chartApiRef.current?.timeScale().getVisibleRange();
+    // Capture visible time and price window before updating if timeframe change
+    const prevTimeRange = isTimeframeChange ? chartApiRef.current?.timeScale().getVisibleRange() : null;
+    const prevPriceRange = isTimeframeChange ? chartApiRef.current?.priceScale('right')?.getVisibleRange() : null;
+    const isPriceAutoScaled = isTimeframeChange ? (chartApiRef.current?.priceScale('right')?.options().autoScale ?? true) : true;
 
     try {
       if (!isSilent || isColdMount) {
         setIsLoadingCandles(true);
       }
-      const res = await fetch(`/api/market/candles?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}`);
-      const data = await res.json();
 
-      if (data.status === 'ok' && Array.isArray(data.candles) && data.candles.length > 0) {
-        candlesRef.current = data.candles;
-        (window as any).__chartCandles = data.candles;
-        (window as any).__chartInterval = inv;
-        if (seriesApiRef.current) {
-          seriesApiRef.current.setData(data.candles);
-          const last = data.candles[data.candles.length - 1];
-          setLastBarInfo({ open: last.open, high: last.high, low: last.low, close: last.close });
+      // Resilient fetch with automatic retries for container start-ups and network blips
+      let res: Response | null = null;
+      let data: any = null;
+      const maxRetries = isSilent ? 1 : 2;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
+          res = await fetch(
+            `/api/market/candles?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}`,
+            { signal: controller.signal }
+          );
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            data = await res.json();
+            if (data?.status === 'ok' && Array.isArray(data?.candles) && data.candles.length > 0) {
+              break;
+            }
+          }
+        } catch (fetchErr: any) {
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+          } else {
+            throw fetchErr;
+          }
         }
+      }
 
-        // Camera preservation: Only fitContent on the very first mount of the chart or explicit symbol change.
-        // On timeframe switch or silent updates, preserve exact visible time window!
-        if (isColdMount && chartApiRef.current) {
-          chartApiRef.current.timeScale().fitContent();
-        } else if (prevRange && chartApiRef.current) {
+      // If network fetch failed or returned no candles, attempt to restore from local storage cache
+      if (!data || data.status !== 'ok' || !Array.isArray(data.candles) || data.candles.length === 0) {
+        const localKey = `smtrading_cached_candles_${sym}_${inv}`;
+        const cachedRaw = localStorage.getItem(localKey);
+        if (cachedRaw) {
           try {
-            chartApiRef.current.timeScale().setVisibleRange(prevRange);
+            const parsed = JSON.parse(cachedRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              data = { status: 'ok', candles: parsed, source: 'local_cache' };
+            }
           } catch {}
+        }
+      }
+
+      if (data && data.status === 'ok' && Array.isArray(data.candles) && data.candles.length > 0) {
+        const incomingCandles = data.candles;
+        const existingCandles = candlesRef.current;
+
+        candlesRef.current = incomingCandles;
+        (window as any).__chartCandles = incomingCandles;
+        (window as any).__chartInterval = inv;
+
+        // Persist to local cache for offline/instant resilience
+        try {
+          const localKey = `smtrading_cached_candles_${sym}_${inv}`;
+          localStorage.setItem(localKey, JSON.stringify(incomingCandles.slice(-200)));
+        } catch {}
+
+        if (seriesApiRef.current) {
+          if (isColdMount || isSymbolChange) {
+            // Only set entire dataset and fitContent on initial cold mount or explicit symbol change
+            seriesApiRef.current.setData(incomingCandles);
+            chartApiRef.current?.timeScale().fitContent();
+          } else if (isTimeframeChange) {
+            // Timeframe change: update dataset and restore visible time & price ranges without resetting
+            seriesApiRef.current.setData(incomingCandles);
+            if (prevTimeRange && chartApiRef.current) {
+              try {
+                chartApiRef.current.timeScale().setVisibleRange(prevTimeRange);
+              } catch {}
+            }
+            if (!isPriceAutoScaled && prevPriceRange && chartApiRef.current) {
+              try {
+                chartApiRef.current.priceScale('right')?.setVisibleRange(prevPriceRange);
+              } catch {}
+            }
+          } else {
+            // Silent background polling / live updates:
+            // NEVER call setData(), fitContent(), resetTimeScale(), or setVisibleRange()!
+            // Update only modified/new bars via series.update() so that manual zoom,
+            // horizontal position (historical pan), and price scale remain 100% persistent!
+            if (existingCandles.length > 0 && incomingCandles.length > 0) {
+              const lastExistingTime = existingCandles[existingCandles.length - 1].time;
+              const barsToUpdate = incomingCandles.filter((c: any) => c.time >= lastExistingTime);
+              if (barsToUpdate.length > 0) {
+                for (const bar of barsToUpdate) {
+                  seriesApiRef.current.update(bar);
+                }
+              } else {
+                seriesApiRef.current.update(incomingCandles[incomingCandles.length - 1]);
+              }
+            } else {
+              seriesApiRef.current.setData(incomingCandles);
+            }
+          }
+
+          const last = incomingCandles[incomingCandles.length - 1];
+          setLastBarInfo({ open: last.open, high: last.high, low: last.low, close: last.close });
         }
 
         // Immediately recalculate screen positions for all drawings on the new timeframe
@@ -582,7 +661,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         lastLoadedKeyRef.current = requestKey;
       }
     } catch (err: any) {
-      console.error('[Financial Chart] Error loading candles:', err.message);
+      if (isSilent) {
+        console.warn('[Financial Chart] Background candle refresh skipped:', err.message);
+      } else {
+        console.warn('[Financial Chart] Candle feed notice:', err.message);
+        // If cold mount failed, schedule a single deferred retry
+        if (isColdMount) {
+          setTimeout(() => {
+            if (candlesRef.current.length === 0) {
+              fetchCandles(sym, inv, false, false, false);
+            }
+          }, 2500);
+        }
+      }
     } finally {
       setIsLoadingCandles(false);
     }
@@ -2020,13 +2111,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       if (isSymbolChange) {
         drawingManagerRef.current?.clearAll();
       }
-      fetchCandles(symbol, interval, false);
+      fetchCandles(symbol, interval, false, false, isSymbolChange);
       loadPostgresDrawings(symbol, interval, true);
     } else {
       // Only interval changed: drawings are shared across all timeframes for the same symbol!
       // Persist any in-memory tweaks, fetch new candles, and reproject existing drawings onto the new timeframe
       batchSaveRef.current?.();
-      fetchCandles(symbol, interval, true, true);
+      fetchCandles(symbol, interval, false, true, false);
       // Only fetch from database if the manager currently has no drawings loaded
       const manager = drawingManagerRef.current;
       if (!manager || (manager.getAllDrawings() || []).length === 0) {

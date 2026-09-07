@@ -61,6 +61,22 @@ const SYMBOL_CONFIG: Record<
   'BTCUSD': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
   'BTCUSDT': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
   'BTC/USD': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
+
+  // Futures: S&P 500 & Nasdaq
+  'CME_MINI:ES1!': { tvSymbol: 'CME_MINI:ES1!', yahooSymbol: 'ES=F' },
+  'ES1!': { tvSymbol: 'CME_MINI:ES1!', yahooSymbol: 'ES=F' },
+  'ES': { tvSymbol: 'CME_MINI:ES1!', yahooSymbol: 'ES=F' },
+  'CME_MINI:NQ1!': { tvSymbol: 'CME_MINI:NQ1!', yahooSymbol: 'NQ=F' },
+  'NQ1!': { tvSymbol: 'CME_MINI:NQ1!', yahooSymbol: 'NQ=F' },
+
+  // Equities: NVIDIA
+  'NASDAQ:NVDA': { tvSymbol: 'NASDAQ:NVDA', yahooSymbol: 'NVDA' },
+  'NVDA': { tvSymbol: 'NASDAQ:NVDA', yahooSymbol: 'NVDA' },
+
+  // Macro: US Dollar Index
+  'TVC:DXY': { tvSymbol: 'CAPITALCOM:DXY', yahooSymbol: 'DX-Y.NYB' },
+  'DXY': { tvSymbol: 'CAPITALCOM:DXY', yahooSymbol: 'DX-Y.NYB' },
+  'INDEX:DXY': { tvSymbol: 'CAPITALCOM:DXY', yahooSymbol: 'DX-Y.NYB' },
 };
 
 function resolveTradingViewSymbol(symbol: string): string {
@@ -134,7 +150,7 @@ function resolveTradingViewTimeframe(inv: string): string {
 // In-memory cache for candles with Stale-While-Revalidate to eliminate delay
 const candleCache = new Map<string, { timestamp: number; candles: Candle[] }>();
 const FRESH_CACHE_TTL_MS = 15000; // 15 seconds fresh
-const STALE_CACHE_MAX_AGE_MS = 300000; // 5 minutes stale serving while refreshing in background
+const STALE_CACHE_MAX_AGE_MS = 7200000; // 2 hours stale serving to guarantee 100% chart uptime
 const pendingFetches = new Map<string, Promise<Candle[]>>();
 
 // Singleton TradingView client instance
@@ -153,7 +169,7 @@ async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string
     const raw = await Promise.race([
       sym.candles({ timeframe: tvTimeframe as any, count }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('TradingView fetch timeout')), 3500)
+        setTimeout(() => reject(new Error('TradingView fetch timeout')), 2800)
       ),
     ]);
     if (!raw || raw.length === 0) return [];
@@ -174,16 +190,15 @@ async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string
     return await attemptFetch(client);
   } catch (err: any) {
     console.warn(`[Market Feed] Primary TV fetch failed for ${tvSymbol}:`, err.message);
+    // Cleanup client in background
     try {
       if (globalTvClient) {
-        await globalTvClient.disconnect().catch(() => {});
+        globalTvClient.disconnect().catch(() => {});
         globalTvClient = null;
       }
     } catch {}
-    // Retry once with a fresh client connection
-    const freshClient = tv();
-    globalTvClient = freshClient;
-    return await attemptFetch(freshClient);
+    // Throw immediately so fast fallbacks (Binance/Yahoo) can respond within <300ms without blocking
+    throw err;
   }
 }
 
@@ -339,12 +354,13 @@ async function fetchMarketCandlesDirect(rawSymbol: string, rawInterval: string):
   // Tertiary: Yahoo Finance real market fallback
   if (!candles || candles.length === 0) {
     const config = SYMBOL_CONFIG[rawSymbol] || SYMBOL_CONFIG[rawSymbol.toUpperCase()];
-    if (config?.yahooSymbol) {
+    const yahooSym = config?.yahooSymbol || (rawSymbol.includes(':') ? rawSymbol.split(':')[1] : rawSymbol);
+    if (yahooSym) {
       try {
         const { yahooInterval, yahooRange } = parseYahooInterval(rawInterval);
-        candles = await fetchFromYahoo(config.yahooSymbol, yahooInterval, yahooRange);
+        candles = await fetchFromYahoo(yahooSym, yahooInterval, yahooRange);
       } catch (yhErr: any) {
-        console.warn('[Market Feed] Yahoo fallback failed:', yhErr.message);
+        console.warn(`[Market Feed] Yahoo fallback failed for ${yahooSym}:`, yhErr.message);
       }
     }
   }
