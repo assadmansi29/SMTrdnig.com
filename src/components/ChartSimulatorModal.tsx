@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { ChartToolbar, ChartStrategyType } from './chart/ChartToolbar';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,32 +20,6 @@ interface ChartSimulatorModalProps {
   defaultSymbol?: string;
   onOpenAdminModal?: (tab?: string, symbol?: string, interval?: string) => void;
 }
-
-const POPULAR_SYMBOLS = [
-  { symbol: 'BLACKBULL:XAUUSD', name: 'Spot Gold / USD (BlackBull)', category: 'Metals' },
-  { symbol: 'BLACKBULL:NAS100', name: 'Nasdaq 100 (NAS100)', category: 'Indices' },
-  { symbol: 'BLACKBULL:US30', name: 'Dow Jones (US30)', category: 'Indices' },
-  { symbol: 'BLACKBULL:GER40', name: 'DAX 40 (GER40)', category: 'Indices' },
-  { symbol: 'BLACKBULL:EURUSD', name: 'EUR / USD', category: 'Forex' },
-  { symbol: 'BLACKBULL:GBPUSD', name: 'GBP / USD', category: 'Forex' },
-  { symbol: 'BLACKBULL:BTCUSD', name: 'Bitcoin (BTC/USD)', category: 'Crypto' },
-  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', category: 'Futures' },
-  { symbol: 'CME_MINI:NQ1!', name: 'NQ Futures (Nasdaq)', category: 'Futures' },
-  { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', category: 'Equities' },
-  { symbol: 'TVC:DXY', name: 'US Dollar Index (DXY)', category: 'Macro' },
-];
-
-const TIMEFRAMES = [
-  { value: '1', label: '1m' },
-  { value: '5', label: '5m' },
-  { value: '15', label: '15m' },
-  { value: '30', label: '30m' },
-  { value: '60', label: '1H' },
-  { value: '240', label: '4H' },
-  { value: '1D', label: 'DAY' },
-  { value: '1W', label: 'Week' },
-  { value: '1M', label: 'Month' },
-];
 
 export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ 
   isOpen, 
@@ -57,6 +32,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
   const isStaff = user?.role === 'super_admin' || user?.role === 'admin';
   const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
   const [activeInterval, setActiveInterval] = useState('15');
+  const [activeStrategy, setActiveStrategy] = useState<ChartStrategyType>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Sync selected symbol when defaultSymbol changes or modal opens
@@ -151,52 +127,15 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
           </div>
         </div>
 
-        {/* Global Toolbar & Symbol / Timeframe Bar */}
-        <div className="px-3 sm:px-5 py-1.5 bg-[#090D17] border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0 z-10">
-          
-          {/* Quick Symbol Switcher */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full lg:max-w-[50%]">
-            <span className="text-slate-400 font-mono-num text-[11px] font-semibold uppercase pr-1 hidden sm:inline shrink-0">
-              {t('chartSymbol')}:
-            </span>
-            {POPULAR_SYMBOLS.map((s) => {
-              const isSelected = selectedSymbol === s.symbol;
-              return (
-                <button
-                  key={s.symbol}
-                  onClick={() => setSelectedSymbol(s.symbol)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono-num font-semibold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                    isSelected
-                      ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800/80'
-                  }`}
-                >
-                  {s.name}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Timeframe Interval Controls */}
-          <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-              <Clock className="w-3.5 h-3.5 text-slate-400 ml-1 mr-0.5 hidden sm:inline" />
-              {TIMEFRAMES.map((tf) => (
-                <button
-                  key={tf.value}
-                  onClick={() => setActiveInterval(tf.value)}
-                  className={`px-2 py-0.5 rounded text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                    activeInterval === tf.value
-                      ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                >
-                  {tf.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Clean, Modern TradingView-Style Toolbar: Compact Instrument Dropdown, Timeframe Dropdown, Strategy Buttons */}
+        <ChartToolbar
+          currentSymbol={selectedSymbol}
+          onSelectSymbol={setSelectedSymbol}
+          currentInterval={activeInterval}
+          onSelectInterval={setActiveInterval}
+          activeStrategy={activeStrategy}
+          onSelectStrategy={setActiveStrategy}
+        />
 
         {/* Main Fully Responsive Chart Container: Fills 100% width and height below toolbar */}
         <div className="flex-1 min-h-0 min-w-0 w-full h-full flex flex-col relative bg-[#090D17] overflow-hidden">
@@ -207,6 +146,8 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
             timezone="Etc/UTC"
             enableDrawingTools={isStaff}
             hideSideToolbar={!isStaff}
+            activeStrategy={activeStrategy}
+            onSelectStrategy={setActiveStrategy}
             className="w-full h-full flex-1 min-h-0 min-w-0 rounded-none border-0"
           />
         </div>

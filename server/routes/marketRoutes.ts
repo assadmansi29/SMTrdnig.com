@@ -122,6 +122,7 @@ function resolveTradingViewTimeframe(inv: string): string {
   if (norm === '15' || norm === '15m') return '15';
   if (norm === '30' || norm === '30m') return '30';
   if (norm === '60' || norm === '1h') return '60';
+  if (norm === '120' || norm === '2h') return '120';
   if (norm === '240' || norm === '4h') return '240';
   if (norm === 'd' || norm === '1d' || norm === 'day') return '1D';
   if (norm === 'w' || norm === '1w' || norm === 'week') return '1W';
@@ -130,9 +131,11 @@ function resolveTradingViewTimeframe(inv: string): string {
   return raw;
 }
 
-// In-memory cache for candles to prevent throttling while keeping data fresh (10s TTL)
+// In-memory cache for candles with Stale-While-Revalidate to eliminate delay
 const candleCache = new Map<string, { timestamp: number; candles: Candle[] }>();
-const CACHE_TTL_MS = 10000; // 10 seconds
+const FRESH_CACHE_TTL_MS = 15000; // 15 seconds fresh
+const STALE_CACHE_MAX_AGE_MS = 300000; // 5 minutes stale serving while refreshing in background
+const pendingFetches = new Map<string, Promise<Candle[]>>();
 
 // Singleton TradingView client instance
 let globalTvClient: ReturnType<typeof tv> | null = null;
@@ -150,7 +153,7 @@ async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string
     const raw = await Promise.race([
       sym.candles({ timeframe: tvTimeframe as any, count }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('TradingView fetch timeout')), 7000)
+        setTimeout(() => reject(new Error('TradingView fetch timeout')), 3500)
       ),
     ]);
     if (!raw || raw.length === 0) return [];
@@ -290,6 +293,9 @@ function parseYahooInterval(inv: string): { yahooInterval: string; yahooRange: s
   if (raw === '240' || raw.toLowerCase() === '4h') {
     return { yahooInterval: '60m', yahooRange: '3mo' };
   }
+  if (raw === '120' || raw.toLowerCase() === '2h') {
+    return { yahooInterval: '60m', yahooRange: '2mo' };
+  }
   if (raw === '60' || raw.toLowerCase() === '1h' || raw.toLowerCase() === 'h') {
     return { yahooInterval: '60m', yahooRange: '1mo' };
   }
@@ -308,6 +314,44 @@ function parseYahooInterval(inv: string): { yahooInterval: string; yahooRange: s
   return { yahooInterval: '15m', yahooRange: '5d' };
 }
 
+async function fetchMarketCandlesDirect(rawSymbol: string, rawInterval: string): Promise<Candle[]> {
+  const tvSymbol = resolveTradingViewSymbol(rawSymbol);
+  const tvTimeframe = resolveTradingViewTimeframe(rawInterval);
+
+  let candles: Candle[] = [];
+
+  // Primary: Fetch genuine real-market candles directly from TradingView
+  try {
+    candles = await fetchCandlesFromTradingView(tvSymbol, tvTimeframe, 300);
+  } catch (tvErr: any) {
+    console.warn(`[Market Feed] TradingView live fetch failed for ${tvSymbol}:`, tvErr.message);
+  }
+
+  // Secondary: Binance real market fallback (if crypto)
+  if ((!candles || candles.length === 0) && (tvSymbol.includes('BTC') || rawSymbol.includes('BTC'))) {
+    try {
+      candles = await fetchFromBinance('BTCUSDT', rawInterval);
+    } catch (biErr: any) {
+      console.warn('[Market Feed] Binance fallback failed:', biErr.message);
+    }
+  }
+
+  // Tertiary: Yahoo Finance real market fallback
+  if (!candles || candles.length === 0) {
+    const config = SYMBOL_CONFIG[rawSymbol] || SYMBOL_CONFIG[rawSymbol.toUpperCase()];
+    if (config?.yahooSymbol) {
+      try {
+        const { yahooInterval, yahooRange } = parseYahooInterval(rawInterval);
+        candles = await fetchFromYahoo(config.yahooSymbol, yahooInterval, yahooRange);
+      } catch (yhErr: any) {
+        console.warn('[Market Feed] Yahoo fallback failed:', yhErr.message);
+      }
+    }
+  }
+
+  return candles;
+}
+
 /**
  * GET /api/market/candles
  * Returns genuine, real-market OHLC candles from TradingView WebSocket feed.
@@ -319,9 +363,11 @@ router.get('/candles', async (req: Request, res: Response): Promise<void> => {
     const rawInterval = String(req.query.interval || '15').trim();
     const cacheKey = `${rawSymbol}_${rawInterval}`;
 
-    // Check memory cache
     const cached = candleCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    const now = Date.now();
+
+    // 1. Fresh cache: return instantly (<1ms)
+    if (cached && now - cached.timestamp < FRESH_CACHE_TTL_MS) {
       res.json({
         status: 'ok',
         symbol: rawSymbol,
@@ -333,43 +379,58 @@ router.get('/candles', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const tvSymbol = resolveTradingViewSymbol(rawSymbol);
-    const tvTimeframe = resolveTradingViewTimeframe(rawInterval);
+    // 2. Stale-While-Revalidate: If we have cached candles within 5 minutes, return them immediately!
+    // Trigger background fetch to update the cache so the user NEVER experiences a 5-second wait!
+    if (cached && now - cached.timestamp < STALE_CACHE_MAX_AGE_MS) {
+      res.json({
+        status: 'ok',
+        symbol: rawSymbol,
+        interval: rawInterval,
+        source: 'tradingview_stale',
+        count: cached.candles.length,
+        candles: cached.candles,
+      });
 
-    let candles: Candle[] = [];
-
-    // Primary: Fetch genuine real-market candles directly from TradingView
-    try {
-      candles = await fetchCandlesFromTradingView(tvSymbol, tvTimeframe, 300);
-    } catch (tvErr: any) {
-      console.warn(`[Market Feed] TradingView live fetch failed for ${tvSymbol}:`, tvErr.message);
-    }
-
-    // Secondary: Binance real market fallback (if crypto)
-    if ((!candles || candles.length === 0) && (tvSymbol.includes('BTC') || rawSymbol.includes('BTC'))) {
-      try {
-        candles = await fetchFromBinance('BTCUSDT', rawInterval);
-      } catch (biErr: any) {
-        console.warn('[Market Feed] Binance fallback failed:', biErr.message);
+      // Background revalidation if not already in progress
+      if (!pendingFetches.has(cacheKey)) {
+        const fetchPromise = fetchMarketCandlesDirect(rawSymbol, rawInterval)
+          .then((freshCandles) => {
+            if (freshCandles && freshCandles.length > 0) {
+              candleCache.set(cacheKey, { timestamp: Date.now(), candles: freshCandles });
+            }
+            return freshCandles;
+          })
+          .catch((err) => {
+            console.warn(`[Market Feed] Background revalidation failed for ${cacheKey}:`, err.message);
+            return [];
+          })
+          .finally(() => {
+            pendingFetches.delete(cacheKey);
+          });
+        pendingFetches.set(cacheKey, fetchPromise);
       }
+      return;
     }
 
-    // Tertiary: Yahoo Finance real market fallback
-    if (!candles || candles.length === 0) {
-      const config = SYMBOL_CONFIG[rawSymbol] || SYMBOL_CONFIG[rawSymbol.toUpperCase()];
-      if (config?.yahooSymbol) {
-        try {
-          const { yahooInterval, yahooRange } = parseYahooInterval(rawInterval);
-          candles = await fetchFromYahoo(config.yahooSymbol, yahooInterval, yahooRange);
-        } catch (yhErr: any) {
-          console.warn('[Market Feed] Yahoo fallback failed:', yhErr.message);
-        }
-      }
+    // 3. Cold fetch (first time loading this symbol/timeframe)
+    let fetchPromise = pendingFetches.get(cacheKey);
+    if (!fetchPromise) {
+      fetchPromise = fetchMarketCandlesDirect(rawSymbol, rawInterval)
+        .then((freshCandles) => {
+          if (freshCandles && freshCandles.length > 0) {
+            candleCache.set(cacheKey, { timestamp: Date.now(), candles: freshCandles });
+          }
+          return freshCandles;
+        })
+        .finally(() => {
+          pendingFetches.delete(cacheKey);
+        });
+      pendingFetches.set(cacheKey, fetchPromise);
     }
 
-    // Strict mandate: Do NOT use synthetic, generated, estimated, or incorrect candle data.
+    const candles = await fetchPromise;
+
     if (!candles || candles.length === 0) {
-      // If cached data exists from a previous successful fetch, return it rather than failing
       if (cached && cached.candles.length > 0) {
         res.json({
           status: 'ok',
@@ -389,9 +450,6 @@ router.get('/candles', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Cache valid real-market candles
-    candleCache.set(cacheKey, { timestamp: Date.now(), candles });
-
     res.json({
       status: 'ok',
       symbol: rawSymbol,
@@ -401,10 +459,10 @@ router.get('/candles', async (req: Request, res: Response): Promise<void> => {
       candles,
     });
   } catch (err: any) {
-    console.error('[Market API] Error:', err.message);
+    console.error('[Market Feed] Error fetching candles:', err.message);
     res.status(500).json({
       status: 'error',
-      error: `Failed to retrieve real market data: ${err.message}`,
+      error: 'Failed to fetch genuine market candles.',
     });
   }
 });

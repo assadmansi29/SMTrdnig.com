@@ -796,18 +796,42 @@ class DenseGannAngleGridPaneView {
 export function timeToLogicalIndex(targetTime: number, candles: any[]): number {
   if (!candles || candles.length === 0) return 0;
   const N = candles.length;
+  if (N === 1) return 0;
+
   const lastTime = Number(candles[N - 1].time);
   const firstTime = Number(candles[0].time);
-  const step = N >= 2 ? (Number(candles[N - 1].time) - Number(candles[N - 2].time)) || 3600 : 3600;
 
+  // Calculate robust candle step duration (median of recent candle diffs to avoid weekend gaps)
+  let step: number = (candles as any).__cachedStep;
+  if (!step || typeof step !== 'number') {
+    step = 3600;
+    if (N >= 2) {
+      const diffs: number[] = [];
+      const samples = Math.min(N - 1, 20);
+      for (let i = N - 1; i > N - 1 - samples; i--) {
+        const d = Number(candles[i].time) - Number(candles[i - 1].time);
+        if (d > 0) diffs.push(d);
+      }
+      diffs.sort((a, b) => a - b);
+      if (diffs.length > 0) {
+        step = diffs[Math.floor(diffs.length / 2)] || 3600;
+      }
+    }
+    try {
+      (candles as any).__cachedStep = step;
+    } catch {}
+  }
+
+  // Future projection (beyond rightmost candle)
   if (targetTime >= lastTime) {
     return (N - 1) + (targetTime - lastTime) / step;
   }
+  // Historical past projection (before leftmost candle)
   if (targetTime <= firstTime) {
-    return (targetTime - firstTime) / step;
+    return 0 - (firstTime - targetTime) / step;
   }
 
-  // Exact or binary search within candle array
+  // Exact match or binary search within candle array
   let low = 0;
   let high = N - 1;
   while (low <= high) {
@@ -822,42 +846,54 @@ export function timeToLogicalIndex(targetTime: number, candles: any[]): number {
     }
   }
 
-  // targetTime falls between high and low
-  const tHigh = Number(candles[high].time);
-  const tLow = Number(candles[low].time);
+  // targetTime falls between high and low (high = low - 1)
+  const safeHigh = Math.max(0, Math.min(N - 1, high));
+  const safeLow = Math.max(0, Math.min(N - 1, low));
+  const tHigh = Number(candles[safeHigh].time);
+  const tLow = Number(candles[safeLow].time);
   const frac = tLow > tHigh ? (targetTime - tHigh) / (tLow - tHigh) : 0;
-  return high + frac;
+  return safeHigh + frac;
 }
 
-export function projectLogicalCoordinate(timeScale: any, logicalIdx: number): number | null {
-  if (!timeScale || isNaN(logicalIdx)) return null;
+export function projectLogicalCoordinate(timeScale: any, logicalIdx: number, chart?: any): number | null {
+  if (isNaN(logicalIdx)) return null;
 
-  const direct = timeScale.logicalToCoordinate?.(logicalIdx);
+  const realTs = chart?.timeScale?.() || (typeof window !== 'undefined' && (window as any).__currentChart?.timeScale?.()) || timeScale;
+  if (!realTs) return null;
+
+  // 1. Primary method: visible logical range and exact bar spacing from the real chart time scale
+  // This continuous calculation NEVER returns null, even for off-screen, past, future, or fractional indices!
+  try {
+    const range = realTs.getVisibleLogicalRange?.();
+    if (range && typeof range.from === 'number' && typeof range.to === 'number' && range.to !== range.from) {
+      const xFrom = realTs.logicalToCoordinate?.(range.from);
+      const xTo = realTs.logicalToCoordinate?.(range.to);
+      if (xFrom !== null && xTo !== null && !isNaN(xFrom) && !isNaN(xTo)) {
+        const barSpacing = (xTo - xFrom) / (range.to - range.from);
+        if (barSpacing > 0) {
+          return xFrom + (logicalIdx - range.from) * barSpacing;
+        }
+      }
+    }
+  } catch {}
+
+  // 2. Direct coordinate calculation
+  const direct = realTs.logicalToCoordinate?.(logicalIdx);
   if (direct !== null && direct !== undefined && !isNaN(direct)) {
     return direct;
   }
 
-  // Check visible logical range for robust linear extrapolation if direct returned null
-  const range = timeScale.getVisibleLogicalRange?.();
-  if (range && range.to !== range.from) {
-    const xFrom = timeScale.logicalToCoordinate?.(range.from);
-    const xTo = timeScale.logicalToCoordinate?.(range.to);
-    if (xFrom !== null && xTo !== null && !isNaN(xFrom) && !isNaN(xTo)) {
-      const barSpacing = (xTo - xFrom) / (range.to - range.from);
-      return xFrom + (logicalIdx - range.from) * barSpacing;
-    }
-  }
-
+  // 3. Interpolation between floor and ceil indices
   const floorIdx = Math.floor(logicalIdx);
   const ceilIdx = Math.ceil(logicalIdx);
 
   if (floorIdx === ceilIdx) {
-    const coord = timeScale.logicalToCoordinate?.(floorIdx);
-    return coord !== null && !isNaN(coord) ? coord : null;
+    const coord = realTs.logicalToCoordinate?.(floorIdx);
+    return coord !== null && coord !== undefined && !isNaN(coord) ? coord : null;
   }
 
-  const coordFloor = timeScale.logicalToCoordinate?.(floorIdx);
-  const coordCeil = timeScale.logicalToCoordinate?.(ceilIdx);
+  const coordFloor = realTs.logicalToCoordinate?.(floorIdx);
+  const coordCeil = realTs.logicalToCoordinate?.(ceilIdx);
 
   if (coordFloor !== null && coordCeil !== null && !isNaN(coordFloor) && !isNaN(coordCeil)) {
     return coordFloor + (logicalIdx - floorIdx) * (coordCeil - coordFloor);
@@ -871,31 +907,64 @@ export function projectLogicalCoordinate(timeScale: any, logicalIdx: number): nu
 // -----------------------------------------------------------------------------
 export function installDirectionalEnhancers() {
   try {
-    // 0. Patch Drawing.prototype.anchorToPixel to support future cycle analysis bars (e.g. +144 bars)
+    // 0. Disable autoscaleInfo on Drawing and all subclasses.
+    // In Lightweight Charts, primitives with an autoscaleInfo() method force the chart
+    // price scale to automatically rescale, zoom out, recenter, and fit the drawing's min/max
+    // prices into the viewport whenever any anchor is created, moved, or edited.
+    // Disabling autoscaleInfo ensures the chart camera zoom, price scale, and position remain
+    // 100% locked and stable, matching professional TradingView-style behavior.
     if (Drawing && Drawing.prototype) {
+      (Drawing.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+
       const origAnchorToPixel = Drawing.prototype.anchorToPixel;
       Drawing.prototype.anchorToPixel = function (anchor: any, viewport: any) {
         if (!anchor || !viewport) return null;
-        const direct = origAnchorToPixel ? origAnchorToPixel.call(this, anchor, viewport) : null;
-        if (direct && direct.x !== null && !isNaN(direct.x) && direct.y !== null && !isNaN(direct.y)) {
-          return direct;
+
+        const chart = (this as any)._chart || (typeof window !== 'undefined' ? (window as any).__currentChart : null);
+        const series = (this as any)._series || (typeof window !== 'undefined' ? (window as any).__currentSeries : null);
+        const timeScale = viewport.timeScale || chart?.timeScale?.();
+        const priceScale = viewport.priceScale || series;
+
+        if (!timeScale) return null;
+
+        // Price coordinate (Y): map absolute anchor.price to the current price scale
+        let y: number | null = null;
+        const priceNum = typeof anchor.price === 'number' ? anchor.price : parseFloat(anchor.price);
+        if (!isNaN(priceNum)) {
+          if (priceScale?.priceToCoordinate) {
+            y = priceScale.priceToCoordinate(priceNum);
+          } else if (series?.priceToCoordinate) {
+            y = series.priceToCoordinate(priceNum);
+          }
         }
-
-        const timeScale = viewport.timeScale;
-        const priceScale = viewport.priceScale;
-        if (!timeScale || !priceScale) return direct;
-
-        const y = direct?.y ?? priceScale.priceToCoordinate?.(anchor.price);
+        if (y === null || isNaN(y)) {
+          const direct = origAnchorToPixel ? origAnchorToPixel.call(this, anchor, viewport) : null;
+          if (direct && typeof direct.y === 'number' && !isNaN(direct.y)) {
+            y = direct.y;
+          }
+        }
         if (y === null || isNaN(y)) return null;
 
-        let x = direct?.x;
-        if ((x === null || x === undefined || isNaN(x)) && timeScale.logicalToCoordinate) {
-          const candles = (window as any).__chartCandles;
-          if (Array.isArray(candles) && candles.length > 0) {
-            const targetTime = typeof anchor.time === 'number' ? anchor.time : Number(anchor.time);
-            if (!isNaN(targetTime)) {
+        // Time coordinate (X): map absolute chart timestamp (seconds) to the current timeframe's time scale
+        let x: number | null = null;
+        let targetTime = typeof anchor.time === 'number' ? anchor.time : Number(anchor.time);
+        if (isNaN(targetTime) && typeof anchor.time === 'string') {
+          targetTime = Math.floor(new Date(anchor.time).getTime() / 1000);
+        }
+
+        if (!isNaN(targetTime)) {
+          // 1. First check direct native timeToCoordinate - instant and accurate for visible bars!
+          const directTimeX = timeScale?.timeToCoordinate?.(targetTime) ?? chart?.timeScale?.().timeToCoordinate?.(targetTime);
+          if (directTimeX !== null && directTimeX !== undefined && !isNaN(directTimeX)) {
+            x = directTimeX;
+          } else {
+            // 2. Continuous logical projection for future projection or timestamps between candles
+            const candles = (typeof window !== 'undefined' && (window as any).__chartCandles) || [];
+            if (Array.isArray(candles) && candles.length > 0) {
               const logicalIdx = timeToLogicalIndex(targetTime, candles);
-              const projectedX = projectLogicalCoordinate(timeScale, logicalIdx);
+              const projectedX = projectLogicalCoordinate(timeScale, logicalIdx, chart);
               if (projectedX !== null && !isNaN(projectedX)) {
                 x = projectedX;
               }
@@ -903,7 +972,14 @@ export function installDirectionalEnhancers() {
           }
         }
 
-        if (x === null || x === undefined || isNaN(x) || y === null || isNaN(y)) {
+        if (x === null || isNaN(x)) {
+          const direct = origAnchorToPixel ? origAnchorToPixel.call(this, anchor, viewport) : null;
+          if (direct && typeof direct.x === 'number' && !isNaN(direct.x)) {
+            x = direct.x;
+          }
+        }
+
+        if (x === null || isNaN(x) || y === null || isNaN(y)) {
           return null;
         }
         return { x, y };
@@ -912,35 +988,62 @@ export function installDirectionalEnhancers() {
       const origPixelToAnchor = (Drawing.prototype as any).pixelToAnchor;
       (Drawing.prototype as any).pixelToAnchor = function (point: any, viewport: any) {
         if (!point || !viewport) return null;
-        const direct = origPixelToAnchor ? origPixelToAnchor.call(this, point, viewport) : null;
-        if (direct && direct.time !== null && direct.time !== undefined && direct.price !== null && !isNaN(direct.price)) {
-          return direct;
+
+        const chart = typeof window !== 'undefined' ? (window as any).__currentChart : undefined;
+        const series = typeof window !== 'undefined' ? (window as any).__currentSeries : undefined;
+        const timeScale = viewport.timeScale || chart?.timeScale?.();
+        const priceScale = viewport.priceScale || series;
+        if (!timeScale || !priceScale) return null;
+
+        let price = priceScale.coordinateToPrice?.(point.y);
+        if (price === null || price === undefined || isNaN(price)) {
+          price = series?.coordinateToPrice?.(point.y);
         }
-        const timeScale = viewport.timeScale;
-        const priceScale = viewport.priceScale;
-        if (!timeScale || !priceScale) return direct;
+        if (price === null || price === undefined || isNaN(price)) return null;
 
-        const price = direct?.price ?? priceScale.coordinateToPrice?.(point.y);
-        if (price === null || isNaN(price)) return null;
+        let time: number | null = null;
+        const rawTs = chart?.timeScale?.() || timeScale;
+        const directTime = rawTs?.coordinateToTime ? rawTs.coordinateToTime(point.x) : null;
+        if (directTime !== null && directTime !== undefined) {
+          time = typeof directTime === 'number' ? directTime : Math.floor(new Date(directTime).getTime() / 1000);
+        }
 
-        let time = direct?.time;
         if (!time) {
-          const chart = typeof window !== 'undefined' ? (window as any).__currentChart : undefined;
-          const rawTs = chart?.timeScale?.() || timeScale;
           const logical = rawTs?.coordinateToLogical ? rawTs.coordinateToLogical(point.x) : null;
           const candles = typeof window !== 'undefined' ? (window as any).__chartCandles : undefined;
           if (logical !== null && logical !== undefined && !isNaN(logical) && Array.isArray(candles) && candles.length > 0) {
             const N = candles.length;
             const lastCandle = candles[N - 1];
             const firstCandle = candles[0];
-            const step = N >= 2 ? (Number(lastCandle.time) - Number(candles[N - 2].time)) || 3600 : 3600;
+
+            let step = 3600;
+            if (N >= 2) {
+              const diffs: number[] = [];
+              const samples = Math.min(N - 1, 20);
+              for (let i = N - 1; i > N - 1 - samples; i--) {
+                const d = Number(candles[i].time) - Number(candles[i - 1].time);
+                if (d > 0) diffs.push(d);
+              }
+              diffs.sort((a, b) => a - b);
+              if (diffs.length > 0) {
+                step = diffs[Math.floor(diffs.length / 2)] || 3600;
+              }
+            }
+
             if (logical >= N - 1) {
               time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
-            } else if (logical < 0) {
+            } else if (logical <= 0) {
               time = Number(firstCandle.time) + Math.round(logical * step);
             } else {
-              const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
-              time = Number(candles[idx].time);
+              const floor = Math.floor(logical);
+              const ceil = Math.ceil(logical);
+              if (floor === ceil) {
+                time = Number(candles[floor].time);
+              } else {
+                const t0 = Number(candles[floor].time);
+                const t1 = Number(candles[ceil].time);
+                time = Math.round(t0 + (logical - floor) * (t1 - t0));
+              }
             }
           }
         }
@@ -949,6 +1052,33 @@ export function installDirectionalEnhancers() {
           return null;
         }
         return { time, price: Number(price.toFixed(2)) };
+      };
+    }
+
+    // 0. Disable autoscaleInfo on Drawing and subclasses so drawings NEVER force the chart to zoom in or zoom out
+    if (Drawing && Drawing.prototype) {
+      (Drawing.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (GannFan && GannFan.prototype) {
+      (GannFan.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (GannBox && GannBox.prototype) {
+      (GannBox.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (Ray && Ray.prototype) {
+      (Ray.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (TrendAngle && TrendAngle.prototype) {
+      (TrendAngle.prototype as any).autoscaleInfo = function () {
+        return null;
       };
     }
 

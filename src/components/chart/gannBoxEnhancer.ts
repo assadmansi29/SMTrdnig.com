@@ -118,10 +118,11 @@ export class EnhancedGannBoxRenderer {
     const viewport = typeof drawing.getViewport === 'function' ? drawing.getViewport() : null;
     if (!viewport || drawing.options?.visible === false || !drawing.isValid()) return;
 
-    // Check timeframe visibility
+    // Check timeframe visibility across current active chart timeframe
     const options = drawing.gannOptions || drawing.options || {};
-    if (options.visibility && drawing._currentChartInterval) {
-      if (!isTimeframeVisible(drawing._currentChartInterval, options.visibility)) {
+    const currentChartInterval = (typeof window !== 'undefined' && ((window as any).__chartInterval || (window as any).__currentInterval)) || drawing._currentChartInterval;
+    if (options.visibility && currentChartInterval) {
+      if (!isTimeframeVisible(currentChartInterval, options.visibility)) {
         return;
       }
     }
@@ -524,6 +525,11 @@ export function installGannBoxEnhancer() {
         configurable: true,
         enumerable: true,
       });
+
+      // Prevent GannBox from altering the chart camera or autoscaling the price axis
+      (GannBox.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
 
       console.log('[Gann Box Enhancer] TradingView-style GannBox installed successfully.');
     }
