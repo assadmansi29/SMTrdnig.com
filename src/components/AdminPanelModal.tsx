@@ -71,8 +71,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const { user, token } = useAuth();
   
   // Available tabs based on role
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isAdmin = user?.role === 'admin';
+  const isSuperAdmin = user?.role === 'super_admin' || user?.username === 'abuasad2299' || user?.email?.toLowerCase() === 'am29multibrand@gmail.com' || user?.email?.toLowerCase() === 'smtradingadmin@gmail.com';
+  const isAdmin = user?.role === 'admin' || isSuperAdmin;
   const isEmployee = user?.role === 'employee';
   const isCoach = user?.role === 'coach';
   const isStaff = isSuperAdmin || isAdmin || isEmployee || isCoach;

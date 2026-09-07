@@ -8,6 +8,8 @@ import {
   Calendar, 
   ArrowRight, 
   Sparkles,
+  GraduationCap,
+  ShoppingBag,
   X
 } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
@@ -16,6 +18,8 @@ interface TradingToolsMenuProps {
   onOpenChart: () => void;
   onOpenCalculator: () => void;
   onOpenCalendar: () => void;
+  onOpenCoachingDesk?: () => void;
+  onOpenECommerce?: () => void;
   compact?: boolean;
   className?: string;
 }
@@ -24,6 +28,8 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
   onOpenChart,
   onOpenCalculator,
   onOpenCalendar,
+  onOpenCoachingDesk,
+  onOpenECommerce,
   compact = false,
   className = ''
 }) => {
@@ -181,6 +187,60 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
             </div>
             <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
           </button>
+
+          {/* Option 4: Coaching Desk (Student Mentorship & Milestones) */}
+          {onOpenCoachingDesk && (
+            <button
+              type="button"
+              onClick={() => handleSelect(onOpenCoachingDesk)}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#101726] hover:bg-[#152035] active:bg-[#1a2842] border border-slate-800 hover:border-emerald-400/50 text-left rtl:text-right transition-all group cursor-pointer shadow-sm"
+            >
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/20 group-hover:border-emerald-400 transition-all">
+                <GraduationCap className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-sm font-bold text-white group-hover:text-emerald-300">
+                    Coaching Desk
+                  </span>
+                  <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40 font-mono-num">
+                    MENTOR
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 leading-snug mt-1">
+                  Student curriculum milestones, mentor notes & 1-on-1 reviews
+                </p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
+            </button>
+          )}
+
+          {/* Option 5: E-Commerce Store */}
+          {onOpenECommerce && (
+            <button
+              type="button"
+              onClick={() => handleSelect(onOpenECommerce)}
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#101726] hover:bg-[#152035] active:bg-[#1a2842] border border-slate-800 hover:border-amber-400/50 text-left rtl:text-right transition-all group cursor-pointer shadow-sm"
+            >
+              <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 group-hover:bg-amber-500/20 group-hover:border-amber-400 transition-all">
+                <ShoppingBag className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-sm font-bold text-white group-hover:text-amber-300">
+                    SMTrading Store
+                  </span>
+                  <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">
+                    STORE
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 leading-snug mt-1">
+                  Institutional indicators, algorithmic suites & trading playbooks
+                </p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
+            </button>
+          )}
         </div>
 
         {/* Footer info note */}
@@ -322,6 +382,60 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
               </button>
+
+              {/* 4. Coaching Desk */}
+              {onOpenCoachingDesk && (
+                <button
+                  id="btn-tool-coaching-desk"
+                  onClick={() => handleSelect(onOpenCoachingDesk)}
+                  className="w-full text-left rtl:text-right p-2.5 rounded-xl hover:bg-slate-800/80 transition-all group flex items-start gap-3 cursor-pointer border border-transparent hover:border-emerald-400/30"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-emerald-500/20 group-hover:border-emerald-400 transition-all">
+                    <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">
+                        Coaching Desk
+                      </span>
+                      <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40 font-mono-num">
+                        MENTOR
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
+                      Student curriculum milestones & 1-on-1 reviews
+                    </p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
+                </button>
+              )}
+
+              {/* 5. SMTrading E-Commerce Store */}
+              {onOpenECommerce && (
+                <button
+                  id="btn-tool-ecommerce-store"
+                  onClick={() => handleSelect(onOpenECommerce)}
+                  className="w-full text-left rtl:text-right p-2.5 rounded-xl hover:bg-slate-800/80 transition-all group flex items-start gap-3 cursor-pointer border border-transparent hover:border-amber-400/30"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-amber-500/20 group-hover:border-amber-400 transition-all">
+                    <ShoppingBag className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-amber-300 transition-colors">
+                        SMTrading Store
+                      </span>
+                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">
+                        STORE
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
+                      Institutional indicators & trading strategies
+                    </p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { Database, UserRecord } from '../db';
+import { Database, UserRecord, UserRole } from '../db';
 import { generateToken, sanitizeUser, authenticateToken, AuthRequest } from '../auth';
 import { sendEmailVerificationCode, verifyEmailCode } from '../emailService';
 import { loginRateLimiter, verificationCodeLimiter } from '../middleware/security';
@@ -222,12 +222,16 @@ router.post('/register', async (req: AuthRequest, res: Response): Promise<void> 
     const expDate = new Date();
     expDate.setMonth(expDate.getMonth() + 1); // 1 month initial access for new registration
 
+    const isOwnerEmail = email.trim().toLowerCase() === 'am29multibrand@gmail.com' || email.trim().toLowerCase() === 'smtradingadmin@gmail.com';
+    const isOwnerUsername = username.trim().toLowerCase() === 'abuasad2299';
+    const assignedRole: UserRole = (isOwnerEmail || isOwnerUsername) ? 'super_admin' : 'client';
+
     const newUser = await Database.createUser({
       username: username.trim(),
       email: email.trim().toLowerCase(),
       passwordHash,
       fullName: fullName?.trim() || username.trim(),
-      role: 'client',
+      role: assignedRole,
       subscriptionStatus: 'active',
       subscriptionPlan: plan || 'Standard SMC Pro Access',
       subscriptionExpiresAt: expDate.toISOString(),

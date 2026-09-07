@@ -43,13 +43,6 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
 
   const products = getProductsByLanguage(language);
 
-  if (!isOpen) return null;
-
-  const categoryLabels: Record<string, string> = {
-    'Education & Masterclass': t('ecomCatEducation') || 'Education & Masterclass',
-    'Pro Trading Strategies': t('ecomCatStrategies') || 'Pro Trading Strategies'
-  };
-
   const filteredProducts = products.filter(
     p => p.category === selectedCategory || p.id === 'prod-7'
   );
@@ -134,7 +127,12 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (typeof document === 'undefined') return null;
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  const categoryLabels: Record<string, string> = {
+    'Education & Masterclass': t('ecomCatEducation') || 'Education & Masterclass',
+    'Pro Trading Strategies': t('ecomCatStrategies') || 'Pro Trading Strategies'
+  };
 
   return createPortal(
     <div

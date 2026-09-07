@@ -10,6 +10,8 @@ interface FooterProps {
   onOpenCalendar: () => void;
   onOpenChart: () => void;
   onOpenNewsletter: () => void;
+  onOpenCoachingDesk?: () => void;
+  onOpenECommerce?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -17,7 +19,9 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenCalculator,
   onOpenCalendar,
   onOpenChart,
-  onOpenNewsletter
+  onOpenNewsletter,
+  onOpenCoachingDesk,
+  onOpenECommerce
 }) => {
   const { t, isRTL } = useTranslation();
 
@@ -143,6 +147,20 @@ export const Footer: React.FC<FooterProps> = ({
                 {t('navVipAlpha')}
               </button>
             </li>
+            {onOpenCoachingDesk && (
+              <li>
+                <button onClick={onOpenCoachingDesk} className="hover:text-emerald-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                  <span>Coaching Desk</span>
+                </button>
+              </li>
+            )}
+            {onOpenECommerce && (
+              <li>
+                <button onClick={onOpenECommerce} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                  <span>SMTrading Store</span>
+                </button>
+              </li>
+            )}
           </ul>
         </div>
 

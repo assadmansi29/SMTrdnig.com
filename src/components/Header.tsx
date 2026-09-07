@@ -18,6 +18,7 @@ import { TranslationKey } from '../locales';
 import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from './UserAvatar';
 import { MarketStatusIndicator } from './chart/MarketStatusIndicator';
+import { AdminPanelTabType } from './AdminPanelModal';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -30,8 +31,9 @@ interface HeaderProps {
   onOpenChart: () => void;
   onOpenNewsletter: () => void;
   onOpenECommerce: () => void;
+  onOpenCoachingDesk: () => void;
   onOpenProfile: () => void;
-  onOpenAdmin: () => void;
+  onOpenAdmin: (tab?: AdminPanelTabType) => void;
 }
 
 const CATEGORIES: ArticleCategory[] = [
@@ -65,6 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenChart,
   onOpenNewsletter,
   onOpenECommerce,
+  onOpenCoachingDesk,
   onOpenProfile,
   onOpenAdmin
 }) => {
@@ -137,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* 3. Master Staff Desk Button (When Super Admin, Admin, Employee, Coach) */}
                 {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
                   <button
-                    onClick={onOpenAdmin}
+                    onClick={() => onOpenAdmin(user.role === 'coach' ? 'coaching' : user.role === 'employee' ? 'operations' : 'users')}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm shrink-0 ${
                       user.role === 'super_admin'
                         ? 'bg-gradient-to-r from-amber-500/25 via-amber-500/15 to-amber-600/20 hover:from-amber-500/35 hover:to-amber-600/30 border border-amber-400/70 text-amber-300 shadow-amber-500/15'
@@ -147,7 +150,7 @@ export const Header: React.FC<HeaderProps> = ({
                         ? 'bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/60 text-blue-300'
                         : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/60 text-purple-300'
                     }`}
-                    title={user.role === 'super_admin' ? 'Super Admin Desk' : user.role === 'coach' ? 'Coaching Desk' : user.role === 'employee' ? 'Operations Desk' : 'Admin Desk'}
+                    title={user.role === 'super_admin' ? 'Super Admin Desk' : user.role === 'coach' ? 'Master Coaching Desk' : user.role === 'employee' ? 'Operations Desk' : 'Admin Desk'}
                   >
                     {user.role === 'super_admin' ? (
                       <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -189,24 +192,38 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="h-4 w-px bg-slate-800 mx-0.5" />
 
-                {/* 5. Tools Dropdown */}
+                {/* 5. Tools Dropdown (Chart, Calculator, Calendar, Coaching Desk, Store) */}
                 <TradingToolsMenu
                   onOpenChart={onOpenChart}
                   onOpenCalculator={onOpenCalculator}
                   onOpenCalendar={onOpenCalendar}
+                  onOpenCoachingDesk={onOpenCoachingDesk}
+                  onOpenECommerce={onOpenECommerce}
                 />
 
-                {/* 6. E-Commerce Store */}
+                {/* 6. Coaching Desk Quick Action */}
                 <button
+                  id="nav-coaching-desk-btn"
+                  onClick={onOpenCoachingDesk}
+                  className="flex items-center gap-1.5 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
+                  title="Coaching Desk: Student Mentorship, Curriculum Milestones & Reviews"
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="hidden xl:inline">Coaching Desk</span>
+                </button>
+
+                {/* 7. E-Commerce Store Quick Action */}
+                <button
+                  id="nav-ecommerce-btn"
                   onClick={onOpenECommerce}
-                  className="flex items-center gap-1.5 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 px-2 py-1 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
+                  className="flex items-center gap-1.5 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 hover:text-amber-200 border border-amber-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
                   title={t('navEcommerceTitle')}
                 >
-                  <ShoppingBag className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <ShoppingBag className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="hidden xl:inline">{t('navEcommerce')}</span>
                 </button>
 
-                {/* 7. Bookmarks Drawer Trigger */}
+                {/* 8. Bookmarks Drawer Trigger */}
                 <button
                   onClick={onOpenSavedModal}
                   className="relative p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shrink-0"
@@ -226,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex md:hidden items-center gap-1.5 shrink-0">
               {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
                 <button
-                  onClick={onOpenAdmin}
+                  onClick={() => onOpenAdmin(user.role === 'coach' ? 'coaching' : user.role === 'employee' ? 'operations' : 'users')}
                   className="p-1.5 bg-amber-500/20 border border-amber-400/60 text-amber-300 rounded-lg text-xs font-bold cursor-pointer"
                   title="Staff Management Desk"
                 >
@@ -291,24 +308,30 @@ export const Header: React.FC<HeaderProps> = ({
               onOpenChart={onOpenChart}
               onOpenCalculator={onOpenCalculator}
               onOpenCalendar={onOpenCalendar}
+              onOpenCoachingDesk={onOpenCoachingDesk}
+              onOpenECommerce={onOpenECommerce}
               compact={true}
             />
           </div>
 
           <button
-            onClick={onOpenECommerce}
+            id="mobile-nav-coaching-desk"
+            onClick={onOpenCoachingDesk}
             className="w-full flex items-center justify-center gap-1 bg-[#0E1726] hover:bg-[#132035] text-emerald-300 border border-emerald-500/30 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
+            title="Coaching Desk"
           >
-            <ShoppingBag className="w-3 h-3 text-emerald-400 shrink-0" />
-            <span className="truncate">{t('navEcommerce')}</span>
+            <GraduationCap className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span className="truncate">Coaching</span>
           </button>
 
           <button
-            onClick={onOpenNewsletter}
-            className="w-full flex items-center justify-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer shadow-xs"
+            id="mobile-nav-ecommerce-btn"
+            onClick={onOpenECommerce}
+            className="w-full flex items-center justify-center gap-1 bg-[#1A150A] hover:bg-[#261E0E] text-amber-300 border border-amber-500/30 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
+            title={t('navEcommerce')}
           >
-            <Sparkles className="w-3 h-3 text-slate-950 shrink-0" />
-            <span className="truncate">{t('navVipAlphaShort')}</span>
+            <ShoppingBag className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate">Store</span>
           </button>
         </div>
       </div>

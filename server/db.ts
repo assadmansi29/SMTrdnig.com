@@ -408,7 +408,7 @@ function mapUserRow(row: any): UserRecord {
     email: row.email,
     passwordHash: row.password_hash,
     fullName: row.full_name,
-    role: (row.role === 'admin' && (row.username === 'abuasad2299' || row.id === 'usr_admin_01')) ? 'super_admin' : (row.role as UserRole),
+    role: ((row.email && (row.email.toLowerCase() === 'am29multibrand@gmail.com' || row.email.toLowerCase() === 'smtradingadmin@gmail.com')) || row.username === 'abuasad2299' || row.id === 'usr_admin_01' || row.role === 'super_admin') ? 'super_admin' : (row.role as UserRole),
     subscriptionStatus: row.subscription_status as SubscriptionStatus,
     subscriptionPlan: row.subscription_plan,
     subscriptionExpiresAt: safeIsoDate(row.subscription_expires_at, new Date(Date.now() + 365*24*60*60*1000).toISOString()),

@@ -32,11 +32,13 @@ import { SavedArticlesModal } from './components/SavedArticlesModal';
 import { SearchModal } from './components/SearchModal';
 import { NewsletterModal } from './components/NewsletterModal';
 import { ECommerceModal } from './components/ECommerceModal';
+import { StudentCoachingModal } from './components/StudentCoachingModal';
 import { AuthGate } from './components/AuthGate';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AdminPanelModal, AdminPanelTabType } from './components/AdminPanelModal';
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
+import { useAuth } from './context/AuthContext';
 import { getArticlesByLanguage, getEconomicEventsByLanguage, getAuthorsByLanguage } from './data/localizedData';
 import { getLocalizedCategory } from './locales';
 import { copyToClipboard } from './utils/clipboard';
@@ -76,7 +78,7 @@ export default function App() {
   const localizedEvents = getEconomicEventsByLanguage(language);
   const localizedAuthors = getAuthorsByLanguage(language);
 
-  // Modal States
+  const { user } = useAuth();
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [calculatorSetup, setCalculatorSetup] = useState<TradeSetup | null>(null);
@@ -87,6 +89,7 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
   const [isECommerceOpen, setIsECommerceOpen] = useState(false);
+  const [isCoachingDeskOpen, setIsCoachingDeskOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<AdminPanelTabType>('users');
@@ -98,6 +101,15 @@ export default function App() {
     setAdminInitialSymbol(symbol);
     setAdminInitialInterval(interval);
     setIsAdminOpen(true);
+  };
+
+  const handleOpenCoachingDesk = () => {
+    const isStaff = user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'coach' || user.role === 'employee' || user.email?.toLowerCase() === 'am29multibrand@gmail.com' || user.username === 'abuasad2299');
+    if (isStaff) {
+      handleOpenAdmin('coaching');
+    } else {
+      setIsCoachingDeskOpen(true);
+    }
   };
   const [supportEmailCopied, setSupportEmailCopied] = useState(false);
 
@@ -215,8 +227,9 @@ export default function App() {
         onOpenChart={() => setIsChartOpen(true)}
         onOpenNewsletter={() => setIsNewsletterOpen(true)}
         onOpenECommerce={() => setIsECommerceOpen(true)}
+        onOpenCoachingDesk={handleOpenCoachingDesk}
         onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenAdmin={() => handleOpenAdmin('users')}
+        onOpenAdmin={(tab) => handleOpenAdmin(tab || 'users')}
       />
 
       {/* 3. Main Body Container */}
@@ -572,6 +585,8 @@ export default function App() {
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenChart={() => setIsChartOpen(true)}
         onOpenNewsletter={() => setIsNewsletterOpen(true)}
+        onOpenCoachingDesk={handleOpenCoachingDesk}
+        onOpenECommerce={() => setIsECommerceOpen(true)}
       />
 
       {/* Modals & Portals */}
@@ -627,6 +642,13 @@ export default function App() {
       <ECommerceModal
         isOpen={isECommerceOpen}
         onClose={() => setIsECommerceOpen(false)}
+      />
+
+      <StudentCoachingModal
+        isOpen={isCoachingDeskOpen}
+        onClose={() => setIsCoachingDeskOpen(false)}
+        onOpenMasterDesk={() => handleOpenAdmin('coaching')}
+        onOpenAuth={() => setIsProfileOpen(true)}
       />
 
       <UserProfileModal

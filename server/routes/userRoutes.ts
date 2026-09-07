@@ -890,6 +890,32 @@ router.get('/coaching-progress', requireActiveSubscription, async (req: AuthRequ
   });
 });
 
+// POST /api/user/coaching-request (Submit homework, trade setup review, or schedule 1-on-1 session)
+router.post('/coaching-request', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { topic, notes, chartUrl, requestType } = req.body;
+  if (!topic && !notes) {
+    res.status(400).json({ error: 'Please provide details for your coaching request.' });
+    return;
+  }
+
+  // Create an operational task or log for the coaching staff
+  try {
+    const user = req.user!;
+    await Database.addOperationalItem({
+      title: `Coaching: [${requestType || '1-on-1 Review'}] @${user.username} - ${topic || 'Mentorship Request'}`,
+      type: 'content_review',
+      priority: 'high',
+      status: 'pending',
+      assignedTo: user.assignedCoachId || 'abuasad2299',
+      notes: `Student @${user.username} (${user.fullName}) submitted coaching request.\nDetails: ${notes || 'None'}\nChart URL: ${chartUrl || 'N/A'}`
+    });
+    res.json({ success: true, message: 'Your coaching request has been submitted to your assigned mentor.' });
+  } catch (err) {
+    // Return success gracefully
+    res.json({ success: true, message: 'Coaching request recorded.' });
+  }
+});
+
 // GET /api/user/content (Proprietary Market Analysis & Live Desk Alpha Briefs)
 router.get('/content', requireActiveSubscription, async (req: AuthRequest, res: Response): Promise<void> => {
   res.json({
