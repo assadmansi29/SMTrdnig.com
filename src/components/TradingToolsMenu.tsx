@@ -67,10 +67,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
 
   const handleSelect = (action: () => void) => {
     setIsOpen(false);
-    // Slight delay to allow modal close before opening tool modal
-    setTimeout(() => {
-      action();
-    }, 50);
+    action();
   };
 
   const mobileModalContent = isOpen && typeof document !== 'undefined' ? (

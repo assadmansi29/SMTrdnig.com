@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   UserProfile, 
@@ -302,7 +303,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
   }, [isOpen, token, user]);
 
-  if (!isOpen || !isStaff) return null;
+  if (!isOpen || !isStaff || typeof document === 'undefined') return null;
 
   // Super Admin: Role Change
   const handleRoleChange = async (userId: string, role: UserRole) => {
@@ -692,8 +693,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     );
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-6xl bg-[#0B0F19] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-4 sm:my-6 flex flex-col max-h-[94vh]">
         
         {/* Top Header */}
@@ -2241,6 +2242,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

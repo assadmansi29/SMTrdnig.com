@@ -104,12 +104,7 @@ export default function App() {
   };
 
   const handleOpenCoachingDesk = () => {
-    const isStaff = user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'coach' || user.role === 'employee' || user.email?.toLowerCase() === 'am29multibrand@gmail.com' || user.username === 'abuasad2299');
-    if (isStaff) {
-      handleOpenAdmin('coaching');
-    } else {
-      setIsCoachingDeskOpen(true);
-    }
+    setIsCoachingDeskOpen(true);
   };
   const [supportEmailCopied, setSupportEmailCopied] = useState(false);
 

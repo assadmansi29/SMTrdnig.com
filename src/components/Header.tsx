@@ -201,18 +201,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onOpenECommerce={onOpenECommerce}
                 />
 
-                {/* 6. Coaching Desk Quick Action */}
-                <button
-                  id="nav-coaching-desk-btn"
-                  onClick={onOpenCoachingDesk}
-                  className="flex items-center gap-1.5 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
-                  title="Coaching Desk: Student Mentorship, Curriculum Milestones & Reviews"
-                >
-                  <GraduationCap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="hidden xl:inline">Coaching Desk</span>
-                </button>
-
-                {/* 7. E-Commerce Store Quick Action */}
+                {/* 6. E-Commerce Store Quick Action */}
                 <button
                   id="nav-ecommerce-btn"
                   onClick={onOpenECommerce}
@@ -220,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title={t('navEcommerceTitle')}
                 >
                   <ShoppingBag className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span className="hidden xl:inline">{t('navEcommerce')}</span>
+                  <span className="hidden md:inline">{t('navEcommerce')}</span>
                 </button>
 
                 {/* 8. Bookmarks Drawer Trigger */}
