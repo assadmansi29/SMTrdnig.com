@@ -297,6 +297,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     priceRange: { from: number; to: number } | null;
   } | null>(null);
 
+  // Viewport stability guards: track manual user interactions (zoom/pan) to prevent any automatic viewport shifts
+  const userHasManuallyInteractedRef = useRef<boolean>(false);
+  const hasInitialFitCompletedRef = useRef<boolean>(false);
+
   const lockCameraForInteraction = useCallback((chart: IChartApi) => {
     try {
       const ts = chart.timeScale();
@@ -328,14 +332,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   const unlockCameraAfterInteraction = useCallback((chart: IChartApi, toolStillActive: boolean) => {
     try {
-      const savedSnapshot = cameraSnapshotRef.current;
-      // Preserve exact visible logical range so the chart does not shift horizontally
-      if (savedSnapshot?.logicalRange) {
-        try {
-          chart.timeScale().setVisibleLogicalRange(savedSnapshot.logicalRange);
-        } catch {}
-      }
-
+      // Re-enable chart pan and zoom controls cleanly without resetting or overriding user viewport
       if (!toolStillActive) {
         chart.applyOptions({
           handleScroll: {
@@ -564,9 +561,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           );
           clearTimeout(timeoutId);
           if (res.ok) {
-            data = await res.json();
-            if (data?.status === 'ok' && Array.isArray(data?.candles) && data.candles.length > 0) {
-              break;
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              data = await res.json();
+              if (data?.status === 'ok' && Array.isArray(data?.candles) && data.candles.length > 0) {
+                break;
+              }
+            } else {
+              console.warn('[Financial Chart] Non-JSON Content-Type received:', contentType);
             }
           }
         } catch (fetchErr: any) {
@@ -607,28 +609,31 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         } catch {}
 
         if (seriesApiRef.current) {
-          if (isColdMount || isSymbolChange) {
-            // Only set entire dataset and fitContent on initial cold mount or explicit symbol change
+          if (isSymbolChange) {
+            // Explicit symbol change initiated by user: reset viewport once for new symbol
             seriesApiRef.current.setData(incomingCandles);
             chartApiRef.current?.timeScale().fitContent();
-          } else if (isTimeframeChange) {
-            // Timeframe change: update dataset and restore visible time & price ranges without resetting
+            userHasManuallyInteractedRef.current = false;
+            hasInitialFitCompletedRef.current = true;
+          } else if (isColdMount && !hasInitialFitCompletedRef.current && !userHasManuallyInteractedRef.current) {
+            // First time loading candles on cold start: fitContent once
             seriesApiRef.current.setData(incomingCandles);
-            if (prevTimeRange && chartApiRef.current) {
+            chartApiRef.current?.timeScale().fitContent();
+            hasInitialFitCompletedRef.current = true;
+          } else if (isTimeframeChange) {
+            // Timeframe change: update dataset and preserve the visible logical range without resetting
+            const currentLogical = chartApiRef.current?.timeScale().getVisibleLogicalRange();
+            seriesApiRef.current.setData(incomingCandles);
+            if (currentLogical && chartApiRef.current) {
               try {
-                chartApiRef.current.timeScale().setVisibleRange(prevTimeRange);
-              } catch {}
-            }
-            if (!isPriceAutoScaled && prevPriceRange && chartApiRef.current) {
-              try {
-                chartApiRef.current.priceScale('right')?.setVisibleRange(prevPriceRange);
+                chartApiRef.current.timeScale().setVisibleLogicalRange(currentLogical);
               } catch {}
             }
           } else {
-            // Silent background polling / live updates:
-            // NEVER call setData(), fitContent(), resetTimeScale(), or setVisibleRange()!
-            // Update only modified/new bars via series.update() so that manual zoom,
-            // horizontal position (historical pan), and price scale remain 100% persistent!
+            // Silent background polling / live candle updates:
+            // The chart must NEVER automatically call fitContent, reset the visible range,
+            // recreate the chart, or restore the default viewport after the user manually zooms or pans.
+            // Live candle updates must update the data only and must not change the user's current viewport.
             if (existingCandles.length > 0 && incomingCandles.length > 0) {
               const lastExistingTime = existingCandles[existingCandles.length - 1].time;
               const barsToUpdate = incomingCandles.filter((c: any) => c.time >= lastExistingTime);
@@ -640,7 +645,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                 seriesApiRef.current.update(incomingCandles[incomingCandles.length - 1]);
               }
             } else {
+              const currentRange = chartApiRef.current?.timeScale().getVisibleLogicalRange();
               seriesApiRef.current.setData(incomingCandles);
+              if (currentRange && chartApiRef.current) {
+                try {
+                  chartApiRef.current.timeScale().setVisibleLogicalRange(currentRange);
+                } catch {}
+              }
             }
           }
 
@@ -912,6 +923,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const handleResetChartView = useCallback(() => {
     if (!chartApiRef.current) return;
     try {
+      userHasManuallyInteractedRef.current = false;
+      hasInitialFitCompletedRef.current = false;
       chartApiRef.current.timeScale().resetTimeScale();
       chartApiRef.current.timeScale().fitContent();
       chartApiRef.current.priceScale('right')?.applyOptions({
@@ -1137,6 +1150,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 25,
+        shiftVisibleRangeOnNewBar: false,
+        allowShiftVisibleRangeOnWhitespaceReplacement: false,
       },
       handleScroll: {
         pressedMouseMove: true,
@@ -1637,7 +1652,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         setSelectedDrawingId(null);
       }
 
-      unlockCameraAfterInteraction(currentChart, false);
+      // User clicked canvas without active drawing tool: track that the user is interacting with the chart
+      if (!activeToolRef.current) {
+        userHasManuallyInteractedRef.current = true;
+      }
     };
 
     // Prioritized pointer/mouse move handler
@@ -1882,8 +1900,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         dragStateRef.current = null;
       }
 
-      // Re-enable chart pan/scroll when mouse or touch is released
-      if (currentChart) {
+      // Re-enable chart pan/scroll when mouse or touch is released if camera was locked for drawing
+      if (currentChart && cameraSnapshotRef.current) {
         unlockCameraAfterInteraction(currentChart, !!activeToolRef.current);
       }
     };
@@ -1939,6 +1957,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       if (activeToolRef.current || drawingCreationRef.current || dragStateRef.current) {
         e.stopPropagation();
         e.preventDefault();
+      } else {
+        userHasManuallyInteractedRef.current = true;
       }
     };
 

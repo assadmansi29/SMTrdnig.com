@@ -87,6 +87,8 @@ async function startServer() {
   app.use('/api/tradingview-storage', requireDatabaseReady, tradingviewStorageRoutes);
   app.use('/api/chart-drawings', requireDatabaseReady, chartDrawingsRoutes);
   app.use('/api/market', marketRoutes);
+  app.use('/api/chart', marketRoutes);
+  app.use('/api', marketRoutes);
 
   // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)
   app.get("/api/health", (req, res) => {
@@ -100,6 +102,15 @@ async function startServer() {
       time: new Date().toISOString(),
       uptimeSeconds: Math.floor(process.uptime()),
       memoryUsageMB: Math.round(process.memoryUsage().rss / (1024 * 1024))
+    });
+  });
+
+  // Strict API 404 handler: ensure ANY unhandled /api/* route returns JSON, NEVER HTML index.html
+  app.all('/api/*', (req, res) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(404).json({
+      status: 'error',
+      error: `API route ${req.method} ${req.originalUrl || req.url} not found`
     });
   });
 

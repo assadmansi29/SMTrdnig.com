@@ -190,14 +190,12 @@ async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string
     return await attemptFetch(client);
   } catch (err: any) {
     console.warn(`[Market Feed] Primary TV fetch failed for ${tvSymbol}:`, err.message);
-    // Cleanup client in background
     try {
       if (globalTvClient) {
         globalTvClient.disconnect().catch(() => {});
         globalTvClient = null;
       }
     } catch {}
-    // Throw immediately so fast fallbacks (Binance/Yahoo) can respond within <300ms without blocking
     throw err;
   }
 }
@@ -280,12 +278,13 @@ async function fetchFromYahoo(yahooSymbol: string, interval: string, range: stri
     const v = quote.volume?.[i];
 
     if (o != null && h != null && l != null && c != null && !isNaN(o) && !isNaN(c)) {
+      const formatP = (v: number) => (Math.abs(v) < 10 ? Number(v.toFixed(5)) : Number(v.toFixed(2)));
       candles.push({
         time: t,
-        open: Number(o.toFixed(2)),
-        high: Number(h.toFixed(2)),
-        low: Number(l.toFixed(2)),
-        close: Number(c.toFixed(2)),
+        open: formatP(o),
+        high: formatP(h),
+        low: formatP(l),
+        close: formatP(c),
         volume: v != null ? Math.round(v) : undefined,
       });
     }
@@ -373,7 +372,8 @@ async function fetchMarketCandlesDirect(rawSymbol: string, rawInterval: string):
  * Returns genuine, real-market OHLC candles from TradingView WebSocket feed.
  * Never uses synthetic, estimated, or randomly generated candle data.
  */
-router.get('/candles', async (req: Request, res: Response): Promise<void> => {
+router.get(['/candles', '/candles/'], async (req: Request, res: Response): Promise<void> => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   try {
     const rawSymbol = String(req.query.symbol || 'OANDA:XAUUSD').trim();
     const rawInterval = String(req.query.interval || '15').trim();
