@@ -21,14 +21,15 @@ interface ChartSimulatorModalProps {
 }
 
 const POPULAR_SYMBOLS = [
-  { symbol: 'OANDA:XAUUSD', name: 'Spot Gold / USD', category: 'Metals' },
-  { symbol: 'OANDA:NAS100USD', name: 'Nasdaq 100 (NAS100)', category: 'Indices' },
-  { symbol: 'OANDA:US30USD', name: 'Dow Jones (US30)', category: 'Indices' },
-  { symbol: 'OANDA:DE30EUR', name: 'DAX 40 (GER40)', category: 'Indices' },
+  { symbol: 'BLACKBULL:XAUUSD', name: 'Spot Gold / USD (BlackBull)', category: 'Metals' },
+  { symbol: 'BLACKBULL:NAS100', name: 'Nasdaq 100 (NAS100)', category: 'Indices' },
+  { symbol: 'BLACKBULL:US30', name: 'Dow Jones (US30)', category: 'Indices' },
+  { symbol: 'BLACKBULL:GER40', name: 'DAX 40 (GER40)', category: 'Indices' },
+  { symbol: 'BLACKBULL:EURUSD', name: 'EUR / USD', category: 'Forex' },
+  { symbol: 'BLACKBULL:GBPUSD', name: 'GBP / USD', category: 'Forex' },
+  { symbol: 'BLACKBULL:BTCUSD', name: 'Bitcoin (BTC/USD)', category: 'Crypto' },
   { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', category: 'Futures' },
   { symbol: 'CME_MINI:NQ1!', name: 'NQ Futures (Nasdaq)', category: 'Futures' },
-  { symbol: 'BINANCE:BTCUSDT', name: 'BTC / USDT Perp', category: 'Crypto' },
-  { symbol: 'FX:EURUSD', name: 'EUR / USD', category: 'Forex' },
   { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', category: 'Equities' },
   { symbol: 'TVC:DXY', name: 'US Dollar Index (DXY)', category: 'Macro' },
 ];
@@ -40,15 +41,15 @@ const TIMEFRAMES = [
   { value: '30', label: '30m' },
   { value: '60', label: '1H' },
   { value: '240', label: '4H' },
-  { value: 'D', label: 'DAY' },
-  { value: 'W', label: 'Week' },
-  { value: 'M', label: 'Month' },
+  { value: '1D', label: 'DAY' },
+  { value: '1W', label: 'Week' },
+  { value: '1M', label: 'Month' },
 ];
 
 export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ 
   isOpen, 
   onClose,
-  defaultSymbol = 'OANDA:XAUUSD',
+  defaultSymbol = 'BLACKBULL:XAUUSD',
   onOpenAdminModal
 }) => {
   const { t } = useTranslation();

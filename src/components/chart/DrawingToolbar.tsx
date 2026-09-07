@@ -13,6 +13,15 @@ import {
   Palette,
   Settings,
   Magnet,
+  Layers,
+  Undo2,
+  Redo2,
+  TrendingUp,
+  Ruler,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { DRAWING_TOOLS, COLOR_PALETTE, LINE_WIDTHS } from './toolsConfig';
 import { DrawingToolItem } from './types';
@@ -30,6 +39,17 @@ interface DrawingToolbarProps {
   onWidthChange: (width: number) => void;
   isMagnetActive?: boolean;
   onToggleMagnet?: () => void;
+  isObjectTreeOpen?: boolean;
+  onToggleObjectTree?: () => void;
+  drawingsCount?: number;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  allLocked?: boolean;
+  onToggleAllLock?: () => void;
+  allVisible?: boolean;
+  onToggleAllVisibility?: () => void;
 }
 
 export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
@@ -45,6 +65,17 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onWidthChange,
   isMagnetActive,
   onToggleMagnet,
+  isObjectTreeOpen,
+  onToggleObjectTree,
+  drawingsCount = 0,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  allLocked = false,
+  onToggleAllLock,
+  allVisible = true,
+  onToggleAllVisibility,
 }) => {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
@@ -63,17 +94,23 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   }, []);
 
   const getToolsByCategory = (category: string) => {
+    if (category === 'channel') {
+      return DRAWING_TOOLS.filter((t) => t.category === 'channel' || t.category === 'pitchfork');
+    }
+    if (category === 'measurement') {
+      return DRAWING_TOOLS.filter((t) => t.category === 'measurement' || t.category === 'forecast');
+    }
     return DRAWING_TOOLS.filter((t) => t.category === category);
   };
 
   const categories = [
-    { id: 'line', label: 'Lines & Rays', icon: Minus },
-    { id: 'channel', label: 'Channels', icon: Columns },
+    { id: 'line', label: 'Lines & Rays', icon: TrendingUp },
+    { id: 'channel', label: 'Channels & Pitchforks', icon: GitFork },
     { id: 'fibonacci', label: 'Fibonacci Tools', icon: Divide },
     { id: 'gann', label: 'Gann Analysis', icon: Grid3X3 },
-    { id: 'pitchfork', label: 'Pitchforks', icon: GitFork },
     { id: 'shape', label: 'Geometric Shapes', icon: Square },
-    { id: 'annotation', label: 'Annotations & Notes', icon: Type },
+    { id: 'annotation', label: 'Annotations & Freehand', icon: Type },
+    { id: 'measurement', label: 'Forecasting & Measurement', icon: Ruler },
   ];
 
   const handleToolClick = (tool: DrawingToolItem) => {
@@ -110,7 +147,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         const IconComponent = cat.icon;
         const isCatActive =
           activeTool !== null &&
-          DRAWING_TOOLS.find((t) => t.id === activeTool)?.category === cat.id;
+          getToolsByCategory(cat.id).some((t) => t.id === activeTool);
         const isOpen = openCategory === cat.id;
         const catTools = getToolsByCategory(cat.id);
 
@@ -138,7 +175,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             {/* Flyout Submenu */}
             {isOpen && (
               <div
-                className="absolute left-full ml-2 top-0 bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl p-1.5 w-56 z-30 animate-in fade-in zoom-in-95 duration-100"
+                className="absolute left-full ml-2 top-0 bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl p-1.5 w-60 z-30 animate-in fade-in zoom-in-95 duration-100"
               >
                 <div className="text-[10px] font-semibold tracking-wider text-slate-400 px-2 py-1 uppercase border-b border-slate-800/80 mb-1">
                   {cat.label}
@@ -177,7 +214,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
       {onToggleMagnet && (
         <button
           id="btn-chart-magnet-toggle"
-          title={isMagnetActive ? 'Magnet Mode: ON (Snaps to Candle OHLC)' : 'Magnet Mode: OFF (Click to Snap to Candle OHLC)'}
+          title={isMagnetActive ? 'Magnet Mode: ON (Snapping to Candle OHLC)' : 'Magnet Mode: OFF (Free positioning)'}
           onClick={onToggleMagnet}
           className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all my-0.5 relative ${
             isMagnetActive
@@ -279,7 +316,83 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         </button>
       )}
 
-      {/* 6. Clear All Drawings */}
+      <div className="w-5 h-[1px] bg-slate-800 my-1" />
+
+      {/* 6. Object Tree / Drawings Manager Toggle */}
+      {onToggleObjectTree && (
+        <button
+          id="btn-chart-object-tree-toggle"
+          title={`Object Tree / Drawings Manager (${drawingsCount} items)`}
+          onClick={onToggleObjectTree}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all my-0.5 relative ${
+            isObjectTreeOpen
+              ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          {drawingsCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 bg-amber-500 text-[#090D17] text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+              {drawingsCount}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* 7. Hide All / Show All Drawings */}
+      {onToggleAllVisibility && (
+        <button
+          id="btn-chart-toggle-all-visibility"
+          title={allVisible ? 'Hide All Drawings' : 'Show All Drawings'}
+          onClick={onToggleAllVisibility}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 my-0.5"
+        >
+          {allVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-rose-400" />}
+        </button>
+      )}
+
+      {/* 8. Lock All / Unlock All Drawings */}
+      {onToggleAllLock && (
+        <button
+          id="btn-chart-toggle-all-lock"
+          title={allLocked ? 'Unlock All Drawings' : 'Lock All Drawings'}
+          onClick={onToggleAllLock}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all my-0.5 ${
+            allLocked ? 'text-amber-400 bg-amber-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+          }`}
+        >
+          {allLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+        </button>
+      )}
+
+      {/* 9. Undo & Redo */}
+      {onUndo && (
+        <button
+          id="btn-chart-undo"
+          title="Undo (Ctrl+Z)"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 disabled:opacity-30 disabled:hover:bg-transparent my-0.5"
+        >
+          <Undo2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      {onRedo && (
+        <button
+          id="btn-chart-redo"
+          title="Redo (Ctrl+Y)"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 disabled:opacity-30 disabled:hover:bg-transparent my-0.5"
+        >
+          <Redo2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
+      <div className="w-5 h-[1px] bg-slate-800 my-1" />
+
+      {/* 10. Clear All Drawings */}
       <button
         id="btn-chart-clear-all"
         title="Clear All Drawings on this Chart"

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Database } from '../db';
 import { authenticateToken, requirePermission, AuthRequest } from '../auth';
+import { requireDatabaseReady } from '../middleware/dbGuard';
 
 const router = Router();
 
@@ -44,7 +45,12 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
   }
 
   const apiKey = process.env.YOUTUBE_API_KEY;
-  const dbSettings = (await Database.getSystemSettings()) as any;
+  let dbSettings: any = null;
+  try {
+    dbSettings = await Database.getSystemSettings();
+  } catch {
+    // Database initializing or busy; gracefully fall back to environment settings
+  }
   const channelId = queryChannelId || process.env.YOUTUBE_CHANNEL_ID || dbSettings?.youtubeSettings?.channelId || '';
   const channelHandle = queryHandle || process.env.YOUTUBE_CHANNEL_HANDLE || dbSettings?.youtubeSettings?.channelHandle || '';
 
@@ -287,7 +293,12 @@ router.get('/status', (req: Request, res: Response): void => {
  */
 router.get('/settings', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const currentSettings = (await Database.getSystemSettings()) as any;
+    let currentSettings: any = null;
+    try {
+      currentSettings = await Database.getSystemSettings();
+    } catch {
+      // Graceful fallback while DB is readying
+    }
     const apiKey = process.env.YOUTUBE_API_KEY;
     const channelId = currentSettings?.youtubeSettings?.channelId || process.env.YOUTUBE_CHANNEL_ID || '';
     const channelHandle = currentSettings?.youtubeSettings?.channelHandle || process.env.YOUTUBE_CHANNEL_HANDLE || '';
@@ -307,7 +318,7 @@ router.get('/settings', authenticateToken, async (req: AuthRequest, res: Respons
  * Admin & Staff route to update YouTube channel configuration.
  * Protected by dynamic RBAC canManageLiveStream permission.
  */
-router.post('/settings', authenticateToken, requirePermission('canManageLiveStream'), async (req: AuthRequest, res: Response): Promise<void> => {
+router.post('/settings', authenticateToken, requirePermission('canManageLiveStream'), requireDatabaseReady, async (req: AuthRequest, res: Response): Promise<void> => {
 
   const { channelId, channelHandle } = req.body;
   const currentSettings = (await Database.getSystemSettings()) as any;

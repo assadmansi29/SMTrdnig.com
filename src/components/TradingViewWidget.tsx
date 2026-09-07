@@ -14,9 +14,10 @@ import {
 } from 'lightweight-charts-drawing';
 import { DrawingToolbar } from './chart/DrawingToolbar';
 import { DrawingPropertiesDialog } from './chart/DrawingPropertiesDialog';
+import { ObjectTreePanel, ObjectTreeItem } from './chart/ObjectTreePanel';
 import { DRAWING_TOOLS } from './chart/toolsConfig';
 import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
-import { Check, Loader2, X, Database, RefreshCw, Save } from 'lucide-react';
+import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw } from 'lucide-react';
 import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 import { installDirectionalEnhancers } from './chart/drawingDirectionEnhancer';
 
@@ -25,7 +26,17 @@ installGannBoxEnhancer();
 installDirectionalEnhancers();
 
 function formatIntervalDisplay(inv: string): string {
-  const norm = (inv || '15').trim().toLowerCase();
+  const raw = (inv || '15').trim();
+  if (raw === '1M' || raw === 'M' || raw.toLowerCase() === '1mo' || raw.toLowerCase() === 'month') return 'Month';
+  if (raw === '1W' || raw === 'W' || raw.toLowerCase() === 'week') return 'Week';
+  if (raw === '1D' || raw === 'D' || raw.toLowerCase() === 'day') return 'DAY';
+  if (raw === '240' || raw.toLowerCase() === '4h') return '4H';
+  if (raw === '60' || raw.toLowerCase() === '1h') return '1H';
+  if (raw === '30' || raw.toLowerCase() === '30m') return '30m';
+  if (raw === '15' || raw.toLowerCase() === '15m') return '15m';
+  if (raw === '5' || raw.toLowerCase() === '5m') return '5m';
+  if (raw === '1' || raw.toLowerCase() === '1m') return '1m';
+  const norm = raw.toLowerCase();
   if (norm === '1' || norm === '1m') return '1m';
   if (norm === '5' || norm === '5m') return '5m';
   if (norm === '15' || norm === '15m') return '15m';
@@ -34,7 +45,7 @@ function formatIntervalDisplay(inv: string): string {
   if (norm === '240' || norm === '4h') return '4H';
   if (norm === 'd' || norm === '1d' || norm === 'day') return 'DAY';
   if (norm === 'w' || norm === '1w' || norm === 'week') return 'Week';
-  if (norm === 'm' || norm === '1mo' || norm === 'month' || norm === 'monthe') return 'Month';
+  if (norm === 'm' || norm === '1mo' || norm === 'month') return 'Month';
   return inv.endsWith('m') ? inv : `${inv}m`;
 }
 
@@ -57,6 +68,25 @@ interface CandleData {
   close: number;
   volume?: number;
 }
+
+const saveStrategyDrawingsLocal = (sym: string, drawings: any[]) => {
+  try {
+    const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
+    localStorage.setItem(`tv_drawings_${cleanSym}`, JSON.stringify(drawings || []));
+  } catch (err) {
+    console.warn('[Financial Chart] Local storage save failed:', err);
+  }
+};
+
+const loadStrategyDrawingsLocal = (sym: string): any[] => {
+  try {
+    const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
+    const raw = localStorage.getItem(`tv_drawings_${cleanSym}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
 
 export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   symbol = 'OANDA:XAUUSD',
@@ -201,7 +231,157 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     hasMoved?: boolean;
   } | null>(null);
 
+  // Track active interactive drawing creation (1-click, 2-click, 3-click tools with live interactive preview)
+  const drawingCreationRef = useRef<{
+    tool: string;
+    actualType: string;
+    drawing: any;
+    requiredAnchors: number;
+    anchors: ChartAnchor[];
+    startPoint: { x: number; y: number };
+    hasMoved: boolean;
+    isDragging: boolean;
+    waitingForNextClick?: boolean;
+  } | null>(null);
+
   const batchSaveRef = useRef<() => void>(() => {});
+
+  // Dedicated Tool Selection Handler
+  const handleSelectTool = useCallback((toolId: string | null) => {
+    if (drawingCreationRef.current) {
+      drawingManagerRef.current?.removeDrawing(drawingCreationRef.current.drawing.id);
+      drawingCreationRef.current = null;
+    }
+    setActiveTool(toolId);
+    activeToolRef.current = toolId;
+    setPendingAnchors([]);
+
+    const chart = chartApiRef.current;
+    const container = chartContainerRef.current;
+
+    if (toolId) {
+      // Disable chart scrolling/panning so click & drag directly draws without moving canvas
+      chart?.applyOptions({
+        handleScroll: false,
+        handleScale: false,
+      });
+      if (container) {
+        container.style.cursor = 'crosshair';
+      }
+      drawingManagerRef.current?.deselectAll();
+      setSelectedDrawingId(null);
+    } else {
+      chart?.applyOptions({
+        handleScroll: true,
+        handleScale: true,
+      });
+      if (container) {
+        container.style.cursor = '';
+      }
+    }
+  }, []);
+
+  // Object Tree and Undo/Redo State
+  const [isObjectTreeOpen, setIsObjectTreeOpen] = useState<boolean>(false);
+  const [drawingsList, setDrawingsList] = useState<ObjectTreeItem[]>([]);
+  const undoStackRef = useRef<any[]>([]);
+  const redoStackRef = useRef<any[]>([]);
+  const [canUndo, setCanUndo] = useState<boolean>(false);
+  const [canRedo, setCanRedo] = useState<boolean>(false);
+
+  const syncDrawingsList = useCallback(() => {
+    const manager = drawingManagerRef.current;
+    if (!manager) {
+      setDrawingsList([]);
+      return;
+    }
+    const all = manager.getAllDrawings() || [];
+    const list: ObjectTreeItem[] = all.map((d: any) => {
+      const tool = DRAWING_TOOLS.find((t) => t.id === d.type);
+      const name = tool?.name || (d.type ? d.type.charAt(0).toUpperCase() + d.type.slice(1).replace(/-/g, ' ') : 'Drawing');
+      const firstAnchor = d.anchors?.[0];
+      const previewText = firstAnchor?.price ? `$${Number(firstAnchor.price).toFixed(2)}` : undefined;
+      return {
+        id: d.id,
+        type: d.type,
+        name,
+        visible: d.options?.visible !== false,
+        locked: !!d.options?.locked,
+        anchorsCount: d.anchors?.length || 0,
+        color: d.style?.lineColor || '#3B82F6',
+        previewText,
+        rawDrawing: d,
+      };
+    });
+    setDrawingsList(list);
+  }, []);
+
+  const pushUndoSnapshot = useCallback(() => {
+    const manager = drawingManagerRef.current;
+    if (!manager) return;
+    try {
+      const current = manager.exportDrawings();
+      undoStackRef.current.push(current);
+      if (undoStackRef.current.length > 50) undoStackRef.current.shift();
+      redoStackRef.current = [];
+      setCanUndo(true);
+      setCanRedo(false);
+    } catch {}
+  }, []);
+
+  const handleUndo = useCallback(async () => {
+    const manager = drawingManagerRef.current;
+    if (!manager || undoStackRef.current.length === 0) return;
+    try {
+      const current = manager.exportDrawings();
+      redoStackRef.current.push(current);
+      const prev = undoStackRef.current.pop();
+      if (!prev) return;
+
+      manager.clearAll();
+      const registry = ToolRegistry.getInstance();
+      prev.forEach((d: any) => {
+        try {
+          const restored = registry.createDrawing(d.type, d.id, d.anchors, d.style, d.options);
+          if (restored) manager.addDrawing(restored);
+        } catch {}
+      });
+
+      setCanUndo(undoStackRef.current.length > 0);
+      setCanRedo(true);
+      syncDrawingsList();
+      batchSaveRef.current?.();
+    } catch (e: any) {
+      console.warn('[Financial Chart] Undo error:', e.message);
+    }
+  }, [syncDrawingsList]);
+
+  const handleRedo = useCallback(async () => {
+    const manager = drawingManagerRef.current;
+    if (!manager || redoStackRef.current.length === 0) return;
+    try {
+      const current = manager.exportDrawings();
+      undoStackRef.current.push(current);
+      const next = redoStackRef.current.pop();
+      if (!next) return;
+
+      manager.clearAll();
+      const registry = ToolRegistry.getInstance();
+      next.forEach((d: any) => {
+        try {
+          const restored = registry.createDrawing(d.type, d.id, d.anchors, d.style, d.options);
+          if (restored) manager.addDrawing(restored);
+        } catch {}
+      });
+
+      setCanUndo(true);
+      setCanRedo(redoStackRef.current.length > 0);
+      syncDrawingsList();
+      batchSaveRef.current?.();
+    } catch (e: any) {
+      console.warn('[Financial Chart] Redo error:', e.message);
+    }
+  }, [syncDrawingsList]);
 
   // 1. Get Auth Token for persistent PostgreSQL saving
   const getAuthToken = useCallback((): string | null => {
@@ -213,6 +393,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 2. Fetch Candle Data
   const fetchCandles = useCallback(async (sym: string, inv: string, isSilent: boolean = false) => {
+    // If user is actively drawing or dragging, suppress silent candle updates to keep chart coordinates locked
+    if (isSilent && (dragStateRef.current || drawingCreationRef.current)) {
+      return;
+    }
     const requestKey = `${sym}_${inv}`;
     try {
       if (!isSilent) {
@@ -245,28 +429,48 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, []);
 
-  // 3. Fetch Published PostgreSQL Drawings
+  // 3. Fetch Published Drawings (PostgreSQL with LocalStorage fallback)
   const loadPostgresDrawings = useCallback(async (sym: string, inv: string) => {
     try {
-      const res = await fetch(`/api/chart-drawings?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}`);
-      const data = await res.json();
+      const manager = drawingManagerRef.current;
+      if (!manager) return;
 
-      if (data.status === 'ok' && Array.isArray(data.drawings)) {
-        const manager = drawingManagerRef.current;
-        if (!manager) return;
+      let rawDrawings: SerializedDrawingPayload[] = [];
+      try {
+        const res = await fetch(`/api/chart-drawings?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}`);
+        const data = await res.json();
+        if (data.status === 'ok' && Array.isArray(data.drawings) && data.drawings.length > 0) {
+          rawDrawings = data.drawings;
+        }
+      } catch (networkErr: any) {
+        console.warn('[Financial Chart] Network fetch drawings notice:', networkErr.message);
+      }
 
-        // Clear existing drawings in manager
+      // Fallback to local storage if PostgreSQL returns empty
+      if (rawDrawings.length === 0) {
+        const localList = loadStrategyDrawingsLocal(sym);
+        if (Array.isArray(localList) && localList.length > 0) {
+          rawDrawings = localList;
+        }
+      }
+
+      if (rawDrawings.length >= 0) {
         manager.clearAll();
-
         const registry = ToolRegistry.getInstance();
 
-        data.drawings.forEach((d: SerializedDrawingPayload) => {
+        rawDrawings.forEach((d: SerializedDrawingPayload) => {
           if (!d.type || !d.anchors || d.anchors.length === 0) return;
           try {
-            // Visitors see drawings in locked (read-only) mode
+            let actualType = d.type;
+            if (!registry.has(actualType)) {
+              if (actualType === 'pitchfork') actualType = 'andrews-pitchfork';
+              else if (actualType === 'measure') actualType = 'date-price-range';
+              else if (actualType === 'gann-angle') actualType = 'trend-angle';
+            }
+
             const isLocked = !enableDrawingTools;
             const restored = registry.createDrawing(
-              d.type,
+              actualType,
               d.id,
               d.anchors as any,
               d.style,
@@ -275,7 +479,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
             if (restored) {
               (restored as any)._currentChartInterval = interval;
-              if (d.type === 'gann-box') {
+              if (actualType === 'gann-box' || actualType === 'gannbox') {
                 const combinedGannOpts = {
                   ...(d.options || {}),
                   ...((d as any).gannOptions || {}),
@@ -313,20 +517,25 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         });
 
         setSaveStatus('synced');
+        syncDrawingsList();
       }
     } catch (err: any) {
-      console.error('[Financial Chart] Error loading drawings from PostgreSQL:', err.message);
+      console.error('[Financial Chart] Error loading drawings:', err.message);
     }
-  }, [enableDrawingTools, interval]);
+  }, [enableDrawingTools, interval, syncDrawingsList]);
 
-  // 4. Save Single Drawing to PostgreSQL
+  // 4. Save Single Drawing (Local Storage & PostgreSQL)
   const saveDrawingToPostgres = useCallback(async (drawingPayload: any) => {
+    const manager = drawingManagerRef.current;
+    if (manager) {
+      saveStrategyDrawingsLocal(symbol, manager.exportDrawings());
+    }
+
     const token = getAuthToken();
     if (!token) return;
 
     try {
       setSaveStatus('saving');
-      const manager = drawingManagerRef.current;
       let finalPayload = drawingPayload;
       if (manager && drawingPayload?.id) {
         const live = manager.getDrawing(drawingPayload.id);
@@ -364,29 +573,36 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [symbol, interval, getAuthToken]);
 
-  // 5. Batch Save Drawings (e.g. after drag or multiple updates)
+  // 5. Batch Save Drawings (Local Storage & PostgreSQL)
   const batchSaveToPostgres = useCallback(async () => {
-    const token = getAuthToken();
     const manager = drawingManagerRef.current;
-    if (!token || !manager) return;
+    if (!manager) return;
+
+    const allDrawings = manager.exportDrawings().map((d: any) => {
+      const live = manager.getDrawing(d.id);
+      if (live && (live as any).gannOptions) {
+        return {
+          ...d,
+          options: {
+            ...(d.options || {}),
+            ...(live as any).gannOptions,
+          },
+          gannOptions: (live as any).gannOptions,
+        };
+      }
+      return d;
+    });
+
+    saveStrategyDrawingsLocal(symbol, allDrawings);
+
+    const token = getAuthToken();
+    if (!token) {
+      setSaveStatus('synced');
+      return;
+    }
 
     try {
       setSaveStatus('saving');
-      const allDrawings = manager.exportDrawings().map((d: any) => {
-        const live = manager.getDrawing(d.id);
-        if (live && (live as any).gannOptions) {
-          return {
-            ...d,
-            options: {
-              ...(d.options || {}),
-              ...(live as any).gannOptions,
-            },
-            gannOptions: (live as any).gannOptions,
-          };
-        }
-        return d;
-      });
-
       const res = await fetch('/api/chart-drawings/batch', {
         method: 'POST',
         headers: {
@@ -436,6 +652,28 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     await batchSaveToPostgres();
   }, [saveStatus, batchSaveToPostgres]);
 
+  // 5.3 Reset / Refresh Chart View (returns chart to standard initial view, zoom, and position without deleting drawings)
+  const handleResetChartView = useCallback(() => {
+    if (!chartApiRef.current) return;
+    try {
+      chartApiRef.current.timeScale().resetTimeScale();
+      chartApiRef.current.timeScale().fitContent();
+      chartApiRef.current.priceScale('right')?.applyOptions({
+        autoScale: true,
+      });
+      // Synchronize all drawings so their viewport projection matches the reset state
+      drawingManagerRef.current?.getAllDrawings().forEach((d: any) => {
+        d.requestUpdate?.();
+      });
+      setRefreshNotification('Chart view reset to standard initial position');
+      setTimeout(() => {
+        setRefreshNotification(null);
+      }, 2500);
+    } catch (err: any) {
+      console.warn('[Financial Chart] Error resetting chart view:', err.message);
+    }
+  }, []);
+
   // 6. Delete Selected Drawing
   const handleDeleteSelected = useCallback(async () => {
     if (!selectedDrawingId) return;
@@ -461,10 +699,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
 
     setSelectedDrawingId(null);
-  }, [selectedDrawingId, getAuthToken]);
+    syncDrawingsList();
+  }, [selectedDrawingId, getAuthToken, syncDrawingsList]);
 
   // 7. Clear All Drawings
   const handleClearAll = useCallback(async () => {
+    pushUndoSnapshot();
     const manager = drawingManagerRef.current;
     if (manager) {
       manager.clearAll();
@@ -493,7 +733,86 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
 
     setSelectedDrawingId(null);
-  }, [symbol, interval, getAuthToken]);
+    syncDrawingsList();
+  }, [symbol, interval, getAuthToken, pushUndoSnapshot, syncDrawingsList]);
+
+  // 7.1 Object Tree & Drawing Manager Actions
+  const handleToggleDrawingVisibility = useCallback((id: string) => {
+    const manager = drawingManagerRef.current;
+    if (!manager) return;
+    const d = manager.getDrawing(id);
+    if (!d) return;
+    d.options.visible = d.options.visible === false ? true : false;
+    d.requestUpdate?.();
+    syncDrawingsList();
+    batchSaveRef.current?.();
+  }, [syncDrawingsList]);
+
+  const handleToggleDrawingLock = useCallback((id: string) => {
+    const manager = drawingManagerRef.current;
+    if (!manager) return;
+    const d = manager.getDrawing(id);
+    if (!d) return;
+    d.options.locked = !d.options.locked;
+    d.requestUpdate?.();
+    syncDrawingsList();
+    batchSaveRef.current?.();
+  }, [syncDrawingsList]);
+
+  const handleToggleAllVisibility = useCallback(() => {
+    const manager = drawingManagerRef.current;
+    if (!manager) return;
+    const all = manager.getAllDrawings() || [];
+    if (all.length === 0) return;
+    const anyVisible = all.some((d: any) => d.options.visible !== false);
+    const targetVis = !anyVisible;
+    all.forEach((d: any) => {
+      d.options.visible = targetVis;
+      d.requestUpdate?.();
+    });
+    syncDrawingsList();
+    batchSaveRef.current?.();
+  }, [syncDrawingsList]);
+
+  const handleToggleAllLock = useCallback(() => {
+    const manager = drawingManagerRef.current;
+    if (!manager) return;
+    const all = manager.getAllDrawings() || [];
+    if (all.length === 0) return;
+    const allAreLocked = all.every((d: any) => !!d.options.locked);
+    const targetLocked = !allAreLocked;
+    all.forEach((d: any) => {
+      d.options.locked = targetLocked;
+      d.requestUpdate?.();
+    });
+    syncDrawingsList();
+    batchSaveRef.current?.();
+  }, [syncDrawingsList]);
+
+  const handleDeleteIndividualDrawing = useCallback(async (id: string) => {
+    const manager = drawingManagerRef.current;
+    if (!manager) return;
+    pushUndoSnapshot();
+    manager.removeDrawing(id);
+    if (selectedDrawingId === id) setSelectedDrawingId(null);
+    syncDrawingsList();
+
+    const token = getAuthToken();
+    if (token) {
+      try {
+        setSaveStatus('saving');
+        await fetch(`/api/chart-drawings/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        setSaveStatus('synced');
+      } catch (err: any) {
+        console.error('[Financial Chart] Delete drawing error:', err.message);
+      }
+    }
+  }, [selectedDrawingId, pushUndoSnapshot, syncDrawingsList, getAuthToken]);
 
   // 8. Initialize Lightweight Chart & Drawing Manager
   useEffect(() => {
@@ -560,6 +879,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     if (typeof rawManager.handleMouseUp === 'function') {
       container.removeEventListener('mouseup', rawManager.handleMouseUp);
     }
+    if (typeof rawManager.handleClick === 'function') {
+      try {
+        chart.unsubscribeClick(rawManager.handleClick);
+      } catch {}
+    }
 
     // Helper to detect if cursor hits any anchor handle of a drawing
     const getHitAnchor = (drawing: any, point: { x: number; y: number }): number | null => {
@@ -567,13 +891,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const viewport = (drawingManagerRef.current as any).getViewport?.();
       if (!viewport) return null;
 
-      // 1. Precise control point check
+      // 1. Precise control point check (Gann Box 6 control points & custom tools)
       if (typeof drawing.getControlPoints === 'function') {
         const cps = drawing.getControlPoints(viewport);
         if (Array.isArray(cps)) {
           for (const cp of cps) {
             const dist = Math.hypot(point.x - cp.x, point.y - cp.y);
-            // 14px hit area gives a responsive, forgiving grip on corner/edge handles
             if (dist <= 14) {
               return cp.index;
             }
@@ -581,13 +904,70 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         }
       }
 
-      // 2. Fallback to drawing.hitTestAnchor
+      // 2. Direct distance check to each anchor pixel
+      if (Array.isArray(drawing.anchors)) {
+        for (let i = 0; i < drawing.anchors.length; i++) {
+          const pixel = drawing.anchorToPixel?.(drawing.anchors[i], viewport);
+          if (pixel && !isNaN(pixel.x) && !isNaN(pixel.y)) {
+            if (Math.hypot(pixel.x - point.x, pixel.y - point.y) <= 12) {
+              return i;
+            }
+          }
+        }
+      }
+
+      // 3. Fallback to drawing.hitTestAnchor
       if (typeof drawing.hitTestAnchor === 'function') {
         const idx = drawing.hitTestAnchor(point, viewport);
         if (idx !== null && idx !== undefined) return idx;
       }
 
       return null;
+    };
+
+    // Helper to calculate exact chart anchor { time, price } from container pixel coordinates
+    const getPointCoords = (px: number, py: number): { time: any; price: number } | null => {
+      const currentChart = chartApiRef.current;
+      const currentSeries = seriesApiRef.current;
+      if (!currentChart || !currentSeries) return null;
+      const price = currentSeries.coordinateToPrice(py);
+      if (price === null || isNaN(price)) return null;
+
+      const chartTs = currentChart.timeScale();
+      let time: number | null = null;
+      const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(px) : null;
+
+      if (candlesRef.current.length > 0 && logical !== null && !isNaN(logical)) {
+        const N = candlesRef.current.length;
+        const lastCandle = candlesRef.current[N - 1];
+        const firstCandle = candlesRef.current[0];
+        const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
+        if (logical >= N - 1) {
+          time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
+        } else if (logical < 0) {
+          time = Number(firstCandle.time) + Math.round(logical * step);
+        } else {
+          const idx = Math.max(0, Math.min(N - 1, Math.round(logical)));
+          time = Number(candlesRef.current[idx].time);
+        }
+      }
+
+      if (!time) {
+        const t = chartTs.coordinateToTime(px);
+        if (t !== null && t !== undefined) time = t as number;
+      }
+
+      if (!time) return null;
+
+      let finalTime = time;
+      let finalPrice = Number(price.toFixed(2));
+      if (isMagnetActiveRef.current) {
+        const snapped = snapToCandleOHLC(time, price);
+        finalTime = snapped.time as any;
+        finalPrice = snapped.price;
+      }
+
+      return { time: finalTime, price: finalPrice };
     };
 
     // Prioritized pointer/mouse down capture handler
@@ -597,28 +977,265 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const currentContainer = chartContainerRef.current;
       if (!currentManager || !currentChart || !currentContainer || !enableDrawingToolsRef.current) return;
 
-      // When placing points for a new tool from toolbar, allow clicks through
-      if (activeToolRef.current) return;
-
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const rect = currentContainer.getBoundingClientRect();
       const point = { x: clientX - rect.left, y: clientY - rect.top };
 
+      // Allow native Lightweight Charts axis dragging / scaling on right price scale & bottom time scale!
+      const priceScaleWidth = 68;
+      const timeScaleHeight = 32;
+      if (point.x >= rect.width - priceScaleWidth || point.y >= rect.height - timeScaleHeight) {
+        return;
+      }
+
+      // 1. ACTIVE TOOL DRAWING MODE (Real interactive drawing for all tools)
+      if (activeToolRef.current) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if (e.cancelable) e.preventDefault();
+
+        const coords = getPointCoords(point.x, point.y);
+        if (!coords) return;
+
+        const currentTool = activeToolRef.current;
+        const toolDef = DRAWING_TOOLS.find(t => t.id === currentTool) || {
+          id: currentTool,
+          name: currentTool,
+          category: 'line',
+          requiredAnchors: 2,
+        };
+
+        // Case A: Next anchor placement for multi-click tool (e.g. click 2 for Trend Line / Gann Box or click 3 for Channel / Pitchfork)
+        if (drawingCreationRef.current && drawingCreationRef.current.waitingForNextClick) {
+          const creation = drawingCreationRef.current;
+          const nextIndex = creation.anchors.length;
+          creation.anchors.push(coords);
+          creation.drawing.updateAnchor(nextIndex, coords);
+          creation.drawing.requestUpdate();
+
+          if (creation.anchors.length >= creation.requiredAnchors) {
+            // All required anchors placed! Complete the drawing immediately!
+            creation.drawing.setState('selected');
+            creation.drawing.requestUpdate();
+            currentManager.selectDrawing(creation.drawing.id);
+            setSelectedDrawingId(creation.drawing.id);
+            saveDrawingToPostgres(creation.drawing.toJSON());
+            saveStrategyDrawingsLocal(symbol, currentManager.exportDrawings());
+            currentChart.applyOptions({ handleScroll: true, handleScale: true });
+            currentContainer.style.cursor = '';
+            setActiveTool(null);
+            activeToolRef.current = null;
+            setPendingAnchors([]);
+            drawingCreationRef.current = null;
+            pushUndoSnapshot();
+            syncDrawingsList();
+            return;
+          } else {
+            // Waiting for the next anchor (e.g. anchor 3)
+            creation.waitingForNextClick = true;
+            setPendingAnchors([...creation.anchors]);
+            return;
+          }
+        }
+
+        // Case B: First anchor placement / Start new drawing!
+        currentChart.applyOptions({ handleScroll: false, handleScale: false });
+
+        const registry = ToolRegistry.getInstance();
+        const drawingId = `draw_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        let actualToolType = currentTool;
+        if (!registry.has(actualToolType)) {
+          if (actualToolType === 'pitchfork') actualToolType = 'andrews-pitchfork';
+          else if (actualToolType === 'measure') actualToolType = 'date-price-range';
+          else if (actualToolType === 'gann-angle') actualToolType = 'trend-angle';
+        }
+
+        const requiredAnchors = toolDef.requiredAnchors || 2;
+
+        // Subcase 1: Single-click tools (Horizontal Line, Vertical Line, Horizontal Ray, Text)
+        if (requiredAnchors === 1) {
+          try {
+            const drawing = registry.createDrawing(
+              actualToolType,
+              drawingId,
+              [coords],
+              {
+                lineColor: currentColorRef.current,
+                lineWidth: currentWidthRef.current,
+                fillColor: `${currentColorRef.current}1a`,
+                fillOpacity: 0.15,
+                showLabels: true,
+              },
+              { visible: true, locked: false }
+            );
+
+            if (drawing) {
+              (drawing as any)._currentChartInterval = interval;
+              currentManager.addDrawing(drawing);
+              drawing.setState('selected');
+              drawing.requestUpdate();
+              currentManager.selectDrawing(drawing.id);
+              setSelectedDrawingId(drawing.id);
+              saveDrawingToPostgres(drawing.toJSON());
+              saveStrategyDrawingsLocal(symbol, currentManager.exportDrawings());
+              pushUndoSnapshot();
+              syncDrawingsList();
+            }
+          } catch (err: any) {
+            console.error('[Financial Chart] Error creating 1-point drawing:', err.message);
+          }
+
+          currentChart.applyOptions({ handleScroll: true, handleScale: true });
+          currentContainer.style.cursor = '';
+          setActiveTool(null);
+          activeToolRef.current = null;
+          setPendingAnchors([]);
+          drawingCreationRef.current = null;
+          return;
+        }
+
+        // Subcase 2: Position / Risk-Reward tools (Long Position, Short Position)
+        if (currentTool === 'long-position' || currentTool === 'short-position') {
+          try {
+            const isLong = currentTool === 'long-position';
+            const candleStep = 3600;
+            const tpPrice = Number((coords.price * (isLong ? 1.02 : 0.98)).toFixed(2));
+            const slPrice = Number((coords.price * (isLong ? 0.99 : 1.01)).toFixed(2));
+            const targetTime = Number(coords.time) + candleStep * 20;
+
+            const positionAnchors = [
+              { time: coords.time, price: coords.price },
+              { time: targetTime, price: tpPrice },
+              { time: targetTime, price: slPrice },
+            ];
+
+            const drawing = registry.createDrawing(
+              actualToolType,
+              drawingId,
+              positionAnchors,
+              {
+                lineColor: currentColorRef.current,
+                lineWidth: currentWidthRef.current,
+                fillColor: `${currentColorRef.current}1a`,
+                fillOpacity: 0.15,
+                showLabels: true,
+              },
+              { visible: true, locked: false }
+            );
+
+            if (drawing) {
+              (drawing as any)._currentChartInterval = interval;
+              currentManager.addDrawing(drawing);
+              drawing.setState('selected');
+              drawing.requestUpdate();
+              currentManager.selectDrawing(drawing.id);
+              setSelectedDrawingId(drawing.id);
+              saveDrawingToPostgres(drawing.toJSON());
+              saveStrategyDrawingsLocal(symbol, currentManager.exportDrawings());
+              pushUndoSnapshot();
+              syncDrawingsList();
+            }
+          } catch (err: any) {
+            console.error('[Financial Chart] Error creating position tool:', err.message);
+          }
+
+          currentChart.applyOptions({ handleScroll: true, handleScale: true });
+          currentContainer.style.cursor = '';
+          setActiveTool(null);
+          activeToolRef.current = null;
+          setPendingAnchors([]);
+          drawingCreationRef.current = null;
+          return;
+        }
+
+        // Subcase 3: Multi-point tools (Trend Line, Ray, Extended Line, Arrow, Brush, Gann Box, Gann Fan, Gann Angles, Rectangle, Circle, Ellipse, Triangle, Channels, Pitchfork, Fibonacci, Ruler/Measure, Ranges)
+        try {
+          const initialAnchors = Array(requiredAnchors).fill({ time: coords.time, price: coords.price });
+          const drawing = registry.createDrawing(
+            actualToolType,
+            drawingId,
+            initialAnchors,
+            {
+              lineColor: currentColorRef.current,
+              lineWidth: currentWidthRef.current,
+              fillColor: `${currentColorRef.current}1a`,
+              fillOpacity: 0.15,
+              showLabels: true,
+            },
+            { visible: true, locked: false }
+          );
+
+          if (drawing) {
+            (drawing as any)._currentChartInterval = interval;
+            if (currentTool === 'gann-box') {
+              (drawing as any).setGannOptions?.({
+                showPriceLevels: true,
+                showTimeLevels: true,
+                showTopLabels: true,
+                showBottomLabels: false,
+                useOneColor: true,
+                angles: true,
+                showDiagonals: true,
+              });
+            }
+            currentManager.addDrawing(drawing);
+            drawing.setState('editing');
+            drawing.requestUpdate();
+          }
+
+          drawingCreationRef.current = {
+            tool: currentTool,
+            actualType: actualToolType,
+            drawing,
+            requiredAnchors,
+            anchors: [coords],
+            startPoint: point,
+            hasMoved: false,
+            isDragging: true,
+            waitingForNextClick: false,
+          };
+          setPendingAnchors([coords]);
+        } catch (createErr: any) {
+          console.error('[Financial Chart] Error creating tool:', currentTool, createErr.message);
+          currentChart.applyOptions({ handleScroll: true, handleScale: true });
+        }
+        return;
+      }
+
+      // 2. CURSOR / SELECTION / DRAG MODE (No active tool selected)
       const selected = currentManager.getSelectedDrawing();
       const viewport = (currentManager as any).getViewport?.();
 
-      // Check hits
+      // Priority 0: Double-click detector on drawings or handles to open Properties Dialog
+      const hitDrawing = currentManager.hitTest(point);
       let hitAnchorIdx: number | null = null;
+      let targetDrawingForAnchor: IDrawing | null = null;
+
       if (selected && !selected.options.locked) {
         hitAnchorIdx = getHitAnchor(selected, point);
+        if (hitAnchorIdx !== null) {
+          targetDrawingForAnchor = selected;
+        }
       }
-      const hitDrawing = currentManager.hitTest(point);
 
-      // Priority 0: Double-click detector on drawings or handles to open Properties Dialog
+      if (hitAnchorIdx === null) {
+        const allDrawings = currentManager.getAllDrawings();
+        for (const d of allDrawings) {
+          if (!d.options.locked) {
+            const idx = getHitAnchor(d, point);
+            if (idx !== null) {
+              hitAnchorIdx = idx;
+              targetDrawingForAnchor = d;
+              break;
+            }
+          }
+        }
+      }
+
       const now = Date.now();
       const lastClick = lastClickRef.current;
-      const clickedTarget = hitDrawing || (hitAnchorIdx !== null ? selected : null);
+      const clickedTarget = hitDrawing || targetDrawingForAnchor;
 
       if (
         clickedTarget &&
@@ -641,25 +1258,28 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         lastClickRef.current = null;
       }
 
-      // Priority 1: Check if an anchor handle of the selected drawing is hit
-      if (hitAnchorIdx !== null && selected) {
-        // Prevent pointer event from reaching the chart's pan/scroll handler
+      // Priority 1: Check if an anchor handle of a drawing is hit
+      if (hitAnchorIdx !== null && targetDrawingForAnchor) {
         e.stopPropagation();
         e.stopImmediatePropagation();
         if (e.cancelable) e.preventDefault();
 
-        // Lock chart pan/scroll so candles remain completely stationary
+        if (!selected || selected.id !== targetDrawingForAnchor.id) {
+          currentManager.selectDrawing(targetDrawingForAnchor.id);
+          setSelectedDrawingId(targetDrawingForAnchor.id);
+        }
+
         currentChart.applyOptions({
           handleScroll: false,
           handleScale: false,
         });
 
-        selected.setState('editing');
-        selected.requestUpdate();
+        targetDrawingForAnchor.setState('editing');
+        targetDrawingForAnchor.requestUpdate();
 
         dragStateRef.current = {
           type: 'handle',
-          drawing: selected,
+          drawing: targetDrawingForAnchor,
           anchorIndex: hitAnchorIdx,
           startPoint: point,
           hasMoved: false,
@@ -667,20 +1287,17 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         return;
       }
 
-      // Priority 2: Check if a drawing element body is hit
+      // Priority 2: Check if an actual drawing element line/body is hit
       if (hitDrawing && !hitDrawing.options.locked) {
-        // Prevent pointer event from reaching the chart's pan/scroll handler
         e.stopPropagation();
         e.stopImmediatePropagation();
         if (e.cancelable) e.preventDefault();
 
-        // Select the drawing if not already selected
         if (!selected || selected.id !== hitDrawing.id) {
           currentManager.selectDrawing(hitDrawing.id);
           setSelectedDrawingId(hitDrawing.id);
         }
 
-        // Lock chart pan/scroll so candles remain stationary while repositioning
         currentChart.applyOptions({
           handleScroll: false,
           handleScale: false,
@@ -701,37 +1318,60 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         return;
       }
 
-      // Priority 3: User dragged/clicked empty chart space where no drawing is selected or edited
+      // Priority 3: User clicked empty chart space
       if (selected) {
         currentManager.deselectAll();
         setSelectedDrawingId(null);
       }
 
-      // Ensure chart pan/scroll is active so chart pans smoothly
       currentChart.applyOptions({
         handleScroll: true,
         handleScale: true,
       });
     };
 
-    // Prioritized pointer/mouse move handler during drag
+    // Prioritized pointer/mouse move handler
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-      const dragState = dragStateRef.current;
-      if (!dragState) return;
-
       const currentManager = drawingManagerRef.current;
       const currentContainer = chartContainerRef.current;
       if (!currentManager || !currentContainer) return;
-
-      // Prevent event from propagating during drawing drag
-      e.stopPropagation();
-      if (e.cancelable) e.preventDefault();
-      dragState.hasMoved = true;
 
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const rect = currentContainer.getBoundingClientRect();
       const point = { x: clientX - rect.left, y: clientY - rect.top };
+
+      // 1. Live Interactive Drawing Preview (during tool creation)
+      if (drawingCreationRef.current) {
+        e.stopPropagation();
+        if (e.cancelable) e.preventDefault();
+        const creation = drawingCreationRef.current;
+        creation.hasMoved = true;
+        const coords = getPointCoords(point.x, point.y);
+        if (coords && creation.drawing) {
+          if (creation.anchors.length === 1) {
+            // Live update second point
+            creation.drawing.updateAnchor(1, coords);
+            // If tool needs 3 points, also live update third point
+            if (creation.requiredAnchors >= 3 && creation.drawing.anchors.length > 2) {
+              creation.drawing.updateAnchor(2, coords);
+            }
+          } else if (creation.anchors.length === 2) {
+            // Live update third point
+            creation.drawing.updateAnchor(2, coords);
+          }
+          creation.drawing.requestUpdate();
+        }
+        return;
+      }
+
+      // 2. Active Dragging of Anchor Handle or Whole Drawing
+      const dragState = dragStateRef.current;
+      if (!dragState) return;
+
+      e.stopPropagation();
+      if (e.cancelable) e.preventDefault();
+      dragState.hasMoved = true;
 
       const viewport = (currentManager as any).getViewport?.();
       if (!viewport) return;
@@ -779,18 +1419,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             } else if (dragState.anchorIndex === 1) {
               dragState.drawing.updateAnchor(1, { time: finalTime, price: finalPrice });
             } else if (dragState.anchorIndex === 2) {
-              // (p2.x, p1.y): horizontal time of anchor 1 (future extension), vertical price of anchor 0
               dragState.drawing.updateAnchor(1, { time: finalTime, price: a1.price });
               dragState.drawing.updateAnchor(0, { time: a0.time, price: finalPrice });
             } else if (dragState.anchorIndex === 3) {
-              // (p1.x, p2.y): horizontal time of anchor 0, vertical price of anchor 1
               dragState.drawing.updateAnchor(0, { time: finalTime, price: a0.price });
               dragState.drawing.updateAnchor(1, { time: a1.time, price: finalPrice });
             } else if (dragState.anchorIndex === 4) {
-              // Right-center handle: extends anchor 1 into future time
               dragState.drawing.updateAnchor(1, { time: finalTime, price: a1.price });
             } else if (dragState.anchorIndex === 5) {
-              // Left-center handle: adjusts anchor 0 time
               dragState.drawing.updateAnchor(0, { time: finalTime, price: a0.price });
             }
           } else {
@@ -865,10 +1501,64 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     };
 
     // Release pointer handler
-    const handlePointerUp = () => {
-      const dragState = dragStateRef.current;
+    const handlePointerUp = (e: MouseEvent | TouchEvent) => {
+      const currentManager = drawingManagerRef.current;
       const currentChart = chartApiRef.current;
+      const currentContainer = chartContainerRef.current;
 
+      // 1. Tool creation pointer up
+      if (drawingCreationRef.current) {
+        const creation = drawingCreationRef.current;
+        if (creation.isDragging) {
+          creation.isDragging = false;
+          const clientX = 'changedTouches' in e && (e as any).changedTouches ? (e as any).changedTouches[0].clientX : (e as MouseEvent).clientX;
+          const clientY = 'changedTouches' in e && (e as any).changedTouches ? (e as any).changedTouches[0].clientY : (e as MouseEvent).clientY;
+          let point = creation.startPoint;
+          if (currentContainer && clientX !== undefined && clientY !== undefined) {
+            const rect = currentContainer.getBoundingClientRect();
+            point = { x: clientX - rect.left, y: clientY - rect.top };
+          }
+          const dist = Math.hypot(point.x - creation.startPoint.x, point.y - creation.startPoint.y);
+
+          if (dist > 8) {
+            // Drag-and-release completed
+            if (creation.requiredAnchors === 2) {
+              const coords = getPointCoords(point.x, point.y) || creation.drawing.anchors[1];
+              creation.drawing.updateAnchor(1, coords);
+              creation.drawing.setState('selected');
+              creation.drawing.requestUpdate();
+              currentManager?.selectDrawing(creation.drawing.id);
+              setSelectedDrawingId(creation.drawing.id);
+              saveDrawingToPostgres(creation.drawing.toJSON());
+              saveStrategyDrawingsLocal(symbol, currentManager?.exportDrawings());
+              currentChart?.applyOptions({ handleScroll: true, handleScale: true });
+              if (currentContainer) currentContainer.style.cursor = '';
+              setActiveTool(null);
+              activeToolRef.current = null;
+              setPendingAnchors([]);
+              drawingCreationRef.current = null;
+              pushUndoSnapshot();
+              syncDrawingsList();
+              return;
+            } else if (creation.requiredAnchors === 3) {
+              const coords = getPointCoords(point.x, point.y) || creation.drawing.anchors[1];
+              creation.drawing.updateAnchor(1, coords);
+              creation.anchors.push(coords);
+              creation.waitingForNextClick = true;
+              setPendingAnchors([...creation.anchors]);
+              return;
+            }
+          } else {
+            // Click-only without drag: waiting for subsequent click
+            creation.waitingForNextClick = true;
+            return;
+          }
+        }
+        return;
+      }
+
+      // 2. Element / handle drag release
+      const dragState = dragStateRef.current;
       if (dragState) {
         if (dragState.drawing) {
           dragState.drawing.setState('selected');
@@ -883,7 +1573,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       }
 
       // Re-enable chart pan/scroll when mouse or touch is released
-      if (currentChart) {
+      if (currentChart && !activeToolRef.current) {
         currentChart.applyOptions({
           handleScroll: true,
           handleScale: true,
@@ -969,7 +1659,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     // Crosshair move handler for OHLC header display (optimized to avoid re-renders when bar doesn't change)
     let lastKnownBar: { open: number; high: number; low: number; close: number } | null = null;
     chart.subscribeCrosshairMove((param) => {
-      if (dragStateRef.current) return;
+      if (dragStateRef.current || drawingCreationRef.current) return;
       if (param.time && param.seriesData.get(series)) {
         const bar = param.seriesData.get(series) as any;
         if (bar && bar.open != null) {
@@ -987,100 +1677,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       }
     });
 
-    // Handle Chart Click for Placing Drawing Anchors
-    const handleChartClick = (param: MouseEventParams) => {
-      const currentTool = activeToolRef.current;
-      if (!currentTool || !param.point) return;
-
-      const toolDef = DRAWING_TOOLS.find((t) => t.id === currentTool);
-      if (!toolDef) return;
-
-      const price = series.coordinateToPrice(param.point.y);
-      if (price === null || isNaN(price)) return;
-
-      let time: number | null = null;
-      const chartTs = chart.timeScale();
-      const logical = chartTs?.coordinateToLogical ? chartTs.coordinateToLogical(param.point.x) : null;
-
-      if (candlesRef.current.length > 0 && logical !== null && !isNaN(logical)) {
-        const N = candlesRef.current.length;
-        const lastCandle = candlesRef.current[N - 1];
-        const firstCandle = candlesRef.current[0];
-        const step = N >= 2 ? (Number(lastCandle.time) - Number(candlesRef.current[N - 2].time)) || 3600 : 3600;
-        if (logical >= N - 1) {
-          // Future area click: project timestamp without clamping
-          time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
-        } else if (logical < 0) {
-          time = Number(firstCandle.time) + Math.round(logical * step);
-        }
-      }
-
-      if (!time) {
-        const t = (param.time as number | undefined) || chartTs.coordinateToTime(param.point.x);
-        if (t !== null && t !== undefined) {
-          time = t as number;
-        }
-      }
-
-      if (!time) return;
-
-      let finalTime = time;
-      let finalPrice = Number(price.toFixed(2));
-
-      if (isMagnetActiveRef.current) {
-        const snapped = snapToCandleOHLC(time as number, price);
-        finalTime = snapped.time as any;
-        finalPrice = snapped.price;
-      }
-
-      const newAnchor: ChartAnchor = {
-        time: finalTime as any,
-        price: finalPrice,
-      };
-
-      const updatedAnchors = [...pendingAnchorsRef.current, newAnchor];
-      setPendingAnchors(updatedAnchors);
-
-      // Check if all anchors required for this tool have been placed
-      if (updatedAnchors.length >= toolDef.requiredAnchors) {
-        try {
-          const registry = ToolRegistry.getInstance();
-          const drawingId = `draw_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-          const drawing = registry.createDrawing(
-            currentTool,
-            drawingId,
-            updatedAnchors as any,
-            {
-              lineColor: currentColorRef.current,
-              lineWidth: currentWidthRef.current,
-              fillColor: `${currentColorRef.current}1a`, // 10% opacity fill
-              fillOpacity: 0.1,
-              showLabels: true,
-            },
-            {
-              visible: true,
-              locked: false,
-            }
-          );
-
-          if (drawing) {
-            (drawing as any)._currentChartInterval = interval;
-            manager.addDrawing(drawing);
-            manager.selectDrawing(drawingId);
-            saveDrawingToPostgres(drawing.toJSON());
-          }
-        } catch (createErr: any) {
-          console.error('[Financial Chart] Error creating drawing:', createErr.message);
-        }
-
-        // Reset tool state
-        setActiveTool(null);
-        setPendingAnchors([]);
-      }
-    };
-
-    chart.subscribeClick(handleChartClick);
-
     // Responsive Size Synchronization & ResizeObserver
     const syncChartSize = () => {
       if (!chartContainerRef.current || !chartApiRef.current) return;
@@ -1089,8 +1685,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const height = Math.floor(el.clientHeight);
       if (width > 0 && height > 0) {
         chartApiRef.current.applyOptions({ width, height });
+        // Synchronize all drawings so they align with the updated viewport dimensions
+        manager.getAllDrawings().forEach((d: any) => d.requestUpdate?.());
       }
     };
+
+    // Keep drawings synchronized during zoom / pan without delay
+    const handleVisibleRangeChange = () => {
+      manager.getAllDrawings().forEach((d: any) => d.requestUpdate?.());
+    };
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
 
     let resizeFrameId: number | null = null;
     const resizeObserver = new ResizeObserver((entries) => {
@@ -1115,8 +1719,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     };
     window.addEventListener('resize', handleWindowResize);
 
-    // Keyboard Shortcuts (Escape to cancel tool, Delete to remove selected)
+    // Keyboard Shortcuts (Escape to cancel tool, Delete to remove selected, Ctrl+Z/Y for Undo/Redo)
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
       if (e.key === 'Escape') {
         setActiveTool(null);
         setPendingAnchors([]);
@@ -1126,6 +1733,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         if (selected) {
           handleDeleteSelected();
         }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
       }
     };
 
@@ -1147,6 +1764,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       window.removeEventListener('mouseup', handlePointerUp);
       window.removeEventListener('touchend', handlePointerUp);
       window.removeEventListener('touchcancel', handlePointerUp);
+      try {
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+      } catch {}
       resizeObserver.disconnect();
       manager.detach();
       chart.remove();
@@ -1251,10 +1871,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               onClick={handleManualSaveStrategy}
               disabled={saveStatus === 'saving'}
               title="Save all drawings to PostgreSQL strategy database"
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-200 hover:text-amber-100 bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-amber-500/10 hover:from-amber-500/30 hover:via-amber-600/25 hover:to-amber-500/20 border border-amber-500/40 hover:border-amber-400/80 rounded-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.12)] hover:shadow-[0_0_16px_rgba(245,158,11,0.25)] group"
             >
-              <Save className="w-3.5 h-3.5 text-amber-400" />
-              <span>{saveStatus === 'saving' ? 'Saving...' : 'Save Strategy'}</span>
+              {saveStatus === 'saving' ? (
+                <Loader2 className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
+              )}
+              <span className="tracking-tight">{saveStatus === 'saving' ? 'Saving...' : 'Save Strategy'}</span>
             </button>
           )}
 
@@ -1265,10 +1889,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             onClick={handleManualRefreshStrategy}
             disabled={isRefreshingStrategy}
             title="Fetch and apply latest admin strategy drawings without reloading the page"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-blue-300 hover:text-white bg-blue-600/25 hover:bg-blue-600/40 border border-blue-500/40 hover:border-blue-400 rounded transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-cyan-200 hover:text-cyan-100 bg-gradient-to-r from-cyan-500/15 via-blue-600/15 to-indigo-600/15 hover:from-cyan-500/25 hover:via-blue-600/25 hover:to-indigo-600/25 border border-cyan-500/40 hover:border-cyan-400/80 rounded-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_12px_rgba(6,182,212,0.12)] hover:shadow-[0_0_16px_rgba(6,182,212,0.25)] group"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
-            <span>{isRefreshingStrategy ? 'Refreshing...' : 'Refresh Strategy'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-300 group-hover:rotate-180 transition-transform duration-500 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
+            <span className="tracking-tight">{isRefreshingStrategy ? 'Refreshing...' : 'Refresh Strategy'}</span>
           </button>
 
           {enableDrawingTools ? (
@@ -1342,6 +1966,55 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           onWidthChange={handleWidthChange}
           isMagnetActive={isMagnetActive}
           onToggleMagnet={handleToggleMagnet}
+          isObjectTreeOpen={isObjectTreeOpen}
+          onToggleObjectTree={() => setIsObjectTreeOpen((prev) => !prev)}
+          drawingsCount={drawingsList.length}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          allLocked={drawingsList.length > 0 && drawingsList.every((d) => d.locked)}
+          onToggleAllLock={handleToggleAllLock}
+          allVisible={drawingsList.length === 0 || drawingsList.some((d) => d.visible)}
+          onToggleAllVisibility={handleToggleAllVisibility}
+        />
+      )}
+
+      {/* 3.1 TradingView-style Object Tree Panel */}
+      {enableDrawingTools && (
+        <ObjectTreePanel
+          isOpen={isObjectTreeOpen}
+          onClose={() => setIsObjectTreeOpen(false)}
+          drawings={drawingsList}
+          selectedDrawingId={selectedDrawingId}
+          onSelectDrawing={(id) => {
+            const manager = drawingManagerRef.current;
+            if (manager) {
+              manager.selectDrawing(id);
+              setSelectedDrawingId(id);
+            }
+          }}
+          onToggleVisibility={handleToggleDrawingVisibility}
+          onToggleLock={handleToggleDrawingLock}
+          onDeleteDrawing={handleDeleteIndividualDrawing}
+          onOpenProperties={(id) => {
+            const manager = drawingManagerRef.current;
+            if (manager) {
+              const d = manager.getDrawing(id);
+              if (d) openPropertiesModal(d);
+            }
+          }}
+          onToggleAllVisibility={handleToggleAllVisibility}
+          onToggleAllLock={handleToggleAllLock}
+          onDeleteSelected={handleDeleteSelected}
+          onDeleteAll={handleClearAll}
+          onClearAll={handleClearAll}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          allVisible={drawingsList.length === 0 || drawingsList.some((d) => d.visible)}
+          allLocked={drawingsList.length > 0 && drawingsList.every((d) => d.locked)}
         />
       )}
 
@@ -1351,6 +2024,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         id="lightweight-financial-chart-container"
         className={`w-full h-full flex-1 min-h-0 min-w-0 relative overflow-hidden ${activeTool ? 'cursor-crosshair' : 'cursor-default'}`}
       >
+        {/* Reset Chart View Button: Positioned on the left side on the chart under the symbol */}
+        <button
+          id="btn-reset-chart-view"
+          type="button"
+          onClick={handleResetChartView}
+          title="Reset chart to standard initial view, zoom, and position without deleting drawings (Alt+R)"
+          className={`absolute top-2.5 ${
+            enableDrawingTools ? 'left-14' : 'left-3'
+          } z-20 flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-white bg-[#0A0F1D]/85 hover:bg-[#111A30] border border-slate-700/80 hover:border-amber-400/60 rounded-lg shadow-lg backdrop-blur-md transition-all duration-200 active:scale-95 group cursor-pointer select-none`}
+        >
+          <RotateCcw className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 group-hover:-rotate-90 transition-all duration-300" />
+          <span className="tracking-wide">Reset View</span>
+        </button>
+
         {/* Loading Spinner */}
         {isLoadingCandles && (
           <div className="absolute inset-0 z-20 bg-[#090D17]/80 flex flex-col items-center justify-center gap-2 pointer-events-none">

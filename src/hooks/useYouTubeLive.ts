@@ -8,7 +8,13 @@ export function useYouTubeLive() {
   const [error, setError] = useState<string | null>(null);
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const isFetchingRef = useRef<boolean>(false);
+
   const fetchLiveStatus = useCallback(async (force = false) => {
+    if (isFetchingRef.current && !force) {
+      return;
+    }
+    isFetchingRef.current = true;
     if (force) {
       setIsRefreshing(true);
     }
@@ -24,24 +30,23 @@ export function useYouTubeLive() {
     } catch (err: any) {
       console.warn('Failed to fetch YouTube live status:', err);
       setError(err.message || 'Failed to connect to YouTube live status');
-      // If no data exists yet, set fallback offline status
-      if (!data) {
-        setData({
-          success: true,
-          isLive: false,
-          message: 'No Live Stream Currently',
-          status: 'idle',
-          stream: null,
-          channel: { title: 'SM Trading Desk' },
-          apiKeyConfigured: false,
-          checkedAt: new Date().toISOString(),
-        });
-      }
+      // If no data exists yet, set fallback offline status without re-triggering dependency cycle
+      setData((prev) => prev ?? {
+        success: true,
+        isLive: false,
+        message: 'No Live Stream Currently',
+        status: 'idle',
+        stream: null,
+        channel: { title: 'SM Trading Desk' },
+        apiKeyConfigured: false,
+        checkedAt: new Date().toISOString(),
+      });
     } finally {
+      isFetchingRef.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [data]);
+  }, []);
 
   // Initial fetch and automatic periodic polling (every 45s)
   useEffect(() => {

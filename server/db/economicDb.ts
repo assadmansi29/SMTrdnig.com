@@ -457,10 +457,10 @@ export async function markNotificationSent(
     SET 
       status = 'sent',
       sent_at_utc = NOW(),
-      telegram_message_id = $1,
-      telegram_channel_id = $2,
+      telegram_message_id = $1::bigint,
+      telegram_channel_id = $2::varchar,
       error_message = NULL
-    WHERE id = $3;
+    WHERE id = $3::integer;
   `, [telegramMessageId, channelId, notificationId]);
 }
 
@@ -475,11 +475,11 @@ export async function markNotificationFailed(
   await pool.query(`
     UPDATE event_notifications
     SET 
-      status = $1,
+      status = $1::varchar,
       retry_count = retry_count + 1,
-      error_message = $2,
-      scheduled_for_utc = CASE WHEN $1 = 'pending' THEN NOW() + INTERVAL '10 minutes' ELSE scheduled_for_utc END
-    WHERE id = $3;
+      error_message = $2::text,
+      scheduled_for_utc = CASE WHEN $1::varchar = 'pending'::varchar THEN NOW() + INTERVAL '10 minutes' ELSE scheduled_for_utc END
+    WHERE id = $3::integer;
   `, [status, errorMessage, notificationId]);
 }
 

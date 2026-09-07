@@ -251,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const uploadAvatar = async (avatarData: string) => {
-    if (!token) return { success: false, error: 'Not authenticated' };
+    if (!token || !user) return { success: false, error: 'Not authenticated' };
 
     try {
       const res = await fetch('/api/user/avatar', {
@@ -260,7 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ avatarData }),
+        body: JSON.stringify({ avatarData, ownerId: user.id }),
       });
 
       const data = await res.json();
@@ -278,14 +278,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeAvatar = async () => {
-    if (!token) return { success: false, error: 'Not authenticated' };
+    if (!token || !user) return { success: false, error: 'Not authenticated' };
 
     try {
       const res = await fetch('/api/user/avatar', {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({ ownerId: user.id }),
       });
 
       const data = await res.json();

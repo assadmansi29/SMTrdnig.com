@@ -29,7 +29,8 @@
     "pg": "^8.23.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "resend": "^6.25.0"
+    "resend": "^6.25.0",
+    "tradingview-api-adapter": "^2.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

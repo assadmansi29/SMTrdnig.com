@@ -14,16 +14,12 @@ export default defineConfig(() => {
     },
 
     server: {
-      hmr: false,
+      allowedHosts: true as const,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
 
     preview: {
-      allowedHosts: [
-        'smtrdnig-com.onrender.com',
-        'smtrading.pro',
-        'www.smtrading.pro',
-      ],
+      allowedHosts: true as const,
       host: '0.0.0.0',
       port: 4173,
     },

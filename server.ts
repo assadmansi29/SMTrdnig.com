@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import http from "http";
 import path from "path";
 import cookieParser from "cookie-parser";
 import compression from "compression";
@@ -20,6 +21,7 @@ import { economicScheduler } from './server/services/economicScheduler';
 
 async function startServer() {
   const app = express();
+  const server = http.createServer(app);
   const PORT = 3000;
 
   // Initialize PostgreSQL schema in background to ensure port 3000 binds immediately
@@ -79,7 +81,7 @@ async function startServer() {
   app.use('/api/auth', requireDatabaseReady, authRoutes);
   app.use('/api/user', requireDatabaseReady, userRoutes);
   app.use('/api/admin', requireDatabaseReady, adminRoutes);
-  app.use('/api/youtube', requireDatabaseReady, youtubeRoutes);
+  app.use('/api/youtube', youtubeRoutes);
   app.use('/api/telegram', requireDatabaseReady, telegramRoutes);
   app.use('/api/chart-analyses', requireDatabaseReady, chartAnalysisRoutes);
   app.use('/api/tradingview-storage', requireDatabaseReady, tradingviewStorageRoutes);
@@ -104,9 +106,15 @@ async function startServer() {
   // 5. Frontend & Asset Handling
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
+      legacy: {
+        skipWebSocketTokenCheck: true,
+      },
       server: {
         middlewareMode: true,
-        hmr: false,
+        allowedHosts: true,
+        hmr: {
+          server,
+        },
       },
       appType: "spa",
     });
@@ -128,7 +136,7 @@ async function startServer() {
     });
   }
 
-  const server = app.listen(PORT, "0.0.0.0", () => {
+  server.listen(PORT, "0.0.0.0", () => {
     console.log(`SMTrading Full-Stack Platform running on http://localhost:${PORT}`);
   });
 

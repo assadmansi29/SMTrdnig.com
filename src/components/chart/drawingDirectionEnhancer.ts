@@ -5,6 +5,7 @@ import {
   ToolRegistry,
   GannBox,
   Drawing,
+  Rectangle,
 } from 'lightweight-charts-drawing';
 
 /**
@@ -792,19 +793,71 @@ class DenseGannAngleGridPaneView {
 }
 
 // -----------------------------------------------------------------------------
-function projectLogicalCoordinate(timeScale: any, logicalIdx: number): number | null {
-  if (!timeScale?.logicalToCoordinate || isNaN(logicalIdx)) return null;
+export function timeToLogicalIndex(targetTime: number, candles: any[]): number {
+  if (!candles || candles.length === 0) return 0;
+  const N = candles.length;
+  const lastTime = Number(candles[N - 1].time);
+  const firstTime = Number(candles[0].time);
+  const step = N >= 2 ? (Number(candles[N - 1].time) - Number(candles[N - 2].time)) || 3600 : 3600;
+
+  if (targetTime >= lastTime) {
+    return (N - 1) + (targetTime - lastTime) / step;
+  }
+  if (targetTime <= firstTime) {
+    return (targetTime - firstTime) / step;
+  }
+
+  // Exact or binary search within candle array
+  let low = 0;
+  let high = N - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const mt = Number(candles[mid].time);
+    if (mt === targetTime) {
+      return mid;
+    } else if (mt < targetTime) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  // targetTime falls between high and low
+  const tHigh = Number(candles[high].time);
+  const tLow = Number(candles[low].time);
+  const frac = tLow > tHigh ? (targetTime - tHigh) / (tLow - tHigh) : 0;
+  return high + frac;
+}
+
+export function projectLogicalCoordinate(timeScale: any, logicalIdx: number): number | null {
+  if (!timeScale || isNaN(logicalIdx)) return null;
+
+  const direct = timeScale.logicalToCoordinate?.(logicalIdx);
+  if (direct !== null && direct !== undefined && !isNaN(direct)) {
+    return direct;
+  }
+
+  // Check visible logical range for robust linear extrapolation if direct returned null
+  const range = timeScale.getVisibleLogicalRange?.();
+  if (range && range.to !== range.from) {
+    const xFrom = timeScale.logicalToCoordinate?.(range.from);
+    const xTo = timeScale.logicalToCoordinate?.(range.to);
+    if (xFrom !== null && xTo !== null && !isNaN(xFrom) && !isNaN(xTo)) {
+      const barSpacing = (xTo - xFrom) / (range.to - range.from);
+      return xFrom + (logicalIdx - range.from) * barSpacing;
+    }
+  }
 
   const floorIdx = Math.floor(logicalIdx);
   const ceilIdx = Math.ceil(logicalIdx);
 
   if (floorIdx === ceilIdx) {
-    const coord = timeScale.logicalToCoordinate(floorIdx);
+    const coord = timeScale.logicalToCoordinate?.(floorIdx);
     return coord !== null && !isNaN(coord) ? coord : null;
   }
 
-  const coordFloor = timeScale.logicalToCoordinate(floorIdx);
-  const coordCeil = timeScale.logicalToCoordinate(ceilIdx);
+  const coordFloor = timeScale.logicalToCoordinate?.(floorIdx);
+  const coordCeil = timeScale.logicalToCoordinate?.(ceilIdx);
 
   if (coordFloor !== null && coordCeil !== null && !isNaN(coordFloor) && !isNaN(coordCeil)) {
     return coordFloor + (logicalIdx - floorIdx) * (coordCeil - coordFloor);
@@ -817,8 +870,6 @@ function projectLogicalCoordinate(timeScale: any, logicalIdx: number): number | 
 // 4. Prototype Patching & Registry Installation
 // -----------------------------------------------------------------------------
 export function installDirectionalEnhancers() {
-  if (typeof window === 'undefined') return;
-
   try {
     // 0. Patch Drawing.prototype.anchorToPixel to support future cycle analysis bars (e.g. +144 bars)
     if (Drawing && Drawing.prototype) {
@@ -840,26 +891,10 @@ export function installDirectionalEnhancers() {
         let x = direct?.x;
         if ((x === null || x === undefined || isNaN(x)) && timeScale.logicalToCoordinate) {
           const candles = (window as any).__chartCandles;
-          if (Array.isArray(candles) && candles.length >= 2) {
-            const N = candles.length;
-            const lastCandle = candles[N - 1];
-            const prevCandle = candles[N - 2];
-            const step = (Number(lastCandle.time) - Number(prevCandle.time)) || 3600;
+          if (Array.isArray(candles) && candles.length > 0) {
             const targetTime = typeof anchor.time === 'number' ? anchor.time : Number(anchor.time);
-            if (step > 0 && !isNaN(targetTime)) {
-              const lastTime = Number(lastCandle.time);
-              const firstTime = Number(candles[0].time);
-              let logicalIdx: number;
-              if (targetTime >= lastTime) {
-                const barsDiff = (targetTime - lastTime) / step;
-                logicalIdx = (N - 1) + barsDiff;
-              } else if (targetTime < firstTime) {
-                const barsDiff = (targetTime - firstTime) / step;
-                logicalIdx = barsDiff;
-              } else {
-                const barsDiff = (targetTime - firstTime) / step;
-                logicalIdx = barsDiff;
-              }
+            if (!isNaN(targetTime)) {
+              const logicalIdx = timeToLogicalIndex(targetTime, candles);
               const projectedX = projectLogicalCoordinate(timeScale, logicalIdx);
               if (projectedX !== null && !isNaN(projectedX)) {
                 x = projectedX;
@@ -890,10 +925,10 @@ export function installDirectionalEnhancers() {
 
         let time = direct?.time;
         if (!time) {
-          const chart = (window as any).__currentChart;
+          const chart = typeof window !== 'undefined' ? (window as any).__currentChart : undefined;
           const rawTs = chart?.timeScale?.() || timeScale;
           const logical = rawTs?.coordinateToLogical ? rawTs.coordinateToLogical(point.x) : null;
-          const candles = (window as any).__chartCandles;
+          const candles = typeof window !== 'undefined' ? (window as any).__chartCandles : undefined;
           if (logical !== null && logical !== undefined && !isNaN(logical) && Array.isArray(candles) && candles.length > 0) {
             const N = candles.length;
             const lastCandle = candles[N - 1];
@@ -1007,26 +1042,38 @@ export function installDirectionalEnhancers() {
       };
     }
 
-    // 4. Patch GannBox control points so handles correspond to actual draggable corners
-    if (GannBox && GannBox.prototype) {
-      (GannBox.prototype as any).getControlPoints = function (viewport: any) {
+    // 3b. Patch Rectangle testHit so clicking empty interior pans the chart, only edges/handles select
+    if (Rectangle && Rectangle.prototype) {
+      (Rectangle.prototype as any).testHit = function (point: { x: number; y: number }, viewport: any) {
+        if (!this.isValid()) return false;
         const vp = viewport || this.getViewport?.();
-        if (!vp || !this.isValid()) return [];
-        const p0 = this.anchorToPixel(this._anchors[0], vp);
-        const p1 = this.anchorToPixel(this._anchors[1], vp);
-        if (!p0 || !p1) return [];
+        if (!vp) return false;
+        const e = this.anchorToPixel(this._anchors[0], vp);
+        const n = this.anchorToPixel(this._anchors[1], vp);
+        if (!e || !n) return false;
+        const minX = Math.min(e.x, n.x);
+        const maxX = Math.max(e.x, n.x);
+        const minY = Math.min(e.y, n.y);
+        const maxY = Math.max(e.y, n.y);
+        const THRESHOLD = 8;
 
-        return [
-          { index: 0, x: p0.x, y: p0.y, radius: 6 },
-          { index: 1, x: p1.x, y: p1.y, radius: 6 },
-          // Opposite diagonal corners
-          { index: 0, x: p0.x, y: p1.y, radius: 6 },
-          { index: 1, x: p1.x, y: p0.y, radius: 6 },
-        ];
+        const nearLeft = Math.abs(point.x - minX) <= THRESHOLD && point.y >= minY - THRESHOLD && point.y <= maxY + THRESHOLD;
+        const nearRight = Math.abs(point.x - maxX) <= THRESHOLD && point.y >= minY - THRESHOLD && point.y <= maxY + THRESHOLD;
+        const nearTop = Math.abs(point.y - minY) <= THRESHOLD && point.x >= minX - THRESHOLD && point.x <= maxX + THRESHOLD;
+        const nearBottom = Math.abs(point.y - maxY) <= THRESHOLD && point.x >= minX - THRESHOLD && point.x <= maxX + THRESHOLD;
+
+        if (nearLeft || nearRight || nearTop || nearBottom) return true;
+
+        if (this._rectangleOptions?.filled && this._style?.fillOpacity && this._style.fillOpacity > 0.4) {
+          return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
+        }
+        return false;
       };
     }
 
-    // 5. Register 'gann-angle' tool in ToolRegistry
+    // 4. GannBox control points are managed cleanly by gannBoxEnhancer (6 corner/edge handles)
+
+    // 5. Register 'gann-angle' tool and aliases in ToolRegistry
     const registry = ToolRegistry.getInstance();
     try {
       if (registry.has('gann-angle')) {
@@ -1050,6 +1097,28 @@ export function installDirectionalEnhancers() {
           return drawing;
         },
       } as any);
+
+      // Aliases
+      if (!registry.has('pitchfork') && registry.has('andrews-pitchfork')) {
+        const entry = registry.get('andrews-pitchfork');
+        if (entry) {
+          registry.register({
+            ...entry,
+            type: 'pitchfork',
+            name: 'Pitchfork',
+          } as any);
+        }
+      }
+      if (!registry.has('measure') && registry.has('date-price-range')) {
+        const entry = registry.get('date-price-range');
+        if (entry) {
+          registry.register({
+            ...entry,
+            type: 'measure',
+            name: 'Measure / Ruler',
+          } as any);
+        }
+      }
     } catch {
       // safe fallback
     }

@@ -24,28 +24,28 @@ const INSTRUMENTS: InstrumentOption[] = [
     id: 'gold',
     nameKey: 'instGoldName',
     ticker: 'XAUUSD',
-    symbol: 'OANDA:XAUUSD',
+    symbol: 'BLACKBULL:XAUUSD',
     descKey: 'instGoldDesc'
   },
   {
     id: 'nasdaq',
     nameKey: 'instNasdaqName',
     ticker: 'NAS100',
-    symbol: 'OANDA:NAS100USD',
+    symbol: 'BLACKBULL:NAS100',
     descKey: 'instNasdaqDesc'
   },
   {
     id: 'dow',
     nameKey: 'instDowName',
     ticker: 'US30',
-    symbol: 'OANDA:US30USD',
+    symbol: 'BLACKBULL:US30',
     descKey: 'instDowDesc'
   },
   {
     id: 'dax',
     nameKey: 'instDaxName',
     ticker: 'GER40',
-    symbol: 'OANDA:DE30EUR',
+    symbol: 'BLACKBULL:GER40',
     descKey: 'instDaxDesc'
   }
 ];
@@ -57,9 +57,9 @@ const TIMEFRAMES = [
   { label: '30m', value: '30' },
   { label: '1H', value: '60' },
   { label: '4H', value: '240' },
-  { label: 'DAY', value: 'D' },
-  { label: 'Week', value: 'W' },
-  { label: 'Month', value: 'M' },
+  { label: 'DAY', value: '1D' },
+  { label: 'Week', value: '1W' },
+  { label: 'Month', value: '1M' },
 ];
 
 interface LiveTradingSectionProps {

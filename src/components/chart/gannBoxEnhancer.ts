@@ -431,6 +431,79 @@ export function installGannBoxEnhancer() {
         ];
       };
 
+      // Patch testHit so clicking empty space or space between lines pans the chart
+      // Only clicking the outer border, level lines, diagonals, or handles selects the Gann Box
+      (GannBox.prototype as any).testHit = function (point: { x: number; y: number }, viewport: any) {
+        if (!this.isValid()) return false;
+        const vp = viewport || this.getViewport?.();
+        if (!vp) return false;
+        const p1 = this.anchorToPixel(this._anchors[0], vp);
+        const p2 = this.anchorToPixel(this._anchors[1], vp);
+        if (!p1 || !p2) return false;
+
+        const minX = Math.min(p1.x, p2.x);
+        const maxX = Math.max(p1.x, p2.x);
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
+        const width = maxX - minX;
+        const height = maxY - minY;
+
+        const THRESHOLD = 8;
+        if (
+          point.x < minX - THRESHOLD ||
+          point.x > maxX + THRESHOLD ||
+          point.y < minY - THRESHOLD ||
+          point.y > maxY + THRESHOLD
+        ) {
+          return false;
+        }
+
+        const distToSegment = (px: number, py: number, x1: number, y1: number, x2: number, y2: number) => {
+          const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+          if (l2 === 0) return Math.hypot(px - x1, py - y1);
+          let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+          t = Math.max(0, Math.min(1, t));
+          return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+        };
+
+        // 1. Outer borders
+        if (distToSegment(point.x, point.y, minX, minY, maxX, minY) <= THRESHOLD) return true;
+        if (distToSegment(point.x, point.y, minX, maxY, maxX, maxY) <= THRESHOLD) return true;
+        if (distToSegment(point.x, point.y, minX, minY, minX, maxY) <= THRESHOLD) return true;
+        if (distToSegment(point.x, point.y, maxX, minY, maxX, maxY) <= THRESHOLD) return true;
+
+        const gOpts = this._gannOptions || {};
+        const pLevels = gOpts.priceLevels || DEFAULT_GANN_PRICE_LEVELS;
+        const tLevels = gOpts.timeLevels || DEFAULT_GANN_TIME_LEVELS;
+
+        // 2. Horizontal price levels
+        for (const lvl of pLevels) {
+          if (lvl <= 0 || lvl >= 1) continue;
+          const y = minY + height * lvl;
+          if (distToSegment(point.x, point.y, minX, y, maxX, y) <= THRESHOLD) return true;
+        }
+
+        // 3. Vertical time levels
+        for (const lvl of tLevels) {
+          if (lvl <= 0 || lvl >= 1) continue;
+          const x = minX + width * lvl;
+          if (distToSegment(point.x, point.y, x, minY, x, maxY) <= THRESHOLD) return true;
+        }
+
+        // 4. Diagonals
+        if (gOpts.showDiagonals !== false) {
+          if (distToSegment(point.x, point.y, minX, minY, maxX, maxY) <= THRESHOLD) return true;
+          if (distToSegment(point.x, point.y, minX, maxY, maxX, minY) <= THRESHOLD) return true;
+        }
+
+        // 5. Heavy fill opacity interior check
+        if (gOpts.filled && this._style?.fillOpacity && this._style.fillOpacity > 0.4) {
+          return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
+        }
+
+        return false;
+      };
+
       // Ensure GannBox has both getter and setter for gannOptions,
       // mapping any property assignment directly to setGannOptions
       // to prevent "Cannot set property gannOptions of #<Mt2> which has only a getter"

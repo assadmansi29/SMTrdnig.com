@@ -174,6 +174,26 @@ export class EconomicScheduler {
         const targetTz = notification.targetTimezone || await resolveUserTimezone(this.pool, notification.userId);
         const destinationChatId = notification.targetChatId || undefined;
 
+        // Pre-validate destination accessibility & permissions to prevent dispatching to inaccessible channels
+        const destValidation = await telegramBotService.validateDestination(destinationChatId);
+        if (!destValidation.accessible || !destValidation.canPostMessages) {
+          const failReason = `Destination "${destValidation.destination}" is inaccessible: ${destValidation.error || 'Missing Post Messages permission'}`;
+          await markNotificationFailed(this.pool, notification.id, failReason, true);
+          if (!destinationChatId) {
+            // Mark any other currently due pending notifications for the inaccessible default channel as failed to prevent repeated dispatching
+            await this.pool.query(`
+              UPDATE event_notifications
+              SET status = 'failed',
+                  error_message = $1::text
+              WHERE target_chat_id IS NULL
+                AND status = 'pending'
+                AND scheduled_for_utc <= NOW();
+            `, [failReason]);
+            break;
+          }
+          continue;
+        }
+
         let result;
         if (notification.notificationType === 'reminder_60m') {
           result = await telegramBotService.sendEventReminder(event, 60, targetTz, destinationChatId);

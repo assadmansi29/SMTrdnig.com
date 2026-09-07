@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { tv } from 'tradingview-api-adapter';
 
 const router = Router();
 
@@ -11,69 +12,221 @@ interface Candle {
   volume?: number;
 }
 
-// Map frontend symbols to Yahoo Finance and Binance symbols
-const SYMBOL_MAP: Record<string, { yahoo: string; binance?: string; basePrice: number }> = {
-  'OANDA:XAUUSD': { yahoo: 'GC=F', binance: 'PAXGUSDT', basePrice: 2850 },
-  'XAUUSD': { yahoo: 'GC=F', binance: 'PAXGUSDT', basePrice: 2850 },
-  'OANDA:NAS100USD': { yahoo: 'NQ=F', basePrice: 20950 },
-  'NAS100USD': { yahoo: 'NQ=F', basePrice: 20950 },
-  'NAS100': { yahoo: 'NQ=F', basePrice: 20950 },
-  'OANDA:US30USD': { yahoo: 'YM=F', basePrice: 43850 },
-  'US30USD': { yahoo: 'YM=F', basePrice: 43850 },
-  'US30': { yahoo: 'YM=F', basePrice: 43850 },
-  'OANDA:DE30EUR': { yahoo: '^GDAXI', basePrice: 22400 },
-  'DE30EUR': { yahoo: '^GDAXI', basePrice: 22400 },
-  'GER40': { yahoo: '^GDAXI', basePrice: 22400 },
-  'BTCUSD': { yahoo: 'BTC-USD', binance: 'BTCUSDT', basePrice: 88500 },
-  'BTCUSDT': { yahoo: 'BTC-USD', binance: 'BTCUSDT', basePrice: 88500 },
-  'EURUSD': { yahoo: 'EURUSD=X', basePrice: 1.0850 },
-  'GBPUSD': { yahoo: 'GBPUSD=X', basePrice: 1.2850 },
+// Map user/frontend symbol input to exact TradingView (BlackBull Markets), Yahoo, and Binance symbol identifiers
+const SYMBOL_CONFIG: Record<
+  string,
+  { tvSymbol: string; yahooSymbol?: string; binanceSymbol?: string }
+> = {
+  // Gold (Spot Gold / USD)
+  'BLACKBULL:XAUUSD': { tvSymbol: 'BLACKBULL:XAUUSD', yahooSymbol: 'GC=F' },
+  'OANDA:XAUUSD': { tvSymbol: 'BLACKBULL:XAUUSD', yahooSymbol: 'GC=F' },
+  'XAUUSD': { tvSymbol: 'BLACKBULL:XAUUSD', yahooSymbol: 'GC=F' },
+  'GOLD': { tvSymbol: 'BLACKBULL:XAUUSD', yahooSymbol: 'GC=F' },
+  'XAU/USD': { tvSymbol: 'BLACKBULL:XAUUSD', yahooSymbol: 'GC=F' },
+
+  // Nasdaq 100
+  'BLACKBULL:NAS100': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'OANDA:NAS100USD': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NAS100USD': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NAS100': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NQ': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+
+  // Dow Jones 30
+  'BLACKBULL:US30': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'OANDA:US30USD': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'US30USD': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'US30': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+
+  // DAX 40 (German 40)
+  'BLACKBULL:GER40': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'OANDA:DE30EUR': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'DE30EUR': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'GER40': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+
+  // Forex EUR/USD
+  'BLACKBULL:EURUSD': { tvSymbol: 'BLACKBULL:EURUSD', yahooSymbol: 'EURUSD=X' },
+  'FX:EURUSD': { tvSymbol: 'BLACKBULL:EURUSD', yahooSymbol: 'EURUSD=X' },
+  'EURUSD': { tvSymbol: 'BLACKBULL:EURUSD', yahooSymbol: 'EURUSD=X' },
+  'EUR/USD': { tvSymbol: 'BLACKBULL:EURUSD', yahooSymbol: 'EURUSD=X' },
+
+  // Forex GBP/USD
+  'BLACKBULL:GBPUSD': { tvSymbol: 'BLACKBULL:GBPUSD', yahooSymbol: 'GBPUSD=X' },
+  'FX:GBPUSD': { tvSymbol: 'BLACKBULL:GBPUSD', yahooSymbol: 'GBPUSD=X' },
+  'GBPUSD': { tvSymbol: 'BLACKBULL:GBPUSD', yahooSymbol: 'GBPUSD=X' },
+  'GBP/USD': { tvSymbol: 'BLACKBULL:GBPUSD', yahooSymbol: 'GBPUSD=X' },
+
+  // Crypto Bitcoin
+  'BLACKBULL:BTCUSD': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
+  'BINANCE:BTCUSDT': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
+  'BTCUSD': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
+  'BTCUSDT': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
+  'BTC/USD': { tvSymbol: 'BLACKBULL:BTCUSD', binanceSymbol: 'BTCUSDT', yahooSymbol: 'BTC-USD' },
 };
 
-function parseInterval(inv: string): { yahooInterval: string; yahooRange: string; stepSeconds: number } {
-  const norm = (inv || '15').trim().toLowerCase();
-  switch (norm) {
-    case '1':
-    case '1m':
-      return { yahooInterval: '1m', yahooRange: '1d', stepSeconds: 60 };
-    case '5':
-    case '5m':
-      return { yahooInterval: '5m', yahooRange: '3d', stepSeconds: 300 };
-    case '15':
-    case '15m':
-      return { yahooInterval: '15m', yahooRange: '5d', stepSeconds: 900 };
-    case '30':
-    case '30m':
-      return { yahooInterval: '30m', yahooRange: '1mo', stepSeconds: 1800 };
-    case '60':
-    case '1h':
-    case 'h':
-      return { yahooInterval: '60m', yahooRange: '1mo', stepSeconds: 3600 };
-    case '240':
-    case '4h':
-      return { yahooInterval: '60m', yahooRange: '3mo', stepSeconds: 14400 };
-    case 'd':
-    case '1d':
-    case 'day':
-      return { yahooInterval: '1d', yahooRange: '1y', stepSeconds: 86400 };
-    case 'w':
-    case '1w':
-    case 'week':
-      return { yahooInterval: '1wk', yahooRange: '2y', stepSeconds: 604800 };
-    case 'm':
-    case '1m_month':
-    case '1mo':
-    case 'month':
-    case 'monthe':
-      return { yahooInterval: '1mo', yahooRange: '5y', stepSeconds: 2592000 };
-    default:
-      return { yahooInterval: '15m', yahooRange: '5d', stepSeconds: 900 };
+function resolveTradingViewSymbol(symbol: string): string {
+  const trimmed = (symbol || '').trim();
+  if (SYMBOL_CONFIG[trimmed]) return SYMBOL_CONFIG[trimmed].tvSymbol;
+  const upper = trimmed.toUpperCase();
+  if (SYMBOL_CONFIG[upper]) return SYMBOL_CONFIG[upper].tvSymbol;
+
+  // If user already specified an exchange prefix
+  if (trimmed.includes(':')) {
+    if (trimmed.startsWith('OANDA:')) {
+      const bare = trimmed.replace('OANDA:', '');
+      if (bare === 'XAUUSD') return 'BLACKBULL:XAUUSD';
+      if (bare === 'NAS100USD' || bare === 'NAS100') return 'BLACKBULL:NAS100';
+      if (bare === 'US30USD' || bare === 'US30') return 'BLACKBULL:US30';
+      if (bare === 'DE30EUR' || bare === 'GER40') return 'BLACKBULL:GER40';
+      return `BLACKBULL:${bare}`;
+    }
+    return trimmed;
+  }
+  return `BLACKBULL:${upper}`;
+}
+
+function resolveTradingViewTimeframe(inv: string): string {
+  const raw = (inv || '15').trim();
+
+  // Case-sensitive check for Month ('1M', 'M') vs 1-minute ('1m', '1')
+  if (raw === '1M' || raw === 'M' || raw.toLowerCase() === '1mo' || raw.toLowerCase() === 'month') {
+    return '1M';
+  }
+  if (raw === '1W' || raw === 'W' || raw.toLowerCase() === 'week') {
+    return '1W';
+  }
+  if (raw === '1D' || raw === 'D' || raw.toLowerCase() === 'day') {
+    return '1D';
+  }
+  if (raw === '240' || raw.toLowerCase() === '4h') {
+    return '240';
+  }
+  if (raw === '60' || raw.toLowerCase() === '1h' || raw.toLowerCase() === 'h') {
+    return '60';
+  }
+  if (raw === '30' || raw.toLowerCase() === '30m') {
+    return '30';
+  }
+  if (raw === '15' || raw.toLowerCase() === '15m') {
+    return '15';
+  }
+  if (raw === '5' || raw.toLowerCase() === '5m') {
+    return '5';
+  }
+  if (raw === '1' || raw.toLowerCase() === '1m' || raw.toLowerCase() === '1min') {
+    return '1';
+  }
+
+  const norm = raw.toLowerCase();
+  if (norm === '1' || norm === '1m') return '1';
+  if (norm === '5' || norm === '5m') return '5';
+  if (norm === '15' || norm === '15m') return '15';
+  if (norm === '30' || norm === '30m') return '30';
+  if (norm === '60' || norm === '1h') return '60';
+  if (norm === '240' || norm === '4h') return '240';
+  if (norm === 'd' || norm === '1d' || norm === 'day') return '1D';
+  if (norm === 'w' || norm === '1w' || norm === 'week') return '1W';
+  if (norm === 'm' || norm === '1m_month' || norm === '1mo' || norm === 'month') return '1M';
+
+  return raw;
+}
+
+// In-memory cache for candles to prevent throttling while keeping data fresh (10s TTL)
+const candleCache = new Map<string, { timestamp: number; candles: Candle[] }>();
+const CACHE_TTL_MS = 10000; // 10 seconds
+
+// Singleton TradingView client instance
+let globalTvClient: ReturnType<typeof tv> | null = null;
+
+function getTvClient() {
+  if (!globalTvClient) {
+    globalTvClient = tv();
+  }
+  return globalTvClient;
+}
+
+async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string, count: number = 300): Promise<Candle[]> {
+  const attemptFetch = async (client: ReturnType<typeof tv>) => {
+    const sym = client.symbol(tvSymbol);
+    const raw = await Promise.race([
+      sym.candles({ timeframe: tvTimeframe as any, count }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TradingView fetch timeout')), 7000)
+      ),
+    ]);
+    if (!raw || raw.length === 0) return [];
+    return raw
+      .map((c) => ({
+        time: c.time,
+        open: Number(c.open),
+        high: Number(c.high),
+        low: Number(c.low),
+        close: Number(c.close),
+        volume: c.volume ? Math.round(c.volume) : undefined,
+      }))
+      .sort((a, b) => a.time - b.time);
+  };
+
+  try {
+    const client = getTvClient();
+    return await attemptFetch(client);
+  } catch (err: any) {
+    console.warn(`[Market Feed] Primary TV fetch failed for ${tvSymbol}:`, err.message);
+    try {
+      if (globalTvClient) {
+        await globalTvClient.disconnect().catch(() => {});
+        globalTvClient = null;
+      }
+    } catch {}
+    // Retry once with a fresh client connection
+    const freshClient = tv();
+    globalTvClient = freshClient;
+    return await attemptFetch(freshClient);
   }
 }
 
-// In-memory cache for market candles to ensure rapid response and prevent throttling
-const candleCache = new Map<string, { timestamp: number; candles: Candle[] }>();
-const CACHE_TTL_MS = 15000; // 15 seconds
+async function fetchFromBinance(binanceSymbol: string, intervalStr: string): Promise<Candle[]> {
+  let biInterval = '15m';
+  const raw = (intervalStr || '15').trim();
+  if (raw === '1M' || raw === 'M' || raw.toLowerCase() === '1mo' || raw.toLowerCase() === 'month') {
+    biInterval = '1M';
+  } else if (raw === '1W' || raw === 'W' || raw.toLowerCase() === 'week') {
+    biInterval = '1w';
+  } else if (raw === '1D' || raw === 'D' || raw.toLowerCase() === 'day') {
+    biInterval = '1d';
+  } else if (raw === '240' || raw.toLowerCase() === '4h') {
+    biInterval = '4h';
+  } else if (raw === '60' || raw.toLowerCase() === '1h') {
+    biInterval = '1h';
+  } else if (raw === '30' || raw.toLowerCase() === '30m') {
+    biInterval = '30m';
+  } else if (raw === '15' || raw.toLowerCase() === '15m') {
+    biInterval = '15m';
+  } else if (raw === '5' || raw.toLowerCase() === '5m') {
+    biInterval = '5m';
+  } else if (raw === '1' || raw.toLowerCase() === '1m' || raw.toLowerCase() === '1min') {
+    biInterval = '1m';
+  }
+
+  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${biInterval}&limit=300`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+  if (!res.ok) {
+    throw new Error(`Binance responded with HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data)) return [];
+
+  const candles: Candle[] = data.map((item: any) => ({
+    time: Math.floor(Number(item[0]) / 1000),
+    open: Number(parseFloat(item[1]).toFixed(2)),
+    high: Number(parseFloat(item[2]).toFixed(2)),
+    low: Number(parseFloat(item[3]).toFixed(2)),
+    close: Number(parseFloat(item[4]).toFixed(2)),
+    volume: Math.round(parseFloat(item[5])),
+  }));
+
+  return candles.sort((a, b) => a.time - b.time);
+}
 
 async function fetchFromYahoo(yahooSymbol: string, interval: string, range: string): Promise<Candle[]> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${interval}&range=${range}`;
@@ -123,75 +276,42 @@ async function fetchFromYahoo(yahooSymbol: string, interval: string, range: stri
   return candles.sort((a, b) => a.time - b.time);
 }
 
-async function fetchFromBinance(binanceSymbol: string, intervalStr: string): Promise<Candle[]> {
-  let biInterval = '15m';
-  const s = intervalStr.toLowerCase();
-  if (s === '1' || s === '1m') biInterval = '1m';
-  else if (s === '5' || s === '5m') biInterval = '5m';
-  else if (s === '15' || s === '15m') biInterval = '15m';
-  else if (s === '30' || s === '30m') biInterval = '30m';
-  else if (s === '60' || s === '1h') biInterval = '1h';
-  else if (s === '240' || s === '4h') biInterval = '4h';
-  else if (s === 'd' || s === '1d' || s === 'day') biInterval = '1d';
-  else if (s === 'w' || s === '1w' || s === 'week') biInterval = '1w';
-  else if (s === 'm' || s === '1mo' || s === 'month' || s === 'monthe') biInterval = '1M';
-
-  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${biInterval}&limit=300`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-  if (!res.ok) {
-    throw new Error(`Binance responded with HTTP ${res.status}`);
+function parseYahooInterval(inv: string): { yahooInterval: string; yahooRange: string } {
+  const raw = (inv || '15').trim();
+  if (raw === '1M' || raw === 'M' || raw.toLowerCase() === '1mo' || raw.toLowerCase() === 'month') {
+    return { yahooInterval: '1mo', yahooRange: '5y' };
   }
-
-  const data = await res.json();
-  if (!Array.isArray(data)) return [];
-
-  const candles: Candle[] = data.map((item: any) => ({
-    time: Math.floor(Number(item[0]) / 1000),
-    open: Number(parseFloat(item[1]).toFixed(2)),
-    high: Number(parseFloat(item[2]).toFixed(2)),
-    low: Number(parseFloat(item[3]).toFixed(2)),
-    close: Number(parseFloat(item[4]).toFixed(2)),
-    volume: Math.round(parseFloat(item[5])),
-  }));
-
-  return candles.sort((a, b) => a.time - b.time);
-}
-
-// Fallback synthetic generator in case external market data sources are unavailable
-function generateRealisticCandles(basePrice: number, stepSeconds: number, count: number = 200): Candle[] {
-  const candles: Candle[] = [];
-  const now = Math.floor(Date.now() / 1000);
-  // Align to step boundary
-  const alignedNow = Math.floor(now / stepSeconds) * stepSeconds;
-  let currentPrice = basePrice;
-  const volatility = basePrice * 0.0015;
-
-  for (let i = count - 1; i >= 0; i--) {
-    const time = alignedNow - i * stepSeconds;
-    const change = (Math.sin(time / (stepSeconds * 8)) + (Math.random() - 0.49)) * volatility;
-    const open = Number((currentPrice).toFixed(2));
-    const close = Number((currentPrice + change).toFixed(2));
-    const high = Number((Math.max(open, close) + Math.random() * volatility * 0.8).toFixed(2));
-    const low = Number((Math.min(open, close) - Math.random() * volatility * 0.8).toFixed(2));
-
-    candles.push({
-      time,
-      open,
-      high,
-      low,
-      close,
-      volume: Math.floor(100 + Math.random() * 500),
-    });
-
-    currentPrice = close;
+  if (raw === '1W' || raw === 'W' || raw.toLowerCase() === 'week') {
+    return { yahooInterval: '1wk', yahooRange: '2y' };
   }
-
-  return candles;
+  if (raw === '1D' || raw === 'D' || raw.toLowerCase() === 'day') {
+    return { yahooInterval: '1d', yahooRange: '1y' };
+  }
+  if (raw === '240' || raw.toLowerCase() === '4h') {
+    return { yahooInterval: '60m', yahooRange: '3mo' };
+  }
+  if (raw === '60' || raw.toLowerCase() === '1h' || raw.toLowerCase() === 'h') {
+    return { yahooInterval: '60m', yahooRange: '1mo' };
+  }
+  if (raw === '30' || raw.toLowerCase() === '30m') {
+    return { yahooInterval: '30m', yahooRange: '1mo' };
+  }
+  if (raw === '15' || raw.toLowerCase() === '15m') {
+    return { yahooInterval: '15m', yahooRange: '5d' };
+  }
+  if (raw === '5' || raw.toLowerCase() === '5m') {
+    return { yahooInterval: '5m', yahooRange: '3d' };
+  }
+  if (raw === '1' || raw.toLowerCase() === '1m' || raw.toLowerCase() === '1min') {
+    return { yahooInterval: '1m', yahooRange: '1d' };
+  }
+  return { yahooInterval: '15m', yahooRange: '5d' };
 }
 
 /**
  * GET /api/market/candles
- * Returns OHLC candles for Lightweight Charts
+ * Returns genuine, real-market OHLC candles from TradingView WebSocket feed.
+ * Never uses synthetic, estimated, or randomly generated candle data.
  */
 router.get('/candles', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -199,65 +319,92 @@ router.get('/candles', async (req: Request, res: Response): Promise<void> => {
     const rawInterval = String(req.query.interval || '15').trim();
     const cacheKey = `${rawSymbol}_${rawInterval}`;
 
-    // Check cache
+    // Check memory cache
     const cached = candleCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
       res.json({
         status: 'ok',
         symbol: rawSymbol,
         interval: rawInterval,
+        source: 'tradingview',
+        count: cached.candles.length,
         candles: cached.candles,
       });
       return;
     }
 
-    const mapping = SYMBOL_MAP[rawSymbol] || SYMBOL_MAP[rawSymbol.toUpperCase()] || {
-      yahoo: rawSymbol.replace('OANDA:', ''),
-      basePrice: 2000,
-    };
+    const tvSymbol = resolveTradingViewSymbol(rawSymbol);
+    const tvTimeframe = resolveTradingViewTimeframe(rawInterval);
 
-    const { yahooInterval, yahooRange, stepSeconds } = parseInterval(rawInterval);
     let candles: Candle[] = [];
 
-    // Strategy 1: Fetch from Yahoo Finance
+    // Primary: Fetch genuine real-market candles directly from TradingView
     try {
-      candles = await fetchFromYahoo(mapping.yahoo, yahooInterval, yahooRange);
-    } catch (yahooErr: any) {
-      // Strategy 2: Binance fallback if crypto/metal available
-      if (mapping.binance) {
+      candles = await fetchCandlesFromTradingView(tvSymbol, tvTimeframe, 300);
+    } catch (tvErr: any) {
+      console.warn(`[Market Feed] TradingView live fetch failed for ${tvSymbol}:`, tvErr.message);
+    }
+
+    // Secondary: Binance real market fallback (if crypto)
+    if ((!candles || candles.length === 0) && (tvSymbol.includes('BTC') || rawSymbol.includes('BTC'))) {
+      try {
+        candles = await fetchFromBinance('BTCUSDT', rawInterval);
+      } catch (biErr: any) {
+        console.warn('[Market Feed] Binance fallback failed:', biErr.message);
+      }
+    }
+
+    // Tertiary: Yahoo Finance real market fallback
+    if (!candles || candles.length === 0) {
+      const config = SYMBOL_CONFIG[rawSymbol] || SYMBOL_CONFIG[rawSymbol.toUpperCase()];
+      if (config?.yahooSymbol) {
         try {
-          candles = await fetchFromBinance(mapping.binance, rawInterval);
-        } catch (biErr: any) {
-          console.warn('[Market Feed] Binance fallback warning:', biErr.message);
+          const { yahooInterval, yahooRange } = parseYahooInterval(rawInterval);
+          candles = await fetchFromYahoo(config.yahooSymbol, yahooInterval, yahooRange);
+        } catch (yhErr: any) {
+          console.warn('[Market Feed] Yahoo fallback failed:', yhErr.message);
         }
       }
     }
 
-    // Strategy 3: Synthetic fallback if empty or offline
-    if (!candles || candles.length < 10) {
-      candles = generateRealisticCandles(mapping.basePrice, stepSeconds, 200);
+    // Strict mandate: Do NOT use synthetic, generated, estimated, or incorrect candle data.
+    if (!candles || candles.length === 0) {
+      // If cached data exists from a previous successful fetch, return it rather than failing
+      if (cached && cached.candles.length > 0) {
+        res.json({
+          status: 'ok',
+          symbol: rawSymbol,
+          interval: rawInterval,
+          source: 'tradingview_cache',
+          count: cached.candles.length,
+          candles: cached.candles,
+        });
+        return;
+      }
+
+      res.status(502).json({
+        status: 'error',
+        error: `Real market data for ${rawSymbol} is temporarily unavailable. Synthetic data is disabled.`,
+      });
+      return;
     }
 
-    // Update cache
+    // Cache valid real-market candles
     candleCache.set(cacheKey, { timestamp: Date.now(), candles });
 
     res.json({
       status: 'ok',
       symbol: rawSymbol,
       interval: rawInterval,
+      source: 'tradingview',
       count: candles.length,
       candles,
     });
   } catch (err: any) {
     console.error('[Market API] Error:', err.message);
-    const { stepSeconds } = parseInterval('15');
-    const fallback = generateRealisticCandles(2850, stepSeconds, 150);
-    res.json({
-      status: 'ok',
-      symbol: 'OANDA:XAUUSD',
-      interval: '15',
-      count: fallback.length,
-      candles: fallback,
+    res.status(500).json({
+      status: 'error',
+      error: `Failed to retrieve real market data: ${err.message}`,
     });
   }
 });

@@ -67,7 +67,7 @@ import {
 
 export default function App() {
   const { t, isRTL, language } = useTranslation();
-  const { abuAsadAvatar, handleFileUpload } = useAbuAsadAvatar();
+  const { abuAsadAvatar, handleFileUpload, canEditAbuAsadAvatar } = useAbuAsadAvatar();
   const [articles, setArticles] = useState<Article[]>(() => getArticlesByLanguage(language));
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<'All' | 'Beginner' | 'Intermediate' | 'Institutional'>('All');
@@ -82,7 +82,7 @@ export default function App() {
   const [calculatorSetup, setCalculatorSetup] = useState<TradeSetup | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isChartOpen, setIsChartOpen] = useState(false);
-  const [chartDefaultSymbol, setChartDefaultSymbol] = useState('OANDA:XAUUSD');
+  const [chartDefaultSymbol, setChartDefaultSymbol] = useState('BLACKBULL:XAUUSD');
   const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
@@ -162,18 +162,18 @@ export default function App() {
 
   const handleSelectTicker = (ticker: MarketTickerItem) => {
     const symbolMap: Record<string, string> = {
-      'BTC/USD': 'BINANCE:BTCUSDT',
+      'BTC/USD': 'BLACKBULL:BTCUSD',
       'ETH/USD': 'BINANCE:ETHUSDT',
       'ES (S&P 500)': 'CME_MINI:ES1!',
-      'NQ (Nasdaq)': 'OANDA:NAS100USD',
-      'US30 (Dow)': 'OANDA:US30USD',
-      'GER40 (DAX)': 'OANDA:DE30EUR',
-      'XAU/USD': 'OANDA:XAUUSD',
-      'EUR/USD': 'FX:EURUSD',
+      'NQ (Nasdaq)': 'BLACKBULL:NAS100',
+      'US30 (Dow)': 'BLACKBULL:US30',
+      'GER40 (DAX)': 'BLACKBULL:GER40',
+      'XAU/USD': 'BLACKBULL:XAUUSD',
+      'EUR/USD': 'BLACKBULL:EURUSD',
       'US10Y': 'TVC:US10Y',
       'VIX': 'TVC:VIX'
     };
-    const targetSymbol = symbolMap[ticker.symbol] || 'OANDA:XAUUSD';
+    const targetSymbol = symbolMap[ticker.symbol] || 'BLACKBULL:XAUUSD';
     setChartDefaultSymbol(targetSymbol);
     setIsChartOpen(true);
   };
@@ -493,26 +493,40 @@ export default function App() {
                 <div className="space-y-3">
                   {/* Lead Architect: Abu Asad Almansi */}
                   <div className="p-3 bg-gradient-to-br from-amber-500/10 via-[#0A0F1A] to-[#0E1528] rounded-xl border border-amber-500/30 flex items-center gap-3 shadow-md group relative">
-                    <label className="relative shrink-0 cursor-pointer group/avatar" title="Click to upload exact photo file">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={handleFileUpload} 
-                      />
-                      <img
-                        src={abuAsadAvatar}
-                        alt={localizedAuthors.abuAsad.name}
-                        referrerPolicy="no-referrer"
-                        className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm transition-opacity group-hover/avatar:opacity-80"
-                      />
-                      <span className="absolute -bottom-1 -right-1 rtl:-left-1 rtl:right-auto bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
-                        <ShieldCheck className="w-2.5 h-2.5" />
-                      </span>
-                      <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
-                        <Camera className="w-4 h-4 text-amber-300" />
+                    {canEditAbuAsadAvatar ? (
+                      <label className="relative shrink-0 cursor-pointer group/avatar" title="Click to upload exact photo file">
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleFileUpload} 
+                        />
+                        <img
+                          src={abuAsadAvatar}
+                          alt={localizedAuthors.abuAsad.name}
+                          referrerPolicy="no-referrer"
+                          className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm transition-opacity group-hover/avatar:opacity-80"
+                        />
+                        <span className="absolute -bottom-1 -right-1 rtl:-left-1 rtl:right-auto bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
+                          <ShieldCheck className="w-2.5 h-2.5" />
+                        </span>
+                        <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center transition-opacity text-white">
+                          <Camera className="w-4 h-4 text-amber-300" />
+                        </div>
+                      </label>
+                    ) : (
+                      <div className="relative shrink-0">
+                        <img
+                          src={abuAsadAvatar}
+                          alt={localizedAuthors.abuAsad.name}
+                          referrerPolicy="no-referrer"
+                          className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
+                        />
+                        <span className="absolute -bottom-1 -right-1 rtl:-left-1 rtl:right-auto bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F17]">
+                          <ShieldCheck className="w-2.5 h-2.5" />
+                        </span>
                       </div>
-                    </label>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <h5 className="font-extrabold text-xs text-white truncate">{localizedAuthors.abuAsad.name}</h5>

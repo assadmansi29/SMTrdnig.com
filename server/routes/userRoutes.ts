@@ -10,6 +10,65 @@ const router = Router();
 // All routes require authentication
 router.use(authenticateToken);
 
+/**
+ * Strict Profile Picture & Profile Ownership Authorization Guard:
+ * Regular users must ONLY be able to change their own profile picture.
+ * They must NEVER be able to change or replace any other user's, Admin's, or Super Admin's picture,
+ * even locally or through API/browser manipulation.
+ * Server-side enforcement: The authenticated user ID must match the profile owner ID, otherwise return 403.
+ */
+function enforceProfileOwnership(req: AuthRequest, res: Response): boolean {
+  const caller = req.user;
+  if (!caller || !caller.id) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return false;
+  }
+
+  // Check any target user/owner identifier passed in URL params, request body, or query string
+  const requestedOwnerId =
+    req.params.userId ||
+    req.params.ownerId ||
+    req.params.id ||
+    req.body.userId ||
+    req.body.ownerId ||
+    req.body.targetUserId ||
+    req.body.profileOwnerId ||
+    req.query.userId ||
+    req.query.ownerId ||
+    req.query.targetUserId;
+
+  if (requestedOwnerId && String(requestedOwnerId).trim() !== String(caller.id).trim()) {
+    console.warn(`[Security Alert] User @${caller.username} (${caller.id}) attempted unauthorized profile modification on owner ID: ${requestedOwnerId}`);
+    res.status(403).json({
+      error: 'Access denied: Regular users are strictly restricted to updating their own profile picture. The authenticated user ID must match the profile owner ID.',
+      code: 'FORBIDDEN_PROFILE_OWNER_MISMATCH',
+    });
+    return false;
+  }
+
+  // Also prevent targeting another user by target username or target email
+  const requestedUsername = req.body.targetUsername || (req.body.username && req.body.username.trim() !== caller.username ? req.body.username.trim() : null);
+  const requestedEmail = req.body.targetEmail;
+
+  if (requestedUsername && caller.role !== 'super_admin' && requestedUsername.toLowerCase() !== caller.username.toLowerCase()) {
+    res.status(403).json({
+      error: 'Access denied: You cannot alter profile pictures or credentials for another user or administrator.',
+      code: 'FORBIDDEN_TARGET_USER_MISMATCH',
+    });
+    return false;
+  }
+
+  if (requestedEmail && caller.role !== 'super_admin' && requestedEmail.toLowerCase() !== caller.email.toLowerCase() && req.path.includes('avatar')) {
+    res.status(403).json({
+      error: 'Access denied: Profile picture changes can only target your own verified account.',
+      code: 'FORBIDDEN_TARGET_EMAIL_MISMATCH',
+    });
+    return false;
+  }
+
+  return true;
+}
+
 // POST /api/user/send-profile-code (Send email verification code before updating personal info)
 router.post('/send-profile-code', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -72,7 +131,8 @@ router.get('/profile', async (req: AuthRequest, res: Response): Promise<void> =>
 });
 
 // PATCH /api/user/profile
-router.patch('/profile', async (req: AuthRequest, res: Response): Promise<void> => {
+router.patch(['/profile', '/profile/:ownerId', '/:ownerId/profile'], async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!enforceProfileOwnership(req, res)) return;
   const {
     fullName,
     phone,
@@ -258,7 +318,8 @@ router.put('/telegram-alerts', async (req: AuthRequest, res: Response): Promise<
 });
 
 // POST /api/user/avatar (Upload & Link Profile Picture)
-router.post('/avatar', async (req: AuthRequest, res: Response): Promise<void> => {
+router.post(['/avatar', '/avatar/:ownerId', '/:ownerId/avatar', '/:userId/avatar'], async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!enforceProfileOwnership(req, res)) return;
   const { avatarData } = req.body;
   const user = req.user!;
 
@@ -310,7 +371,8 @@ router.post('/avatar', async (req: AuthRequest, res: Response): Promise<void> =>
 });
 
 // DELETE /api/user/avatar (Remove Profile Picture & Reset to Default)
-router.delete('/avatar', async (req: AuthRequest, res: Response): Promise<void> => {
+router.delete(['/avatar', '/avatar/:ownerId', '/:ownerId/avatar', '/:userId/avatar'], async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!enforceProfileOwnership(req, res)) return;
   const user = req.user!;
 
   const updatedUser = await Database.updateUser(user.id, {
