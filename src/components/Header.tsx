@@ -327,28 +327,35 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* 2. Institutional Tagline Bar & Compact Market Status */}
       <div className="bg-[#080C13] border-b border-slate-800/60 py-1.5 px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-start gap-2 sm:gap-3 text-xs">
-          {/* Main Title Area Tagline: Smart Money Trading + Order Flow & SMC */}
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/80 border border-slate-800/80 px-2.5 py-0.5 rounded-full shadow-inner shrink-0">
-            <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="text-amber-400 font-bold uppercase tracking-wider text-[10px] shrink-0">
-              {t('brandSubtitle')}
-            </span>
-            <span className="text-slate-600 shrink-0">•</span>
-            <span className="text-slate-300 font-medium text-[10px] sm:text-[11px] tracking-wide shrink-0">
-              {t('brandTagline')}
-            </span>
+        <div className="max-w-7xl mx-auto relative flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs min-h-[32px]">
+          {/* Market Status (MARKET OPEN) aligned on the left under SMTrading.pro */}
+          <div className="flex items-center shrink-0 z-10">
+            <MarketStatusIndicator
+              id="brand-bar-market-status"
+              compact={true}
+              align="left"
+            />
           </div>
 
-          {/* Compact Professional Market Status aligned on LEFT side, next to/near Order Flow & SMC */}
-          <MarketStatusIndicator
-            id="brand-bar-market-status"
-            compact={true}
-            align="left"
-          />
+          {/* Main Title Area Tagline: Smart Money Trading + Order Flow & SMC centered in the middle */}
+          <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center z-0 w-full sm:w-auto">
+            <div className="group relative flex items-center gap-2 bg-gradient-to-r from-[#0B1322]/95 via-[#0F1B30]/95 to-[#0B1322]/95 hover:from-[#0E1A2E] hover:to-[#0E1A2E] border border-amber-500/30 hover:border-amber-400/60 px-3.5 py-1 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(245,158,11,0.12)] hover:shadow-[0_2px_14px_rgba(245,158,11,0.18)] transition-all duration-200 shrink-0 select-none backdrop-blur-md">
+              <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/50"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400 shadow-[0_0_8px_#f59e0b]"></span>
+              </span>
+              <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px] font-mono shrink-0">
+                {t('brandSubtitle')}
+              </span>
+              <span className="text-slate-600/90 shrink-0 text-[10px] select-none font-mono">|</span>
+              <span className="text-slate-200 font-medium text-[11px] tracking-normal shrink-0">
+                {t('brandTagline')}
+              </span>
+            </div>
+          </div>
+
+          {/* Symmetrical placeholder on the right for balanced spacing */}
+          <div className="hidden sm:flex items-center shrink-0 w-[120px] pointer-events-none" aria-hidden="true" />
         </div>
       </div>
 

@@ -82,9 +82,9 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
     switch (status.status) {
       case 'MARKET OPEN':
         return {
-          badgeBorder: 'border-emerald-500/40 hover:border-emerald-500/70 shadow-[0_0_12px_rgba(16,185,129,0.15)]',
-          badgeBg: 'bg-[#071B12]/85 hover:bg-[#092418]',
-          dot: 'bg-emerald-400 shadow-[0_0_6px_#34d399]',
+          badgeBorder: 'border-emerald-500/40 hover:border-emerald-400/80 shadow-[0_0_10px_rgba(16,185,129,0.12)] hover:shadow-[0_0_15px_rgba(16,185,129,0.22)]',
+          badgeBg: 'bg-gradient-to-r from-[#061810]/95 via-[#082216]/90 to-[#061810]/95 hover:from-[#092619] hover:to-[#092619]',
+          dot: 'bg-emerald-400 shadow-[0_0_8px_#34d399]',
           dotAnimation: 'animate-pulse',
           titleText: 'text-emerald-400 font-bold',
           detailText: 'text-emerald-300/90 font-medium',
@@ -92,8 +92,8 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         };
       case 'MARKET WILL CLOSE SOON':
         return {
-          badgeBorder: 'border-amber-500/60 hover:border-amber-500/90 shadow-[0_0_14px_rgba(245,158,11,0.25)]',
-          badgeBg: 'bg-[#1F1403]/90 hover:bg-[#2B1B04]',
+          badgeBorder: 'border-amber-500/50 hover:border-amber-400/90 shadow-[0_0_12px_rgba(245,158,11,0.2)] hover:shadow-[0_0_18px_rgba(245,158,11,0.3)]',
+          badgeBg: 'bg-gradient-to-r from-[#1C1203]/95 via-[#261905]/90 to-[#1C1203]/95 hover:from-[#312007] hover:to-[#312007]',
           dot: 'bg-amber-400 shadow-[0_0_8px_#fbbf24]',
           dotAnimation: 'animate-ping',
           titleText: 'text-amber-400 font-extrabold',
@@ -102,8 +102,8 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         };
       case 'MARKET WILL OPEN SOON':
         return {
-          badgeBorder: 'border-cyan-500/60 hover:border-cyan-500/90 shadow-[0_0_14px_rgba(6,182,212,0.25)]',
-          badgeBg: 'bg-[#031A21]/90 hover:bg-[#05252F]',
+          badgeBorder: 'border-cyan-500/50 hover:border-cyan-400/90 shadow-[0_0_12px_rgba(6,182,212,0.2)] hover:shadow-[0_0_18px_rgba(6,182,212,0.3)]',
+          badgeBg: 'bg-gradient-to-r from-[#031A21]/95 via-[#05252F]/90 to-[#031A21]/95 hover:from-[#072F3B] hover:to-[#072F3B]',
           dot: 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]',
           dotAnimation: 'animate-ping',
           titleText: 'text-cyan-400 font-extrabold',
@@ -113,9 +113,9 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
       case 'MARKET CLOSED':
       default:
         return {
-          badgeBorder: 'border-rose-500/40 hover:border-rose-500/65 shadow-[0_0_10px_rgba(244,63,94,0.12)]',
-          badgeBg: 'bg-[#18080C]/85 hover:bg-[#220B10]',
-          dot: 'bg-rose-400 shadow-[0_0_5px_#f43f5e]',
+          badgeBorder: 'border-rose-500/35 hover:border-rose-400/70 shadow-[0_0_8px_rgba(244,63,94,0.1)] hover:shadow-[0_0_14px_rgba(244,63,94,0.2)]',
+          badgeBg: 'bg-gradient-to-r from-[#15070A]/95 via-[#1D0B0F]/90 to-[#15070A]/95 hover:from-[#250E14] hover:to-[#250E14]',
+          dot: 'bg-rose-400 shadow-[0_0_6px_#f43f5e]',
           dotAnimation: '',
           titleText: 'text-rose-400 font-bold',
           detailText: 'text-rose-300/85 font-medium',
@@ -196,9 +196,9 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         type="button"
         onClick={() => setShowDetails(!showDetails)}
         title={`Live Market Status: ${status.status} — Click for Real-Time Session Schedule & Global Clocks`}
-        className={`group flex items-center ${
-          compact ? 'gap-1.5 px-2 py-0.5 text-[10px]' : 'gap-2 px-3 py-1.5 text-[11px]'
-        } rounded-full border font-mono transition-all duration-200 cursor-pointer select-none backdrop-blur-md shrink-0 whitespace-nowrap ${styles.badgeBg} ${styles.badgeBorder}`}
+        className={`group relative flex items-center ${
+          compact ? 'gap-2 px-3 py-1 text-[10.5px]' : 'gap-2.5 px-3.5 py-1.5 text-[11px]'
+        } rounded-full border font-mono transition-all duration-200 cursor-pointer select-none backdrop-blur-md shrink-0 whitespace-nowrap active:scale-[0.98] hover:scale-[1.01] ${styles.badgeBg} ${styles.badgeBorder}`}
       >
         {/* Pulsing indicator status beacon */}
         <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
@@ -211,7 +211,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         {/* Dynamic Status Text */}
         {getBadgeContent()}
 
-        <ChevronDown className={`w-2.5 h-2.5 text-slate-400 group-hover:text-slate-200 transition-transform duration-200 shrink-0 ${showDetails ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3 h-3 text-slate-400 group-hover:text-slate-200 transition-transform duration-200 shrink-0 ${showDetails ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Centered Modal rendered into document.body - Standardized with Header Trading Tools positioning */}
