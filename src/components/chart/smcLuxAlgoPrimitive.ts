@@ -42,7 +42,8 @@ class SmcLuxAlgoRenderer implements IPrimitivePaneRenderer {
     const data = this._primitive.getData();
     const candles = this._primitive.getCandles();
 
-    if (!chart || !series || !settings.enabled || !data) return;
+    // The indicator is active ONLY when SMC Strategy is selected
+    if (!chart || !series || !this._primitive.isActiveStrategy() || !settings.enabled || !data) return;
 
     const timeScale = chart.timeScale();
     const latestCandleTime = candles.length > 0 ? candles[candles.length - 1].time : 0;
@@ -423,10 +424,22 @@ export class SmcLuxAlgoSeriesPrimitive implements ISeriesPrimitive<Time> {
   private _settings: SmcLuxAlgoSettings;
   private _data: SmcAnalysisResult | null = null;
   private _candles: CandleData[] = [];
+  private _isActiveStrategy: boolean = false;
 
   constructor(settings: SmcLuxAlgoSettings) {
     this._settings = { ...settings };
     this._paneView = new SmcLuxAlgoPaneView(this);
+  }
+
+  setActiveStrategy(active: boolean) {
+    if (this._isActiveStrategy !== active) {
+      this._isActiveStrategy = active;
+      this._requestUpdate?.();
+    }
+  }
+
+  isActiveStrategy(): boolean {
+    return this._isActiveStrategy;
   }
 
   attached(param: SeriesAttachedParameter<Time>): void {
@@ -449,6 +462,9 @@ export class SmcLuxAlgoSeriesPrimitive implements ISeriesPrimitive<Time> {
   updateAllViews(): void {}
 
   paneViews(): readonly IPrimitivePaneView[] {
+    if (!this._isActiveStrategy || !this._settings.enabled) {
+      return [];
+    }
     return [this._paneView];
   }
 

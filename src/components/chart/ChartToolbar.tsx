@@ -592,9 +592,6 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             <Layers className={`w-3.5 h-3.5 ${activeStrategy === 'smc' ? 'text-sky-300' : 'text-sky-400'}`} />
             <span className="hidden sm:inline">SMC Strategy</span>
             <span className="sm:hidden">SMC</span>
-            <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 font-mono hidden md:inline">
-              LuxAlgo
-            </span>
             {activeStrategy === 'smc' && (
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
             )}

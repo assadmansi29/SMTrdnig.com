@@ -302,9 +302,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [updateSmcIndicator]);
 
-  // When user activates SMC Strategy, automatically ensure SMC indicator is enabled
+  // The SMC indicator is active strictly and exclusively for the SMC Strategy button
   useEffect(() => {
-    if (activeStrategy === 'smc') {
+    const isSmc = activeStrategy === 'smc';
+    smcPrimitiveRef.current?.setActiveStrategy(isSmc);
+    if (isSmc) {
       setSmcSettings((prev) => (prev.enabled ? prev : { ...prev, enabled: true }));
     }
   }, [activeStrategy]);
@@ -1442,8 +1444,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     seriesApiRef.current = series;
 
-    // Attach LuxAlgo Smart Money Concepts (SMC) Series Primitive
+    // Attach LuxAlgo Smart Money Concepts (SMC) Series Primitive (active strictly and exclusively for SMC Strategy)
     const smcPrimitive = new SmcLuxAlgoSeriesPrimitive(smcSettingsRef.current);
+    smcPrimitive.setActiveStrategy(activeStrategy === 'smc');
     try {
       series.attachPrimitive(smcPrimitive);
       smcPrimitiveRef.current = smcPrimitive;
@@ -2890,8 +2893,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           </button>
         </div>
 
-        {/* LuxAlgo Smart Money Concepts (SMC) Indicator Overlay */}
-        {(activeStrategy === 'smc' || smcSettings.enabled) && (
+        {/* LuxAlgo Smart Money Concepts (SMC) Indicator Overlay - visible strictly and exclusively for SMC Strategy */}
+        {activeStrategy === 'smc' && smcSettings.enabled && (
           <SmcLuxAlgoOverlay
             settings={smcSettings}
             onUpdateSettings={handleUpdateSmcSettings}
