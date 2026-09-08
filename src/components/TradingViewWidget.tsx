@@ -26,6 +26,10 @@ import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawingDirectionEnhancer';
 import { useAuth } from '../context/AuthContext';
 import { MarketStreamClient } from '../services/marketStreamClient';
+import { SmcLuxAlgoSeriesPrimitive } from './chart/smcLuxAlgoPrimitive';
+import { SmcLuxAlgoSettings, DEFAULT_SMC_SETTINGS, SmcAnalysisResult } from './chart/smcLuxAlgoTypes';
+import { calculateSmcLuxAlgo } from './chart/smcLuxAlgoCalculator';
+import { SmcLuxAlgoOverlay } from './chart/SmcLuxAlgoOverlay';
 
 // Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers
 installGannBoxEnhancer();
@@ -255,6 +259,55 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const [isRefreshingStrategy, setIsRefreshingStrategy] = useState<boolean>(false);
   const [refreshNotification, setRefreshNotification] = useState<string | null>(null);
   const [streamStatus, setStreamStatus] = useState<'connecting' | 'connected' | 'reconnecting' | 'error'>('connecting');
+
+  // Smart Money Concepts (SMC LuxAlgo) Indicator State & Primitive
+  const [smcSettings, setSmcSettings] = useState<SmcLuxAlgoSettings>(() => {
+    try {
+      const saved = localStorage.getItem('smc_luxalgo_settings');
+      if (saved) {
+        return { ...DEFAULT_SMC_SETTINGS, ...JSON.parse(saved) };
+      }
+    } catch {}
+    return DEFAULT_SMC_SETTINGS;
+  });
+  const smcSettingsRef = useRef<SmcLuxAlgoSettings>(smcSettings);
+  useEffect(() => {
+    smcSettingsRef.current = smcSettings;
+    try {
+      localStorage.setItem('smc_luxalgo_settings', JSON.stringify(smcSettings));
+    } catch {}
+  }, [smcSettings]);
+
+  const [smcAnalysis, setSmcAnalysis] = useState<SmcAnalysisResult | null>(null);
+  const smcPrimitiveRef = useRef<SmcLuxAlgoSeriesPrimitive | null>(null);
+
+  // Recalculate and update SMC LuxAlgo Indicator
+  const updateSmcIndicator = useCallback((candles: any[]) => {
+    if (!candles || candles.length === 0) return;
+    try {
+      const analysis = calculateSmcLuxAlgo(candles, smcSettingsRef.current);
+      setSmcAnalysis(analysis);
+      smcPrimitiveRef.current?.setData(analysis, candles);
+    } catch (err) {
+      console.error('[Financial Chart] Error calculating SMC LuxAlgo:', err);
+    }
+  }, []);
+
+  const handleUpdateSmcSettings = useCallback((newSettings: SmcLuxAlgoSettings) => {
+    setSmcSettings(newSettings);
+    smcSettingsRef.current = newSettings;
+    smcPrimitiveRef.current?.setSettings(newSettings);
+    if (candlesRef.current && candlesRef.current.length > 0) {
+      updateSmcIndicator(candlesRef.current);
+    }
+  }, [updateSmcIndicator]);
+
+  // When user activates SMC Strategy, automatically ensure SMC indicator is enabled
+  useEffect(() => {
+    if (activeStrategy === 'smc') {
+      setSmcSettings((prev) => (prev.enabled ? prev : { ...prev, enabled: true }));
+    }
+  }, [activeStrategy]);
 
   // Magnet Mode State (Snap drawing anchors to candle OHLC levels)
   const [isMagnetActive, setIsMagnetActive] = useState<boolean>(() => {
@@ -717,6 +770,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           localStorage.setItem(localKey, JSON.stringify(incomingCandles.slice(-200)));
         } catch {}
 
+        // Update LuxAlgo Smart Money Concepts (SMC) Indicator
+        updateSmcIndicator(incomingCandles);
+
         if (seriesApiRef.current) {
           if (isSymbolChange) {
             // Explicit symbol change initiated by user: initialize future whitespace and set comfortable initial viewport
@@ -803,6 +859,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             if (incomingCandles.length > 0) {
               const lastIncoming = incomingCandles[incomingCandles.length - 1];
               seriesApiRef.current.update(lastIncoming);
+              updateSmcIndicator(incomingCandles);
             }
           }
 
@@ -1384,6 +1441,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     });
 
     seriesApiRef.current = series;
+
+    // Attach LuxAlgo Smart Money Concepts (SMC) Series Primitive
+    const smcPrimitive = new SmcLuxAlgoSeriesPrimitive(smcSettingsRef.current);
+    try {
+      series.attachPrimitive(smcPrimitive);
+      smcPrimitiveRef.current = smcPrimitive;
+      if (candlesRef.current && candlesRef.current.length > 0) {
+        const initialAnalysis = calculateSmcLuxAlgo(candlesRef.current, smcSettingsRef.current);
+        setSmcAnalysis(initialAnalysis);
+        smcPrimitive.setData(initialAnalysis, candlesRef.current);
+      }
+    } catch (err) {
+      console.error('[Financial Chart] Failed to attach SMC LuxAlgo primitive:', err);
+    }
 
     // Add invisible auxiliary Whitespace Series to extend the horizontal time axis
     // into future time coordinates (without fake price candles or affecting price scale)
@@ -2334,6 +2405,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
       } catch {}
       resizeObserver.disconnect();
+      if (smcPrimitiveRef.current && series) {
+        try {
+          series.detachPrimitive(smcPrimitiveRef.current);
+        } catch {}
+        smcPrimitiveRef.current = null;
+      }
       manager.detach();
       chart.remove();
       chartApiRef.current = null;
@@ -2812,6 +2889,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             <span className="tracking-wide">Reset</span>
           </button>
         </div>
+
+        {/* LuxAlgo Smart Money Concepts (SMC) Indicator Overlay */}
+        {(activeStrategy === 'smc' || smcSettings.enabled) && (
+          <SmcLuxAlgoOverlay
+            settings={smcSettings}
+            onUpdateSettings={handleUpdateSmcSettings}
+            analysis={smcAnalysis}
+            className={enableDrawingTools ? 'left-14 top-11' : 'left-3 top-11'}
+          />
+        )}
 
         {/* Loading Spinner - only shown on first cold load when no candles exist yet */}
         {isLoadingCandles && candlesRef.current.length === 0 && (

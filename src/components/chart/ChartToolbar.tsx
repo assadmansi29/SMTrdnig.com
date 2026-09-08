@@ -587,11 +587,14 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.25)] ring-1 ring-sky-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-sky-500/40 text-slate-300 hover:text-sky-300'
             }`}
-            title="SMC Strategy: Open clean chart view with saved SMC Strategy analysis"
+            title="SMC Strategy: Smart Money Concepts (LuxAlgo) with BOS, CHoCH, Order Blocks, and FVGs"
           >
             <Layers className={`w-3.5 h-3.5 ${activeStrategy === 'smc' ? 'text-sky-300' : 'text-sky-400'}`} />
             <span className="hidden sm:inline">SMC Strategy</span>
             <span className="sm:hidden">SMC</span>
+            <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/30 text-sky-200 border border-sky-400/40 font-mono hidden md:inline">
+              LuxAlgo
+            </span>
             {activeStrategy === 'smc' && (
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
             )}
