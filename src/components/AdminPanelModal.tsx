@@ -138,6 +138,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [newPass, setNewPass] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('client');
   const [newSubStatus, setNewSubStatus] = useState<SubscriptionStatus>('active');
+  const [newPlanName, setNewPlanName] = useState('Site Subscription — Monthly (€80)');
   const [newInitialBalance, setNewInitialBalance] = useState('0');
   const [newRate, setNewRate] = useState('10');
   const [createStatus, setCreateStatus] = useState<string | null>(null);
@@ -148,6 +149,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [newOpType, setNewOpType] = useState<OperationalItem['type']>('market_brief');
   const [newOpPriority, setNewOpPriority] = useState<OperationalItem['priority']>('medium');
   const [newOpNotes, setNewOpNotes] = useState('');
+
+  // Payment Verification state
+  const [verificationResult, setVerificationResult] = useState<{
+    ticketId: string;
+    credentials: any;
+    message: string;
+  } | null>(null);
+  const [processingVerificationId, setProcessingVerificationId] = useState<string | null>(null);
 
   // Selected Student for Coaching Note Edit
   const [selectedStudentForNote, setSelectedStudentForNote] = useState<CoachingStudent | null>(null);
@@ -508,6 +517,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           fullName: newFullName.trim() || newUsername.trim(),
           role: isSuperAdmin ? newRole : 'client',
           subscriptionStatus: newSubStatus,
+          planName: newPlanName,
           commissionRate: isSuperAdmin ? Number(newRate) : 10,
           balance: isSuperAdmin ? Number(newInitialBalance) : 0,
         }),
@@ -603,6 +613,64 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       }
     } catch (err) {
       console.error('Failed to update operation item:', err);
+    }
+  };
+
+  // Payment Verification: Approve and automatically activate subscription
+  const handleApprovePaymentVerification = async (ticketId: string) => {
+    setProcessingVerificationId(ticketId);
+    try {
+      const res = await fetch(`/api/admin/payment-verifications/${ticketId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setVerificationResult({
+          ticketId,
+          credentials: data.credentials,
+          message: data.message,
+        });
+        fetchAdminData();
+      } else {
+        alert(data.error || 'Failed to approve payment verification');
+      }
+    } catch (err: any) {
+      console.error('Error approving payment verification:', err);
+      alert(err.message || 'Error approving payment');
+    } finally {
+      setProcessingVerificationId(null);
+    }
+  };
+
+  // Payment Verification: Reject payment verification
+  const handleRejectPaymentVerification = async (ticketId: string) => {
+    const reason = window.prompt('Enter rejection reason (optional):', 'Transaction unverified or cancelled.');
+    if (reason === null) return;
+    setProcessingVerificationId(ticketId);
+    try {
+      const res = await fetch(`/api/admin/payment-verifications/${ticketId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        fetchAdminData();
+      } else {
+        alert(data.error || 'Failed to reject payment verification');
+      }
+    } catch (err: any) {
+      console.error('Error rejecting payment verification:', err);
+      alert(err.message || 'Error rejecting payment');
+    } finally {
+      setProcessingVerificationId(null);
     }
   };
 
@@ -1503,95 +1571,245 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
           {/* TAB 5: OPERATIONS QUEUE */}
           {activeTab === 'operations' && (isSuperAdmin || isAdmin || isEmployee) && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <ListTodo className="w-4 h-4 text-blue-400" />
-                    <span>Institutional Trading Operations & Live Stream Queue</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Real-time operational tasks: Market briefs, stream preparations, content reviews, and support tickets.
-                  </p>
+            <div className="space-y-6">
+              {/* SECTION 1: USDT PAYMENT VERIFICATIONS & SUBSCRIPTION ACTIVATION */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>USDT (TRC20) Subscription Payment Verifications</span>
+                      {operationsQueue.filter(i => i.type === 'payment_verification' && i.status === 'pending').length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                          {operationsQueue.filter(i => i.type === 'payment_verification' && i.status === 'pending').length} Pending
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Incoming subscription orders via USDT TRC20. Verify blockchain TxID and click Approve to instantly provision the account with the correct duration and access permissions.
+                    </p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setShowNewOpModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/20"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Operational Task</span>
-                </button>
+
+                <div className="space-y-3">
+                  {operationsQueue.filter(i => i.type === 'payment_verification').length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 bg-[#070A11] border border-slate-800 rounded-xl text-xs">
+                      No payment verification requests in queue.
+                    </div>
+                  ) : (
+                    operationsQueue.filter(i => i.type === 'payment_verification').map((item) => {
+                      let meta: any = {};
+                      try {
+                        meta = JSON.parse(item.notes || '{}');
+                      } catch {
+                        meta = { rawNotes: item.notes };
+                      }
+
+                      const isPending = item.status === 'pending';
+                      const isResolved = item.status === 'resolved';
+                      const isRejected = item.status === 'rejected';
+
+                      return (
+                        <div 
+                          key={item.id} 
+                          className={`p-4 rounded-xl border transition-all ${
+                            isPending 
+                              ? 'bg-[#0E1528] border-amber-500/50 shadow-lg shadow-amber-500/5' 
+                              : isResolved 
+                              ? 'bg-[#0A101D] border-emerald-500/30' 
+                              : 'bg-[#0A0D16] border-slate-800 opacity-75'
+                          }`}
+                        >
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            {/* Left: Info */}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-white text-sm">
+                                  {meta.planName || item.title}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                  isPending
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                    : isResolved
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                }`}>
+                                  {isPending ? 'Pending Payment Verification' : isResolved ? 'Approved / Active' : 'Rejected'}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  Ticket #{item.id.substring(0, 8)}
+                                </span>
+                              </div>
+
+                              {/* Subscriber details grid */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300 bg-black/40 p-2.5 rounded-lg border border-slate-800">
+                                <div>
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">Subscriber Telegram:</span>
+                                  <span className="font-bold text-amber-400 font-mono">
+                                    {meta.telegramUsername ? (meta.telegramUsername.startsWith('@') ? meta.telegramUsername : `@${meta.telegramUsername}`) : 'N/A'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">Subscriber Email:</span>
+                                  <span className="font-medium text-white">{meta.subscriberEmail || 'N/A'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">USDT (TRC20) TxID:</span>
+                                  <span className="font-mono text-slate-300 text-[11px] truncate block" title={meta.txHash}>
+                                    {meta.txHash ? `${meta.txHash.substring(0, 16)}...` : 'Pending Telegram submission'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {meta.credentials && (
+                                <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
+                                  <div className="space-y-0.5">
+                                    <span className="font-bold text-emerald-300 block">
+                                      Activated Account: @{meta.credentials.username}
+                                    </span>
+                                    <span className="text-[11px] text-slate-300">
+                                      Plan: {meta.credentials.subscriptionPlan} • Expires: {new Date(meta.credentials.subscriptionExpiresAt).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const text = `Hello! Your SM Trading Pro subscription has been approved and activated:\nWebsite: ${window.location.origin}\nUsername: ${meta.credentials.username}\nPassword: ${meta.credentials.temporaryPassword || '(Existing Password)'}\nPackage: ${meta.credentials.subscriptionPlan}\nExpires: ${new Date(meta.credentials.subscriptionExpiresAt).toLocaleDateString()}`;
+                                      navigator.clipboard.writeText(text);
+                                      alert('Client credentials message copied to clipboard!');
+                                    }}
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold cursor-pointer transition-colors shrink-0"
+                                  >
+                                    Copy Login Details
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right: Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isPending && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={processingVerificationId === item.id}
+                                    onClick={() => handleApprovePaymentVerification(item.id)}
+                                    className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>{processingVerificationId === item.id ? 'Activating...' : 'Approve & Activate'}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={processingVerificationId === item.id}
+                                    onClick={() => handleRejectPaymentVerification(item.id)}
+                                    className="px-3 py-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 font-bold rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
-              <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#070A11]">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      <tr>
-                        <th className="px-4 py-3">Task & Scope</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Priority</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {operationsQueue.length === 0 ? (
+              {/* SECTION 2: GENERAL OPERATIONAL TASKS */}
+              <div className="space-y-3 pt-4 border-t border-slate-800">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <ListTodo className="w-4 h-4 text-blue-400" />
+                      <span>General Operational & Stream Tasks</span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Market briefs, live stream preparations, and routine maintenance tasks.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowNewOpModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Operational Task</span>
+                  </button>
+                </div>
+
+                <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#070A11]">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                            No operational tasks in queue.
-                          </td>
+                          <th className="px-4 py-3">Task & Scope</th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3">Priority</th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3 text-right">Action</th>
                         </tr>
-                      ) : (
-                        operationsQueue.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-900/50">
-                            <td className="px-4 py-3">
-                              <span className="font-bold text-white block">{item.title}</span>
-                              {item.notes && <span className="text-[11px] text-slate-400">{item.notes}</span>}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px] uppercase font-semibold">
-                                {item.type.replace('_', ' ')}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                item.priority === 'high'
-                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                  : item.priority === 'medium'
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}>
-                                {item.priority}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                item.status === 'resolved'
-                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                  : item.status === 'in_progress'
-                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                  : 'bg-slate-800 text-slate-300'
-                              }`}>
-                                {item.status.replace('_', ' ')}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <select
-                                value={item.status}
-                                onChange={(e) => handleUpdateOpStatus(item.id, e.target.value as any)}
-                                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="resolved">Resolved</option>
-                              </select>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {operationsQueue.filter(i => i.type !== 'payment_verification').length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                              No general tasks in queue.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          operationsQueue.filter(i => i.type !== 'payment_verification').map((item) => (
+                            <tr key={item.id} className="hover:bg-slate-900/50">
+                              <td className="px-4 py-3">
+                                <span className="font-bold text-white block">{item.title}</span>
+                                {item.notes && <span className="text-[11px] text-slate-400">{item.notes}</span>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px] uppercase font-semibold">
+                                  {item.type.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  item.priority === 'high'
+                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                    : item.priority === 'medium'
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                    : 'bg-slate-800 text-slate-400'
+                                }`}>
+                                  {item.priority}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                  item.status === 'resolved'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                    : item.status === 'in_progress'
+                                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                                    : 'bg-slate-800 text-slate-300'
+                                }`}>
+                                  {item.status.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <select
+                                  value={item.status}
+                                  onChange={(e) => handleUpdateOpStatus(item.id, e.target.value as any)}
+                                  className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="in_progress">In Progress</option>
+                                  <option value="resolved">Resolved</option>
+                                </select>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1761,6 +1979,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       <option value="active">Active</option>
                       <option value="expired">Expired</option>
                       <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-amber-300 mb-1">Subscription Package / Tier</label>
+                    <select
+                      value={newPlanName}
+                      onChange={(e) => setNewPlanName(e.target.value)}
+                      className="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-2 text-xs text-white font-medium focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="Site Subscription — Monthly (€80)">Monthly — €80 (Site Subscription)</option>
+                      <option value="Site Subscription — 6 Months (€410)">6 Months — €410 (Site Subscription)</option>
+                      <option value="Site Subscription — 1 Year ($650)">1 Year — $650 (Site Subscription)</option>
+                      <option value="$999 All-Inclusive (1 Year + SMC Course + 144 Strategy Course)">$999 All-Inclusive (1 Year + SMC Course + 144 Strategy Course)</option>
                     </select>
                   </div>
 
@@ -2237,6 +2469,77 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   Save Coaching Feedback
                 </button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* SUBMODAL: Payment Verification Result & Client Dispatch */}
+        {verificationResult && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+            <div className="w-full max-w-md bg-[#0C1222] border border-emerald-500/50 rounded-2xl p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span>Subscription Activated Successfully!</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVerificationResult(null)}
+                  className="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-300">
+                {verificationResult.message}
+              </p>
+
+              <div className="p-3.5 bg-black/60 border border-slate-800 rounded-xl space-y-2 text-xs font-mono">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Username:</span>
+                  <span className="text-amber-400 font-bold">{verificationResult.credentials?.username}</span>
+                </div>
+                {verificationResult.credentials?.temporaryPassword && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Password:</span>
+                    <span className="text-emerald-300 font-bold">{verificationResult.credentials.temporaryPassword}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Plan:</span>
+                  <span className="text-white">{verificationResult.credentials?.subscriptionPlan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Expires:</span>
+                  <span className="text-slate-300">
+                    {new Date(verificationResult.credentials?.subscriptionExpiresAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const creds = verificationResult.credentials;
+                    const message = `Hello! Your SM Trading Pro subscription has been verified and activated on the platform:\n\n🌐 Platform: ${window.location.origin}\n👤 Username: ${creds.username}\n🔑 Password: ${creds.temporaryPassword || '(Your existing password)'}\n📦 Package: ${creds.subscriptionPlan}\n⏳ Expiration Date: ${new Date(creds.subscriptionExpiresAt).toLocaleDateString()}\n\nWelcome to SM Trading Pro! Please login with your credentials above.`;
+                    navigator.clipboard.writeText(message);
+                    alert('Client onboarding message copied to clipboard! Paste directly into Telegram support chat.');
+                  }}
+                  className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-emerald-500/20"
+                >
+                  Copy Telegram Client Message
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVerificationResult(null)}
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -67,7 +67,9 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
 
   const handleSelect = (action: () => void) => {
     setIsOpen(false);
-    action();
+    setTimeout(() => {
+      action();
+    }, 60);
   };
 
   const mobileModalContent = isOpen && typeof document !== 'undefined' ? (

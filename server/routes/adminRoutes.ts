@@ -757,4 +757,230 @@ router.patch(['/operations/queue/:id', '/operations-queue/:id'], requirePermissi
   res.json({ success: true, item: updated });
 });
 
+// ====================================================
+// 8. PAYMENT VERIFICATION & DIRECT SUBSCRIPTION ACTIVATION
+// (Super Admin & Admin only)
+// ====================================================
+router.post('/payment-verifications/:id/approve', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { 
+      username, 
+      email, 
+      password, 
+      planId = 'all-inclusive', 
+      notes = '' 
+    } = req.body;
+
+    const opItem = (await Database.getOperationalItems()).find(i => i.id === id);
+    if (!opItem) {
+      res.status(404).json({ error: 'Payment verification ticket not found.' });
+      return;
+    }
+
+    // Try parsing structured metadata from notes
+    let parsedNotes: any = {};
+    try {
+      if (opItem.notes && opItem.notes.startsWith('{')) {
+        parsedNotes = JSON.parse(opItem.notes);
+      }
+    } catch {
+      parsedNotes = {};
+    }
+
+    const effectivePlanId = planId || parsedNotes.planId || 'all-inclusive';
+    const effectiveEmail = (email || parsedNotes.subscriberEmail || '').trim().toLowerCase();
+    const effectiveTelegram = (parsedNotes.telegramUsername || '').trim();
+    
+    // Determine exact subscription plan name and duration
+    let assignedPlanName = 'All-Inclusive Package ($999/Year)';
+    let durationDays = 365;
+    let includedCourses: string[] = ['SMC Trading Course', '144 Strategy Course'];
+
+    if (effectivePlanId === 'monthly' || effectivePlanId.toLowerCase().includes('monthly')) {
+      assignedPlanName = 'Site Subscription — Monthly (€80)';
+      durationDays = 30; // 1 month
+      includedCourses = [];
+    } else if (effectivePlanId === '6months' || effectivePlanId.toLowerCase().includes('6 month')) {
+      assignedPlanName = 'Site Subscription — 6 Months (€410)';
+      durationDays = 180; // 6 months
+      includedCourses = [];
+    } else if (effectivePlanId === '1year' || effectivePlanId.toLowerCase().includes('1 year') || effectivePlanId.toLowerCase().includes('650')) {
+      assignedPlanName = 'Site Subscription — 1 Year ($650)';
+      durationDays = 365; // 12 months
+      includedCourses = [];
+    } else {
+      assignedPlanName = 'All-Inclusive Package ($999/Year)';
+      durationDays = 365; // 12 months + SMC Course + 144 Strategy Course
+      includedCourses = ['SMC Trading Course', '144 Strategy Course'];
+    }
+
+    const startDate = new Date();
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + durationDays);
+
+    // Target username
+    const rawUsername = username || effectiveTelegram || effectiveEmail.split('@')[0] || `trader${Math.floor(1000 + Math.random() * 9000)}`;
+    const cleanUsername = rawUsername.replace(/[^a-zA-Z0-9_]/g, '').trim() || `trader${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Target password
+    const clearPassword = password || `SM_Pass${Math.floor(1000 + Math.random() * 9000)}!`;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(clearPassword, salt);
+
+    // Check if user already exists by email or username
+    let targetUser: UserRecord | null = null;
+    if (effectiveEmail && effectiveEmail.includes('@')) {
+      targetUser = await Database.findUserByEmail(effectiveEmail);
+    }
+    if (!targetUser) {
+      targetUser = await Database.findUserByUsername(cleanUsername);
+    }
+
+    let resultingUser: UserRecord;
+
+    if (targetUser) {
+      // Activate existing account
+      const updatedUser = await Database.updateUser(targetUser.id, {
+        subscriptionStatus: 'active',
+        subscriptionPlan: assignedPlanName,
+        subscriptionExpiresAt: expirationDate.toISOString(),
+        notes: `USDT TRC20 verified & approved by @${req.user!.username} on ${new Date().toISOString()}. ${notes}`.trim()
+      });
+      resultingUser = updatedUser!;
+    } else {
+      // Create new client account
+      const userRefCode = `SM${cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6)}${Math.floor(100 + Math.random() * 900)}`;
+      const newUser = await Database.createUser({
+        username: cleanUsername,
+        email: effectiveEmail || `${cleanUsername}@smtrading.pro`,
+        passwordHash,
+        fullName: cleanUsername,
+        role: 'client',
+        subscriptionStatus: 'active',
+        subscriptionPlan: assignedPlanName,
+        subscriptionExpiresAt: expirationDate.toISOString(),
+        referralCode: userRefCode,
+        commissionRate: 10,
+        balance: 0.0,
+        pendingBalance: 0.0,
+        totalEarned: 0.0,
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`,
+        notes: `Created via USDT TRC20 payment approval by @${req.user!.username}. Plan: ${assignedPlanName}. ${notes}`.trim(),
+      });
+      resultingUser = newUser;
+    }
+
+    // Update operational item status to 'resolved' (Approved)
+    await Database.updateOperationalItem(id, {
+      status: 'resolved',
+      assignedTo: req.user!.username,
+      notes: JSON.stringify({
+        ...parsedNotes,
+        approvalStatus: 'Approved / Active',
+        approvedBy: req.user!.username,
+        approvedAt: new Date().toISOString(),
+        activatedUsername: resultingUser.username,
+        activatedEmail: resultingUser.email,
+        assignedPlan: assignedPlanName,
+        durationDays,
+        includedCourses,
+        startDate: startDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        dispatchPassword: clearPassword
+      })
+    });
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'PAYMENT_VERIFICATION_APPROVED',
+      targetId: resultingUser.id,
+      targetUsername: resultingUser.username,
+      details: `Approved USDT TRC20 payment #${id}. Activated '${assignedPlanName}' for @${resultingUser.username} (Expires: ${expirationDate.toISOString().split('T')[0]})`,
+      metadata: {
+        ticketId: id,
+        plan: assignedPlanName,
+        durationDays,
+        expiresAt: expirationDate.toISOString(),
+        username: resultingUser.username,
+        email: resultingUser.email
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Payment approved! Subscription '${assignedPlanName}' activated for @${resultingUser.username}.`,
+      credentials: {
+        username: resultingUser.username,
+        password: clearPassword,
+        email: resultingUser.email,
+        planName: assignedPlanName,
+        startDate: startDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        includedCourses,
+        subscriptionStatus: 'active'
+      },
+      user: sanitizeUser(resultingUser, req.user!.role)
+    });
+  } catch (err: any) {
+    console.error('Payment approval error:', err);
+    res.status(500).json({ error: err.message || 'Failed to approve payment verification.' });
+  }
+});
+
+router.post('/payment-verifications/:id/reject', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Transaction hash invalid or unconfirmed on TRC20 network.' } = req.body;
+
+    const opItem = (await Database.getOperationalItems()).find(i => i.id === id);
+    if (!opItem) {
+      res.status(404).json({ error: 'Payment verification ticket not found.' });
+      return;
+    }
+
+    let parsedNotes: any = {};
+    try {
+      if (opItem.notes && opItem.notes.startsWith('{')) {
+        parsedNotes = JSON.parse(opItem.notes);
+      }
+    } catch {
+      parsedNotes = {};
+    }
+
+    await Database.updateOperationalItem(id, {
+      status: 'rejected' as any,
+      assignedTo: req.user!.username,
+      notes: JSON.stringify({
+        ...parsedNotes,
+        approvalStatus: 'Rejected',
+        rejectedBy: req.user!.username,
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: reason
+      })
+    });
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'PAYMENT_VERIFICATION_REJECTED',
+      details: `Rejected payment verification ticket #${id}. Reason: ${reason}`,
+      metadata: { ticketId: id, reason }
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment verification rejected. No subscription was activated.'
+    });
+  } catch (err: any) {
+    console.error('Payment rejection error:', err);
+    res.status(500).json({ error: err.message || 'Failed to reject payment verification.' });
+  }
+});
+
 export default router;

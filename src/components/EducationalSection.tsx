@@ -15,10 +15,15 @@ import {
   AlertTriangle,
   Lightbulb,
   Share2,
-  Check
+  Check,
+  Lock,
+  ExternalLink,
+  Send,
+  Crown
 } from 'lucide-react';
 import { useTranslation } from '../locales';
 import { copyToClipboard } from '../utils/clipboard';
+import { useAuth } from '../context/AuthContext';
 
 // High-resolution local course & strategy imagery
 import smcImg from '../assets/images/smc_course_cover_1788811985326.jpg';
@@ -430,10 +435,24 @@ export const EDUCATIONAL_CARDS: EducationalCardData[] = [
 
 export const EducationalSection: React.FC = () => {
   const { isRTL, language } = useTranslation();
+  const { user } = useAuth();
   const [selectedTopic, setSelectedTopic] = useState<EducationalCardData | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const isArabic = isRTL || language === 'ar';
+  const isClient = user?.role === 'client';
+  
+  // Courses are included exclusively with the All-Inclusive package ($999/Year), or for coaches/staff
+  const hasCourseAccess = 
+    !isClient ||
+    Boolean(
+      user?.subscriptionPlan && (
+        user.subscriptionPlan.toLowerCase().includes('all-inclusive') ||
+        user.subscriptionPlan.includes('999') ||
+        user.subscriptionPlan.toLowerCase().includes('course')
+      )
+    );
 
   const handleShare = (topic: EducationalCardData) => {
     const url = window.location.href.split('#')[0] + `#edu-${topic.id}`;
@@ -442,12 +461,56 @@ export const EducationalSection: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const handleCardClick = (card: EducationalCardData) => {
+    if (!hasCourseAccess) {
+      setShowUpgradeModal(true);
+    } else {
+      setSelectedTopic(card);
+    }
+  };
+
   return (
     <section 
       aria-label="Educational Academy" 
       className="space-y-5 my-6"
       id="trading-academy-section"
     >
+      {/* Educational Exclusion Disclaimer Banner for Standard Site Subscriptions */}
+      {isClient && !hasCourseAccess && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-[#13121F] to-amber-950/20 border border-amber-500/40 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black text-amber-300 uppercase tracking-wider">
+                  Site Subscription Notice
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {user?.subscriptionPlan || 'Standard Site Subscription'}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-white leading-relaxed">
+                “Courses and educational programs are NOT included in this subscription.”
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Your subscription provides full platform charts, live analysts, trading recommendations, and ready-made strategy setups. To access the <strong>SMC Trading Course</strong> and <strong>144 Strategy Course</strong>, upgrade to the <strong>$999/Year All-Inclusive Package</strong>.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowUpgradeModal(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer shadow-md shadow-amber-500/20"
+          >
+            <Crown className="w-4 h-4" />
+            <span>Upgrade to All-Inclusive ($999)</span>
+          </button>
+        </div>
+      )}
+
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3.5 px-1">
         <div className="flex items-center gap-3">
@@ -491,7 +554,7 @@ export const EducationalSection: React.FC = () => {
           return (
             <div
               key={card.id}
-              onClick={() => setSelectedTopic(card)}
+              onClick={() => handleCardClick(card)}
               className="group relative bg-[#0D1322] hover:bg-[#111827] border border-slate-800/90 hover:border-amber-400/50 rounded-2xl p-4 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-amber-500/5 cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="space-y-3">
@@ -504,6 +567,21 @@ export const EducationalSection: React.FC = () => {
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0D1322] via-black/30 to-transparent"></div>
+
+                  {/* Non-inclusive Package Locked Notice */}
+                  {!hasCourseAccess && isClient && (
+                    <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] flex flex-col items-center justify-center p-3 text-center z-10">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 mb-1.5 shadow-lg">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px] font-extrabold text-amber-300 leading-tight">
+                        {isArabic ? 'باقة 999$ الشاملة مطلوبة' : '$999 All-Inclusive Required'}
+                      </span>
+                      <span className="text-[10px] text-slate-300 mt-1 leading-tight">
+                        {isArabic ? 'غير مشمول في الاشتراك العادي' : 'Not in Site Subscription'}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Corner Index Badge */}
                   <span className="absolute top-2.5 left-2.5 rtl:left-auto rtl:right-2.5 bg-slate-950/90 text-amber-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border border-amber-400/30 backdrop-blur-sm shadow-sm">
@@ -556,7 +634,7 @@ export const EducationalSection: React.FC = () => {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedTopic(card);
+                    handleCardClick(card);
                   }}
                   className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-all cursor-pointer"
                   aria-label={`${isArabic ? 'تعلم المزيد عن' : 'Learn more about'} ${title}`}
@@ -765,6 +843,97 @@ export const EducationalSection: React.FC = () => {
                 className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
               >
                 {isArabic ? 'إغلاق المنهج' : 'Close Curriculum'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Modal for Non-Inclusive Subscriptions */}
+      {showUpgradeModal && (
+        <div 
+          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowUpgradeModal(false)}
+        >
+          <div 
+            className="relative w-full max-w-lg bg-[#0C1220] border border-amber-500/40 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                  <Crown className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+                    {isArabic ? 'باقة 999$ الشاملة' : 'All-Inclusive Package Required'}
+                  </span>
+                  <h3 className="text-lg sm:text-xl font-black text-white">
+                    {isArabic ? 'المسارات الأكاديمية التعليمية' : 'Academy Educational Masterclasses'}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Mandatory Package Disclaimer */}
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-1.5">
+              <p className="text-xs font-black text-amber-300">
+                “Courses and educational programs are NOT included in this subscription.”
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Your current subscription includes full platform access, live analyst desk, trading recommendations, and ready-made strategy setups.
+              </p>
+            </div>
+
+            {/* Included in $999 All-Inclusive */}
+            <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-2.5">
+              <span className="text-xs font-bold text-white block">
+                Upgrade to $999 All-Inclusive to unlock:
+              </span>
+              <ul className="space-y-2 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span><strong>SMC Trading Course</strong> (Full Institutional Curriculum)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span><strong>144 Strategy Course</strong> (Proprietary Execution System)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>12 Months Full Platform & Analyst Desk Access</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2.5 pt-1">
+              <a
+                href={`https://t.me/SMTrading_SUPPORT?text=${encodeURIComponent('Hello @SMTrading_SUPPORT, I would like to upgrade my account to the $999/Year All-Inclusive Package to access the SMC Trading Course and 144 Strategy Course.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 bg-[#24A1DE] hover:bg-[#2094cc] text-white font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#24A1DE]/25 transition-all cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>Contact Support to Upgrade on Telegram</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Close Notice
               </button>
             </div>
           </div>

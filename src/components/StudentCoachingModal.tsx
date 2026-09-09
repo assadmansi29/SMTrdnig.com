@@ -305,7 +305,6 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
     e.preventDefault();
     if (!token) {
       if (onOpenAuth) {
-        onClose();
         onOpenAuth();
       }
       return;
@@ -350,7 +349,11 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
     <div
       id="modal-coaching-desk"
       className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div
         className="w-full max-w-4xl bg-[#090D17] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black overflow-hidden text-slate-100 flex flex-col max-h-[92vh] relative animate-in slide-in-from-bottom-8 duration-200"

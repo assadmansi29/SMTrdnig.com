@@ -169,9 +169,9 @@ export interface CoachingStudent {
 export interface OperationalItem {
   id: string;
   title: string;
-  type: 'market_brief' | 'content_review' | 'live_stream_prep' | 'support_ticket';
+  type: 'market_brief' | 'content_review' | 'live_stream_prep' | 'support_ticket' | 'payment_verification';
   priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'in_progress' | 'resolved';
+  status: 'pending' | 'in_progress' | 'resolved' | 'rejected';
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
