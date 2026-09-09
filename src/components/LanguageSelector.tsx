@@ -124,16 +124,16 @@ export const LanguageSelector: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="Select language"
-        className="w-full flex items-center justify-between gap-1 sm:gap-1.5 px-2 py-1 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[30px]"
+        className="w-full h-full min-h-[36px] flex items-center justify-between gap-1 sm:gap-1.5 px-2 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap"
       >
         <span className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-          <span className="text-sm leading-none shrink-0">{currentLanguage.flag}</span>
-          <span className="font-mono uppercase font-bold tracking-wider text-[11px] truncate">
+          <span className="text-xs sm:text-sm leading-none shrink-0">{currentLanguage.flag}</span>
+          <span className="font-mono uppercase font-bold tracking-wider text-[10px] sm:text-[11px] truncate">
             {currentLanguage.code}
           </span>
         </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+          className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
             isOpen ? 'rotate-180 text-amber-400' : ''
           }`}
         />
