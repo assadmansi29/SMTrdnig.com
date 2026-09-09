@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { tv } from 'tradingview-api-adapter';
-import { marketStreamManager, resolveRealtimeTvSymbol } from '../services/marketStreamService';
+import { marketStreamManager, resolveRealtimeTvSymbol, getIntervalDurationSeconds } from '../services/marketStreamService';
 
 const router = Router();
 
@@ -28,23 +28,38 @@ const SYMBOL_CONFIG: Record<
   'XAU/USD': { tvSymbol: 'OANDA:XAUUSD', yahooSymbol: 'GC=F' },
 
   // Nasdaq 100
-  'OANDA:NAS100USD': { tvSymbol: 'OANDA:NAS100USD', yahooSymbol: 'NQ=F' },
   'BLACKBULL:NAS100': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
-  'NAS100USD': { tvSymbol: 'OANDA:NAS100USD', yahooSymbol: 'NQ=F' },
-  'NAS100': { tvSymbol: 'OANDA:NAS100USD', yahooSymbol: 'NQ=F' },
-  'NQ': { tvSymbol: 'OANDA:NAS100USD', yahooSymbol: 'NQ=F' },
+  'OANDA:NAS100USD': { tvSymbol: 'OANDA:NAS100USD', yahooSymbol: 'NQ=F' },
+  'NAS100USD': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NAS100': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NQ': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NQ (NASDAQ)': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NASDAQ': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NASDAQ 100': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
+  'NASDAQ100': { tvSymbol: 'BLACKBULL:NAS100', yahooSymbol: 'NQ=F' },
 
   // Dow Jones 30
-  'OANDA:US30USD': { tvSymbol: 'OANDA:US30USD', yahooSymbol: 'YM=F' },
   'BLACKBULL:US30': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
-  'US30USD': { tvSymbol: 'OANDA:US30USD', yahooSymbol: 'YM=F' },
-  'US30': { tvSymbol: 'OANDA:US30USD', yahooSymbol: 'YM=F' },
+  'OANDA:US30USD': { tvSymbol: 'OANDA:US30USD', yahooSymbol: 'YM=F' },
+  'US30USD': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'US30': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'US3O': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'BLACKBULL:US3O': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'US3OUSD': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'US30 (DOW)': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'DOW': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
+  'DOW JONES': { tvSymbol: 'BLACKBULL:US30', yahooSymbol: 'YM=F' },
 
   // DAX 40 (German 40)
-  'OANDA:DE30EUR': { tvSymbol: 'OANDA:DE30EUR', yahooSymbol: '^GDAXI' },
   'BLACKBULL:GER40': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
-  'DE30EUR': { tvSymbol: 'OANDA:DE30EUR', yahooSymbol: '^GDAXI' },
-  'GER40': { tvSymbol: 'OANDA:DE30EUR', yahooSymbol: '^GDAXI' },
+  'OANDA:DE30EUR': { tvSymbol: 'OANDA:DE30EUR', yahooSymbol: '^GDAXI' },
+  'DE30EUR': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'GER40': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'DAX': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'DAX40': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'BLACKBULL:DAX': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'GER40 (DAX)': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
+  'DE40': { tvSymbol: 'BLACKBULL:GER40', yahooSymbol: '^GDAXI' },
 
   // Forex EUR/USD
   'OANDA:EURUSD': { tvSymbol: 'OANDA:EURUSD', yahooSymbol: 'EURUSD=X' },
@@ -143,6 +158,7 @@ const pendingFetches = new Map<string, Promise<Candle[]>>();
 
 // Singleton TradingView client instance
 let globalTvClient: ReturnType<typeof tv> | null = null;
+let consecutiveTvFailures = 0;
 
 function getTvClient() {
   if (!globalTvClient) {
@@ -157,10 +173,11 @@ async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string
     const raw = await Promise.race([
       sym.candles({ timeframe: tvTimeframe as any, count }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('TradingView fetch timeout')), 2800)
+        setTimeout(() => reject(new Error(`TradingView fetch timeout for ${tvSymbol}`)), 7000)
       ),
     ]);
     if (!raw || raw.length === 0) return [];
+    consecutiveTvFailures = 0;
     return raw
       .map((c) => ({
         time: c.time,
@@ -177,13 +194,17 @@ async function fetchCandlesFromTradingView(tvSymbol: string, tvTimeframe: string
     const client = getTvClient();
     return await attemptFetch(client);
   } catch (err: any) {
-    console.warn(`[Market Feed] Primary TV fetch failed for ${tvSymbol}:`, err.message);
-    try {
-      if (globalTvClient) {
-        globalTvClient.disconnect().catch(() => {});
-        globalTvClient = null;
-      }
-    } catch {}
+    consecutiveTvFailures++;
+    console.warn(`[Market Feed] Primary TV fetch failed for ${tvSymbol} (${consecutiveTvFailures} failures):`, err.message);
+    if (consecutiveTvFailures >= 3) {
+      try {
+        if (globalTvClient) {
+          globalTvClient.disconnect().catch(() => {});
+          globalTvClient = null;
+          consecutiveTvFailures = 0;
+        }
+      } catch {}
+    }
     throw err;
   }
 }
@@ -329,7 +350,30 @@ async function fetchMarketCandlesDirect(rawSymbol: string, rawInterval: string):
     console.warn(`[Market Feed] TradingView live fetch failed for ${tvSymbol}:`, tvErr.message);
   }
 
-  // Secondary: Binance real market fallback (if crypto)
+  // Secondary: Try alternative broker feed if primary index symbol timed out
+  if (!candles || candles.length === 0) {
+    const upper = (rawSymbol || '').toUpperCase();
+    let altTvSymbol: string | null = null;
+    if (upper.includes('NAS100') || upper.includes('NQ') || upper.includes('NASDAQ')) {
+      altTvSymbol = tvSymbol === 'BLACKBULL:NAS100' ? 'OANDA:NAS100USD' : 'BLACKBULL:NAS100';
+    } else if (upper.includes('US30') || upper.includes('US3O') || upper.includes('DOW')) {
+      altTvSymbol = tvSymbol === 'BLACKBULL:US30' ? 'OANDA:US30USD' : 'BLACKBULL:US30';
+    } else if (upper.includes('GER40') || upper.includes('DAX') || upper.includes('DE30')) {
+      altTvSymbol = tvSymbol === 'BLACKBULL:GER40' ? 'OANDA:DE30EUR' : 'BLACKBULL:GER40';
+    } else if (upper.includes('XAU') || upper.includes('GOLD')) {
+      altTvSymbol = tvSymbol === 'BLACKBULL:XAUUSD' ? 'OANDA:XAUUSD' : 'BLACKBULL:XAUUSD';
+    }
+
+    if (altTvSymbol) {
+      try {
+        candles = await fetchCandlesFromTradingView(altTvSymbol, tvTimeframe, 300);
+      } catch (altErr: any) {
+        console.warn(`[Market Feed] TradingView alt fetch failed for ${altTvSymbol}:`, altErr.message);
+      }
+    }
+  }
+
+  // Tertiary: Binance real market fallback (if crypto)
   if ((!candles || candles.length === 0) && (tvSymbol.includes('BTC') || rawSymbol.includes('BTC'))) {
     try {
       candles = await fetchFromBinance('BTCUSDT', rawInterval);
@@ -411,14 +455,31 @@ router.get(['/candles', '/candles/'], async (req: Request, res: Response): Promi
       if (!liveTick || typeof liveTick.price !== 'number' || liveTick.price <= 0) {
         return candleList;
       }
+      const durationSec = getIntervalDurationSeconds(rawInterval);
+      const tickTimeSec = liveTick.time || Math.floor(Date.now() / 1000);
+      const currentBarTime = Math.floor(tickTimeSec / durationSec) * durationSec;
       const last = candleList[candleList.length - 1];
-      const updatedLast: Candle = {
-        ...last,
-        close: liveTick.price,
-        high: Math.max(last.high, liveTick.price),
-        low: Math.min(last.low, liveTick.price),
-      };
-      return [...candleList.slice(0, -1), updatedLast];
+
+      if (currentBarTime > last.time) {
+        // A new candle has started since the last completed bar!
+        const newBar: Candle = {
+          time: currentBarTime,
+          open: liveTick.price,
+          high: liveTick.price,
+          low: liveTick.price,
+          close: liveTick.price,
+          volume: 1,
+        };
+        return [...candleList, newBar];
+      } else {
+        const updatedLast: Candle = {
+          ...last,
+          close: liveTick.price,
+          high: Math.max(last.high, liveTick.price),
+          low: Math.min(last.low, liveTick.price),
+        };
+        return [...candleList.slice(0, -1), updatedLast];
+      }
     };
 
     // 1. Fresh cache (unless forced): return immediately (<1ms)

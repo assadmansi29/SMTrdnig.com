@@ -47,52 +47,29 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
   const trimmed = (symbol || 'OANDA:XAUUSD').trim();
   const upper = trimmed.toUpperCase();
 
-  // Explicit mappings
-  if (upper === 'OANDA:XAUUSD' || upper === 'XAUUSD' || upper === 'GOLD' || upper === 'XAU/USD') {
-    return 'OANDA:XAUUSD';
-  }
-  if (upper === 'BLACKBULL:XAUUSD') {
-    return 'BLACKBULL:XAUUSD';
-  }
-  if (upper === 'FOREXCOM:XAUUSD') {
-    return 'FOREXCOM:XAUUSD';
-  }
-  if (upper === 'SAXO:XAUUSD') {
-    return 'SAXO:XAUUSD';
-  }
+  // 1. Explicit broker-prefixed symbols - preserve the user's exact requested broker!
+  if (upper === 'BLACKBULL:XAUUSD') return 'BLACKBULL:XAUUSD';
+  if (upper === 'OANDA:XAUUSD') return 'OANDA:XAUUSD';
+  if (upper === 'FOREXCOM:XAUUSD') return 'FOREXCOM:XAUUSD';
+  if (upper === 'SAXO:XAUUSD') return 'SAXO:XAUUSD';
 
-  // Indices
-  if (upper === 'OANDA:NAS100USD' || upper === 'NAS100' || upper === 'NAS100USD' || upper === 'NQ') {
-    return 'OANDA:NAS100USD';
-  }
-  if (upper === 'BLACKBULL:NAS100') {
-    return 'BLACKBULL:NAS100';
-  }
-  if (upper === 'OANDA:US30USD' || upper === 'US30' || upper === 'US30USD') {
-    return 'OANDA:US30USD';
-  }
-  if (upper === 'BLACKBULL:US30') {
-    return 'BLACKBULL:US30';
-  }
-  if (upper === 'OANDA:DE30EUR' || upper === 'GER40' || upper === 'DE30EUR') {
-    return 'OANDA:DE30EUR';
-  }
-  if (upper === 'BLACKBULL:GER40') {
-    return 'BLACKBULL:GER40';
-  }
+  if (upper === 'BLACKBULL:NAS100') return 'BLACKBULL:NAS100';
+  if (upper === 'OANDA:NAS100USD') return 'OANDA:NAS100USD';
 
-  // Forex
-  if (upper === 'FX:EURUSD' || upper === 'OANDA:EURUSD' || upper === 'EURUSD' || upper === 'EUR/USD') {
-    return 'OANDA:EURUSD';
-  }
-  if (upper === 'FX:GBPUSD' || upper === 'OANDA:GBPUSD' || upper === 'GBPUSD' || upper === 'GBP/USD') {
-    return 'OANDA:GBPUSD';
-  }
+  if (upper === 'BLACKBULL:US30' || upper === 'BLACKBULL:US3O') return 'BLACKBULL:US30';
+  if (upper === 'OANDA:US30USD') return 'OANDA:US30USD';
 
-  // Crypto
-  if (upper === 'BINANCE:BTCUSDT' || upper === 'BTCUSDT' || upper === 'BTCUSD' || upper === 'BTC/USD' || upper === 'BITCOIN') {
-    return 'BINANCE:BTCUSDT';
-  }
+  if (upper === 'BLACKBULL:GER40' || upper === 'BLACKBULL:DAX') return 'BLACKBULL:GER40';
+  if (upper === 'OANDA:DE30EUR') return 'OANDA:DE30EUR';
+
+  if (upper === 'BLACKBULL:EURUSD') return 'BLACKBULL:EURUSD';
+  if (upper === 'OANDA:EURUSD' || upper === 'FX:EURUSD') return 'OANDA:EURUSD';
+
+  if (upper === 'BLACKBULL:GBPUSD') return 'BLACKBULL:GBPUSD';
+  if (upper === 'OANDA:GBPUSD' || upper === 'FX:GBPUSD') return 'OANDA:GBPUSD';
+
+  if (upper === 'BINANCE:BTCUSDT') return 'BINANCE:BTCUSDT';
+  if (upper === 'BLACKBULL:BTCUSD') return 'BLACKBULL:BTCUSD';
 
   // Futures
   if (upper.includes('ES1!')) return 'CME_MINI:ES1!';
@@ -100,7 +77,55 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
 
   // Equities & DXY
   if (upper === 'NVDA' || upper === 'NASDAQ:NVDA') return 'NASDAQ:NVDA';
-  if (upper === 'DXY' || upper === 'TVC:DXY') return 'CAPITALCOM:DXY';
+  if (upper === 'DXY' || upper === 'TVC:DXY' || upper === 'CAPITALCOM:DXY') return 'CAPITALCOM:DXY';
+
+  // 2. Generic un-prefixed symbol fallbacks (route cleanly to primary real-time broker feed)
+  if (upper === 'XAUUSD' || upper === 'GOLD' || upper === 'XAU/USD') {
+    return 'BLACKBULL:XAUUSD';
+  }
+  if (
+    upper === 'NAS100' ||
+    upper === 'NAS100USD' ||
+    upper === 'NQ' ||
+    upper === 'NQ (NASDAQ)' ||
+    upper === 'NASDAQ' ||
+    upper === 'NASDAQ 100' ||
+    upper === 'NASDAQ100'
+  ) {
+    return 'BLACKBULL:NAS100';
+  }
+  if (
+    upper === 'US30' ||
+    upper === 'US30USD' ||
+    upper === 'US3O' ||
+    upper === 'US3OUSD' ||
+    upper === 'US30 (DOW)' ||
+    upper === 'DOW' ||
+    upper === 'DOW JONES' ||
+    upper === 'DJ30'
+  ) {
+    return 'BLACKBULL:US30';
+  }
+  if (
+    upper === 'GER40' ||
+    upper === 'DE30EUR' ||
+    upper === 'DAX' ||
+    upper === 'DAX40' ||
+    upper === 'GER40 (DAX)' ||
+    upper === 'DE40' ||
+    upper === 'GERMANY40'
+  ) {
+    return 'BLACKBULL:GER40';
+  }
+  if (upper === 'EURUSD' || upper === 'EUR/USD') {
+    return 'BLACKBULL:EURUSD';
+  }
+  if (upper === 'GBPUSD' || upper === 'GBP/USD') {
+    return 'BLACKBULL:GBPUSD';
+  }
+  if (upper === 'BTCUSD' || upper === 'BTCUSDT' || upper === 'BTC/USD' || upper === 'BITCOIN') {
+    return 'BINANCE:BTCUSDT';
+  }
 
   if (trimmed.includes(':')) {
     return trimmed;
@@ -367,7 +392,7 @@ class MarketStreamManager {
 
       // 2. Listen for quote updates (bid/ask/lp)
       stream.on('update', ({ data }: { data: any }) => {
-        const rawPrice = data.lp ?? data.bid ?? data.ask;
+        const rawPrice = data.lp ?? (data.bid && data.ask ? (data.bid + data.ask) / 2 : (data.bid ?? data.ask));
         const price = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice);
         if (!isNaN(price) && price > 0) {
           this.handleIncomingTick(sub, {
@@ -422,17 +447,40 @@ class MarketStreamManager {
     }
   }
 
+  private isMatchingSymbol(clientSym: string, subRawSym: string, subTvSym: string): boolean {
+    if (clientSym === subRawSym || clientSym === subTvSym) return true;
+    const norm = (s: string) => {
+      const raw = s.includes(':') ? s.split(':')[1] : s;
+      return raw.toUpperCase().replace(/USD|EUR|USDT|\.P|1!/g, '').replace(/US3O/g, 'US30');
+    };
+    const c = norm(clientSym);
+    const r = norm(subRawSym);
+    const t = norm(subTvSym);
+    if (c === r || c === t) return true;
+    if ((c === 'DE30' || c === 'GER40' || c === 'DAX') && (t === 'GER40' || t === 'DE30' || r === 'GER40' || r === 'DE30')) return true;
+    if ((c === 'US30' || c === 'DOW' || c === 'DJ30') && (t === 'US30' || r === 'US30')) return true;
+    if ((c === 'NAS100' || c === 'NQ' || c === 'NASDAQ') && (t === 'NAS100' || r === 'NAS100')) return true;
+    return false;
+  }
+
   private handleIncomingTick(sub: SymbolSubscription, tick: PriceTick) {
     sub.lastTick = tick;
 
-    // Broadcast tick immediately to all clients watching this symbol
-    const tickMsg = JSON.stringify({ type: 'tick', ...tick });
-
     // 1. Dispatch to SSE clients
     for (const client of this.sseClients) {
-      if (client.tvSymbol === sub.tvSymbol || client.rawSymbol === sub.rawSymbol) {
+      if (
+        client.tvSymbol === sub.tvSymbol ||
+        client.rawSymbol === sub.rawSymbol ||
+        this.isMatchingSymbol(client.rawSymbol, sub.rawSymbol, sub.tvSymbol)
+      ) {
         try {
-          client.res.write(`data: ${tickMsg}\n\n`);
+          const clientTickMsg = JSON.stringify({
+            type: 'tick',
+            ...tick,
+            symbol: client.rawSymbol,
+            tvSymbol: sub.tvSymbol,
+          });
+          client.res.write(`data: ${clientTickMsg}\n\n`);
         } catch {
           this.sseClients.delete(client);
         }
@@ -441,10 +489,20 @@ class MarketStreamManager {
 
     // 2. Dispatch to WebSocket clients
     for (const client of this.wsClients) {
-      if (client.tvSymbol === sub.tvSymbol || client.rawSymbol === sub.rawSymbol) {
+      if (
+        client.tvSymbol === sub.tvSymbol ||
+        client.rawSymbol === sub.rawSymbol ||
+        this.isMatchingSymbol(client.rawSymbol, sub.rawSymbol, sub.tvSymbol)
+      ) {
         try {
           if (client.ws.readyState === WebSocket.OPEN) {
-            client.ws.send(tickMsg);
+            const clientTickMsg = JSON.stringify({
+              type: 'tick',
+              ...tick,
+              symbol: client.rawSymbol,
+              tvSymbol: sub.tvSymbol,
+            });
+            client.ws.send(clientTickMsg);
           }
         } catch {
           this.wsClients.delete(client);

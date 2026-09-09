@@ -24,22 +24,41 @@ export interface ChartInstrument {
   symbol: string;
   name: string;
   ticker: string;
+  broker: string;
   category: 'Metals' | 'Indices' | 'Forex' | 'Crypto' | 'Futures' | 'Equities' | 'Macro';
   description: string;
 }
 
 export const ALL_INSTRUMENTS: ChartInstrument[] = [
-  { symbol: 'BLACKBULL:XAUUSD', name: 'Spot Gold / USD (BlackBull)', ticker: 'XAUUSD', category: 'Metals', description: 'Spot Gold / US Dollar' },
-  { symbol: 'BLACKBULL:NAS100', name: 'Nasdaq 100 (NAS100)', ticker: 'NAS100', category: 'Indices', description: 'Nasdaq 100 Tech Index' },
-  { symbol: 'BLACKBULL:US30', name: 'Dow Jones (US30)', ticker: 'US30', category: 'Indices', description: 'Dow Jones Industrial Average' },
-  { symbol: 'BLACKBULL:GER40', name: 'DAX 40 (GER40)', ticker: 'GER40', category: 'Indices', description: 'German DAX 40 Index' },
-  { symbol: 'BLACKBULL:EURUSD', name: 'EUR / USD', ticker: 'EURUSD', category: 'Forex', description: 'Euro / US Dollar' },
-  { symbol: 'BLACKBULL:GBPUSD', name: 'GBP / USD', ticker: 'GBPUSD', category: 'Forex', description: 'British Pound / US Dollar' },
-  { symbol: 'BLACKBULL:BTCUSD', name: 'Bitcoin (BTC/USD)', ticker: 'BTCUSD', category: 'Crypto', description: 'Bitcoin / US Dollar' },
-  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', ticker: 'ES1!', category: 'Futures', description: 'E-mini S&P 500 Index Futures' },
-  { symbol: 'CME_MINI:NQ1!', name: 'NQ Futures (Nasdaq)', ticker: 'NQ1!', category: 'Futures', description: 'E-mini Nasdaq 100 Futures' },
-  { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', ticker: 'NVDA', category: 'Equities', description: 'NVIDIA Corporation' },
-  { symbol: 'TVC:DXY', name: 'US Dollar Index (DXY)', ticker: 'DXY', category: 'Macro', description: 'US Dollar Currency Index' },
+  // Spot Metals
+  { symbol: 'BLACKBULL:XAUUSD', name: 'Spot Gold (BlackBull)', ticker: 'XAUUSD', broker: 'BlackBull', category: 'Metals', description: 'Spot Gold / US Dollar (BlackBull Feed)' },
+  { symbol: 'OANDA:XAUUSD', name: 'Spot Gold (OANDA)', ticker: 'XAUUSD', broker: 'OANDA', category: 'Metals', description: 'Spot Gold / US Dollar (OANDA Feed)' },
+
+  // Indices
+  { symbol: 'BLACKBULL:NAS100', name: 'Nasdaq 100 (BlackBull)', ticker: 'NAS100', broker: 'BlackBull', category: 'Indices', description: 'Nasdaq 100 Tech Index (BlackBull Feed)' },
+  { symbol: 'OANDA:NAS100USD', name: 'Nasdaq 100 (OANDA)', ticker: 'NAS100', broker: 'OANDA', category: 'Indices', description: 'US Wall St Tech 100 (OANDA Feed)' },
+  { symbol: 'BLACKBULL:US30', name: 'Dow Jones 30 (BlackBull)', ticker: 'US30', broker: 'BlackBull', category: 'Indices', description: 'Dow Jones Industrial Average (BlackBull Feed)' },
+  { symbol: 'OANDA:US30USD', name: 'Dow Jones 30 (OANDA)', ticker: 'US30', broker: 'OANDA', category: 'Indices', description: 'US Wall St 30 / Dow (OANDA Feed)' },
+  { symbol: 'BLACKBULL:GER40', name: 'DAX 40 (BlackBull)', ticker: 'GER40', broker: 'BlackBull', category: 'Indices', description: 'German DAX 40 Index (BlackBull Feed)' },
+  { symbol: 'OANDA:DE30EUR', name: 'DAX 40 (OANDA)', ticker: 'GER40', broker: 'OANDA', category: 'Indices', description: 'Germany 40 / DAX (OANDA Feed)' },
+
+  // Forex
+  { symbol: 'BLACKBULL:EURUSD', name: 'EUR / USD (BlackBull)', ticker: 'EURUSD', broker: 'BlackBull', category: 'Forex', description: 'Euro / US Dollar (BlackBull Feed)' },
+  { symbol: 'OANDA:EURUSD', name: 'EUR / USD (OANDA)', ticker: 'EURUSD', broker: 'OANDA', category: 'Forex', description: 'Euro / US Dollar (OANDA Feed)' },
+  { symbol: 'BLACKBULL:GBPUSD', name: 'GBP / USD (BlackBull)', ticker: 'GBPUSD', broker: 'BlackBull', category: 'Forex', description: 'British Pound / US Dollar (BlackBull Feed)' },
+  { symbol: 'OANDA:GBPUSD', name: 'GBP / USD (OANDA)', ticker: 'GBPUSD', broker: 'OANDA', category: 'Forex', description: 'British Pound / US Dollar (OANDA Feed)' },
+
+  // Crypto
+  { symbol: 'BINANCE:BTCUSDT', name: 'Bitcoin (Binance)', ticker: 'BTCUSDT', broker: 'Binance', category: 'Crypto', description: 'Bitcoin / Tether (Binance Spot Feed)' },
+  { symbol: 'BLACKBULL:BTCUSD', name: 'Bitcoin (BlackBull)', ticker: 'BTCUSD', broker: 'BlackBull', category: 'Crypto', description: 'Bitcoin / US Dollar (BlackBull Feed)' },
+
+  // Futures
+  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', ticker: 'ES1!', broker: 'CME', category: 'Futures', description: 'E-mini S&P 500 Futures (CME Globex)' },
+  { symbol: 'CME_MINI:NQ1!', name: 'NQ Futures (Nasdaq)', ticker: 'NQ1!', broker: 'CME', category: 'Futures', description: 'E-mini Nasdaq 100 Futures (CME Globex)' },
+
+  // Equities & Macro
+  { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', ticker: 'NVDA', broker: 'NASDAQ', category: 'Equities', description: 'NVIDIA Corporation (NASDAQ)' },
+  { symbol: 'CAPITALCOM:DXY', name: 'US Dollar Index', ticker: 'DXY', broker: 'Capital.com', category: 'Macro', description: 'US Dollar Currency Index (Capital.com)' },
 ];
 
 export interface ChartTimeframe {
@@ -101,6 +120,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
   const [isTimeframeMenuOpen, setIsTimeframeMenuOpen] = useState(false);
   const [instrumentSearch, setInstrumentSearch] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All');
+  const [selectedBrokerFilter, setSelectedBrokerFilter] = useState<string>('All');
 
   const instrumentDropdownRef = useRef<HTMLDivElement>(null);
   const timeframeDropdownRef = useRef<HTMLDivElement>(null);
@@ -109,15 +129,23 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
   // Close menus on outside click
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+
+      // Do NOT close if clicking inside the portaled instrument or timeframe modals
+      if (target.closest('#modal-instrument-selector') || target.closest('#modal-timeframe-selector')) {
+        return;
+      }
+
       if (
         instrumentDropdownRef.current &&
-        !instrumentDropdownRef.current.contains(event.target as Node)
+        !instrumentDropdownRef.current.contains(target as Node)
       ) {
         setIsInstrumentMenuOpen(false);
       }
       if (
         timeframeDropdownRef.current &&
-        !timeframeDropdownRef.current.contains(event.target as Node)
+        !timeframeDropdownRef.current.contains(target as Node)
       ) {
         setIsTimeframeMenuOpen(false);
       }
@@ -159,15 +187,20 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
     } else {
       setInstrumentSearch('');
       setSelectedCategoryFilter('All');
+      setSelectedBrokerFilter('All');
     }
   }, [isInstrumentMenuOpen]);
 
   // Current instrument metadata
-  const currentInstrument =
-    ALL_INSTRUMENTS.find((i) => i.symbol === currentSymbol) || {
+  const cleanSym = (currentSymbol || '').toUpperCase();
+  const currentInstrument: ChartInstrument =
+    ALL_INSTRUMENTS.find((i) => i.symbol === currentSymbol) ||
+    ALL_INSTRUMENTS.find((i) => i.symbol.toUpperCase() === cleanSym) ||
+    ALL_INSTRUMENTS.find((i) => i.ticker.toUpperCase() === cleanSym) || {
       symbol: currentSymbol,
-      name: currentSymbol.replace('BLACKBULL:', ''),
-      ticker: currentSymbol.replace('BLACKBULL:', '').replace(/[^A-Z0-9]/g, ''),
+      name: currentSymbol.includes(':') ? currentSymbol.split(':')[1] : currentSymbol,
+      ticker: currentSymbol.includes(':') ? currentSymbol.split(':')[1] : currentSymbol,
+      broker: currentSymbol.includes(':') ? currentSymbol.split(':')[0] : 'BlackBull',
       category: 'Metals' as const,
       description: currentSymbol,
     };
@@ -182,22 +215,43 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
       group: 'Minutes' as const,
     };
 
-  // Filter instruments by search & category
+  const brokers = ['All', 'BlackBull', 'OANDA', 'Binance', 'CME'];
+  const categories = ['All', 'Metals', 'Indices', 'Forex', 'Crypto', 'Futures', 'Equities', 'Macro'];
+
+  // Filter instruments by search, category & broker
   const filteredInstruments = ALL_INSTRUMENTS.filter((inst) => {
     const matchesCategory =
       selectedCategoryFilter === 'All' || inst.category === selectedCategoryFilter;
-    const q = instrumentSearch.trim().toLowerCase();
-    if (!q) return matchesCategory;
+    const matchesBroker =
+      selectedBrokerFilter === 'All' || inst.broker === selectedBrokerFilter;
+    const q = instrumentSearch.trim().toLowerCase().replace(/us3o/g, 'us30');
+    if (!q) return matchesCategory && matchesBroker;
     const matchesSearch =
       inst.name.toLowerCase().includes(q) ||
       inst.ticker.toLowerCase().includes(q) ||
+      inst.broker.toLowerCase().includes(q) ||
       inst.symbol.toLowerCase().includes(q) ||
       inst.category.toLowerCase().includes(q) ||
       inst.description.toLowerCase().includes(q);
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesBroker && matchesSearch;
   });
 
-  const categories = ['All', 'Metals', 'Indices', 'Forex', 'Crypto', 'Futures', 'Equities', 'Macro'];
+  const getBrokerBadgeColor = (broker: string) => {
+    switch (broker) {
+      case 'OANDA':
+        return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+      case 'BlackBull':
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      case 'Binance':
+        return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+      case 'CME':
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      case 'NASDAQ':
+        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+      default:
+        return 'bg-slate-700/60 text-slate-300 border-slate-600/50';
+    }
+  };
 
   const getCategoryDotColor = (category: string) => {
     switch (category) {
@@ -266,16 +320,16 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-slate-800 border-amber-500/60 text-white ring-1 ring-amber-500/30'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-slate-600 text-slate-100'
             }`}
-            title="Click to search and change financial instrument"
+            title="Click to search and change financial instrument & broker"
           >
             <span className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${getCategoryDotColor(currentInstrument.category)} animate-pulse`} />
-              <span className="font-semibold tracking-tight truncate max-w-[140px] sm:max-w-[200px] md:max-w-none text-white">
+              <span className="font-semibold tracking-tight truncate max-w-[130px] sm:max-w-[180px] md:max-w-none text-white">
                 {currentInstrument.name}
               </span>
             </span>
-            <span className="hidden md:inline-block text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-400 border border-slate-700/60">
-              {currentInstrument.category}
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${getBrokerBadgeColor(currentInstrument.broker)}`}>
+              {currentInstrument.broker}
             </span>
             <ChevronDown
               className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
@@ -305,8 +359,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                       <BarChart2 className="w-5 h-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-bold text-white truncate">Select Market Instrument</h3>
-                      <p className="text-xs text-slate-400 font-mono truncate">Live Institutional Multi-Asset Feed</p>
+                      <h3 className="text-base font-bold text-white truncate">Select Market & Broker</h3>
+                      <p className="text-xs text-slate-400 font-mono truncate">Real-Time Institutional Multi-Broker Feed</p>
                     </div>
                   </div>
 
@@ -328,7 +382,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                     type="text"
                     value={instrumentSearch}
                     onChange={(e) => setInstrumentSearch(e.target.value)}
-                    placeholder="Search symbol (e.g. Gold, US30, BTC, EURUSD)..."
+                    placeholder="Search instrument or broker (e.g. Gold, OANDA, US30, BlackBull)..."
                     className="w-full bg-[#11192E] border border-slate-700/90 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all font-mono"
                   />
                   {instrumentSearch && (
@@ -342,14 +396,38 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                   )}
                 </div>
 
+                {/* Broker Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 shrink-0 mr-1">
+                    Broker:
+                  </span>
+                  {brokers.map((brk) => (
+                    <button
+                      key={brk}
+                      type="button"
+                      onClick={() => setSelectedBrokerFilter(brk)}
+                      className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap transition-all font-mono font-medium cursor-pointer border ${
+                        selectedBrokerFilter === brk
+                          ? 'bg-amber-500/25 text-amber-300 border-amber-500/50 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border-slate-800/80 bg-[#090D17]/80'
+                      }`}
+                    >
+                      {brk === 'All' ? 'All Brokers' : brk}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Category Filter Pills */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs border-b border-slate-800/80">
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 shrink-0 mr-1">
+                    Market:
+                  </span>
                   {categories.map((cat) => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => setSelectedCategoryFilter(cat)}
-                      className={`px-3 py-1 rounded-lg whitespace-nowrap transition-colors font-medium cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg whitespace-nowrap transition-colors font-medium cursor-pointer ${
                         selectedCategoryFilter === cat
                           ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -372,8 +450,11 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                       return (
                         <button
                           key={inst.symbol}
+                          id={`btn-select-market-${inst.symbol.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
+                          data-symbol={inst.symbol}
                           type="button"
                           onClick={() => {
+                            console.log('[FLOW: Step 1 - Toolbar Select Instrument]:', { ticker: inst.ticker, symbol: inst.symbol, currentSymbol });
                             onSelectSymbol(inst.symbol);
                             setIsInstrumentMenuOpen(false);
                           }}
@@ -392,12 +473,15 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                                 <span className="font-mono font-bold text-xs text-white">
                                   {inst.ticker}
                                 </span>
-                                <span className="text-[10px] uppercase px-1.5 py-0.2 rounded bg-slate-800/90 text-slate-400 border border-slate-700/50">
+                                <span className={`text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border ${getBrokerBadgeColor(inst.broker)}`}>
+                                  {inst.broker}
+                                </span>
+                                <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-400 border border-slate-700/50">
                                   {inst.category}
                                 </span>
                               </div>
-                              <div className="text-xs text-slate-400 truncate">
-                                {inst.name}
+                              <div className="text-xs text-slate-400 truncate mt-0.5">
+                                {inst.description}
                               </div>
                             </div>
                           </div>

@@ -96,16 +96,26 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const result = await pool.query(query, [symbol, altSymbol, strategy]);
 
-    const drawings = result.rows.map(row => {
-      // Ensure data is parsed object
-      const parsed = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-      return {
-        ...parsed,
-        id: row.id,
-        type: row.type || parsed.type,
-        strategy: row.strategy || 'default',
-      };
-    });
+    const drawings = result.rows
+      .map(row => {
+        // Ensure data is parsed object
+        const parsed = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+        return {
+          ...parsed,
+          id: row.id,
+          type: row.type || parsed.type,
+          strategy: row.strategy || 'default',
+        };
+      })
+      .filter(d => {
+        if (!d || !Array.isArray(d.anchors) || d.anchors.length === 0) return false;
+        // Verify anchor prices are valid finite positive numbers within realistic financial bounds
+        return d.anchors.every((a: any) => {
+          const p = typeof a?.price === 'number' ? a.price : parseFloat(a?.price);
+          const t = typeof a?.time === 'number' ? a.time : parseFloat(a?.time);
+          return !isNaN(p) && isFinite(p) && p > 0 && p < 1e9 && !isNaN(t) && t > 0;
+        });
+      });
 
     res.json({
       status: 'ok',
@@ -141,12 +151,19 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
     const rawDrawings = Array.isArray(req.body.drawings) ? req.body.drawings : [];
     const createdBy = req.user?.username || 'admin';
 
-    // Deduplicate drawings by id, keeping the latest version
+    // Deduplicate drawings by id, keeping the latest valid version
     const drawingMap = new Map<string, any>();
     for (const d of rawDrawings) {
       if (!d) continue;
       const id = String(d.id || '').trim();
       if (!id) continue;
+      if (!Array.isArray(d.anchors) || d.anchors.length === 0) continue;
+      const allValid = d.anchors.every((a: any) => {
+        const p = typeof a?.price === 'number' ? a.price : parseFloat(a?.price);
+        const t = typeof a?.time === 'number' ? a.time : parseFloat(a?.time);
+        return !isNaN(p) && isFinite(p) && p > 0 && p < 1e9 && !isNaN(t) && t > 0;
+      });
+      if (!allValid) continue;
       const type = String(d.type || d.options?.type || 'drawing').trim();
       drawingMap.set(id, {
         ...d,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   LineChart, 
@@ -34,12 +34,25 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
   const [activeInterval, setActiveInterval] = useState('15');
   const [activeStrategy, setActiveStrategy] = useState<ChartStrategyType>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  console.log('[FLOW: Step 2 - selectedSymbol State in ChartSimulatorModal]:', selectedSymbol);
   
-  // Sync selected symbol when defaultSymbol changes or modal opens
+  const prevDefaultSymbolRef = useRef(defaultSymbol);
+  const wasOpenRef = useRef(isOpen);
+
+  // Sync selected symbol cleanly when defaultSymbol changes or modal freshly opens;
+  // prevents stale default prop or secondary App re-renders from re-applying the previous Gold symbol.
   useEffect(() => {
-    if (defaultSymbol) {
-      setSelectedSymbol(defaultSymbol);
+    const justOpened = isOpen && !wasOpenRef.current;
+    const defaultSymbolChanged = Boolean(defaultSymbol && defaultSymbol !== prevDefaultSymbolRef.current);
+
+    if (justOpened || defaultSymbolChanged) {
+      if (defaultSymbol) {
+        setSelectedSymbol(defaultSymbol);
+        prevDefaultSymbolRef.current = defaultSymbol;
+      }
     }
+    wasOpenRef.current = isOpen;
   }, [defaultSymbol, isOpen]);
 
   const toggleBrowserFullscreen = () => {

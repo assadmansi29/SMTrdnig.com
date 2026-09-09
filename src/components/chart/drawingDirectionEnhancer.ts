@@ -1,3 +1,4 @@
+import * as DrawingPkg from 'lightweight-charts-drawing';
 import {
   Ray,
   GannFan,
@@ -6,6 +7,7 @@ import {
   GannBox,
   Drawing,
   Rectangle,
+  DrawingManager,
 } from 'lightweight-charts-drawing';
 
 /**
@@ -925,12 +927,23 @@ export function projectLogicalCoordinate(timeScale: any, logicalIdx: number, cha
 // -----------------------------------------------------------------------------
 export function installDirectionalEnhancers() {
   try {
-    // 0. Disable autoscaleInfo on Drawing and all subclasses.
+    // 0. Disable autoscaleInfo on Drawing and ALL drawing subclasses.
     // In Lightweight Charts, primitives with an autoscaleInfo() method force the chart
     // price scale to automatically rescale, zoom out, recenter, and fit the drawing's min/max
     // prices into the viewport whenever any anchor is created, moved, or edited.
-    // Disabling autoscaleInfo ensures the chart camera zoom, price scale, and position remain
-    // 100% locked and stable, matching professional TradingView-style behavior.
+    // Disabling autoscaleInfo across ALL classes ensures the chart camera zoom, price scale,
+    // and position remain 100% locked and stable, matching professional TradingView-style behavior.
+    for (const key of Object.keys(DrawingPkg)) {
+      const item = (DrawingPkg as any)[key];
+      if (typeof item === 'function' && item.prototype) {
+        if (item.prototype.autoscaleInfo || Object.getOwnPropertyNames(item.prototype).includes('autoscaleInfo')) {
+          item.prototype.autoscaleInfo = function () {
+            return null;
+          };
+        }
+      }
+    }
+
     if (Drawing && Drawing.prototype) {
       (Drawing.prototype as any).autoscaleInfo = function () {
         return null;
@@ -951,7 +964,7 @@ export function installDirectionalEnhancers() {
         // Check series first because it correctly resolves firstValue for PriceScale
         let y: number | null = null;
         const priceNum = typeof anchor.price === 'number' ? anchor.price : parseFloat(anchor.price);
-        if (!isNaN(priceNum)) {
+        if (!isNaN(priceNum) && isFinite(priceNum) && priceNum > 0 && priceNum < 1e9) {
           if (series?.priceToCoordinate) {
             y = series.priceToCoordinate(priceNum);
           }
@@ -1009,8 +1022,8 @@ export function installDirectionalEnhancers() {
       (Drawing.prototype as any).pixelToAnchor = function (point: any, viewport: any) {
         if (!point || !viewport) return null;
 
-        const chart = typeof window !== 'undefined' ? (window as any).__currentChart : undefined;
-        const series = typeof window !== 'undefined' ? (window as any).__currentSeries : undefined;
+        const chart = (this as any)._chart || (typeof window !== 'undefined' ? (window as any).__currentChart : undefined);
+        const series = (this as any)._series || (typeof window !== 'undefined' ? (window as any).__currentSeries : undefined);
         const timeScale = viewport.timeScale || chart?.timeScale?.();
         const priceScale = viewport.priceScale || series;
         if (!timeScale || !priceScale) return null;
@@ -1021,7 +1034,9 @@ export function installDirectionalEnhancers() {
         } else if (priceScale.coordinateToPrice) {
           price = priceScale.coordinateToPrice(point.y);
         }
-        if (price === null || price === undefined || isNaN(price)) return null;
+        if (price === null || price === undefined || isNaN(price) || !isFinite(price) || price <= 0 || price > 1e9) {
+          return null;
+        }
 
         let time: number | null = null;
         const rawTs = chart?.timeScale?.() || timeScale;
@@ -1070,10 +1085,30 @@ export function installDirectionalEnhancers() {
           }
         }
 
-        if (time === null || time === undefined || price === null || isNaN(price)) {
+        if (time === null || time === undefined || price === null || isNaN(price) || !isFinite(price) || price <= 0 || price > 1e9) {
           return null;
         }
-        return { time, price: Number(price.toFixed(2)) };
+
+        // Format price precision intelligently based on asset scale: Forex (5 decimals), DXY/Mid (3 decimals), Standard (2 decimals)
+        const formattedPrice = Math.abs(price) < 5 ? Number(price.toFixed(5)) : Math.abs(price) < 500 ? Number(price.toFixed(3)) : Number(price.toFixed(2));
+        return { time, price: formattedPrice };
+      };
+    }
+
+    if (DrawingManager && DrawingManager.prototype) {
+      const origAddDrawing = DrawingManager.prototype.addDrawing;
+      DrawingManager.prototype.addDrawing = function (drawing: any) {
+        if (drawing) {
+          drawing.autoscaleInfo = function () {
+            return null;
+          };
+          if (drawing._primitive) {
+            drawing._primitive.autoscaleInfo = function () {
+              return null;
+            };
+          }
+        }
+        return origAddDrawing.call(this, drawing);
       };
     }
 

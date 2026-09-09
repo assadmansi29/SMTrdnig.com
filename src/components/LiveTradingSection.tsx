@@ -90,6 +90,8 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
   const [activeStrategy, setActiveStrategy] = useState<ChartStrategyType>(null);
   const [viewMode, setViewMode] = useState<'stream' | 'chart' | 'both'>('both');
 
+  console.log('[FLOW: Step 2 - selectedSymbol State in LiveTradingSection]:', selectedSymbol);
+
   const {
     isLive,
     stream,
@@ -103,6 +105,16 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
   } = useYouTubeLive();
 
   const events = localizedEvents || getEconomicEventsByLanguage(language);
+
+  const rawBroker = selectedSymbol.includes(':') ? selectedSymbol.split(':')[0] : 'BlackBull';
+  const brokerName =
+    rawBroker === 'BLACKBULL' ? 'BlackBull' :
+    rawBroker === 'OANDA' ? 'OANDA' :
+    rawBroker === 'BINANCE' ? 'Binance' :
+    rawBroker === 'CME_MINI' || rawBroker === 'CME' ? 'CME' :
+    rawBroker === 'CAPITALCOM' ? 'Capital.com' :
+    rawBroker === 'NASDAQ' ? 'NASDAQ' :
+    rawBroker || 'BlackBull';
 
   // When inside "Support" or "VIP Signals", completely hide the entire Live Trading Section (including live stream and terminal)
   if (activeCategory === 'Support' || activeCategory === 'VIP Signals') {
@@ -141,7 +153,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
                 </span>
               </div>
               <span className="text-xs text-slate-400 hidden sm:inline">
-                Real-Time BlackBull Market Feed
+                Real-Time {brokerName} Market Feed
               </span>
             </div>
 
@@ -154,6 +166,36 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
               <Maximize2 className="w-3.5 h-3.5" />
               <span className="text-[11px] font-semibold">{t('terminalStudioMode')}</span>
             </button>
+          </div>
+
+          {/* Quick Instrument Switcher Pills (Gold, Nasdaq, Dow Jones, DAX) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none max-w-[800px] mx-auto w-full">
+            {INSTRUMENTS.map((inst) => {
+              const isSelected =
+                selectedSymbol === inst.symbol ||
+                (selectedSymbol.includes(':') && selectedSymbol.split(':')[1] === inst.ticker);
+              return (
+                <button
+                  key={inst.id}
+                  id={`btn-live-inst-${inst.id}`}
+                  onClick={() => {
+                    console.log('[FLOW: Step 1 - Button Click in LiveTradingSection]:', { id: inst.id, ticker: inst.ticker, targetSymbol: inst.symbol, previousSymbol: selectedSymbol });
+                    setSelectedSymbol(inst.symbol);
+                  }}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-medium transition-all duration-200 cursor-pointer shadow-sm ${
+                    isSelected
+                      ? 'bg-amber-500/20 border-amber-500/60 text-amber-200 font-bold shadow-amber-500/10'
+                      : 'bg-[#080C14] hover:bg-slate-800/80 border-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'}`} />
+                  <span className="font-mono font-bold">{inst.ticker}</span>
+                  <span className="text-[10px] text-slate-400 hidden xs:inline">
+                    {inst.id === 'gold' ? 'Gold' : inst.id === 'nasdaq' ? 'Nasdaq 100' : inst.id === 'dow' ? 'Dow 30' : 'DAX 40'}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Embedded Real-Time TradingView Chart with Modern Toolbar */}

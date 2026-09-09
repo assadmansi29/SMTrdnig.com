@@ -54,6 +54,12 @@ export class MarketStreamClient {
     const trimmedSym = (symbol || 'OANDA:XAUUSD').trim();
     const trimmedInv = (interval || '15').trim();
 
+    console.log('[FLOW: Step 5 - MarketStreamClient subscribe]:', {
+      previousSymbol: this.activeSymbol,
+      newSymbol: trimmedSym,
+      interval: trimmedInv
+    });
+
     // If already connected to this exact symbol and interval, keep stream active
     if (this.activeSymbol === trimmedSym && this.activeInterval === trimmedInv) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
@@ -221,6 +227,10 @@ export class MarketStreamClient {
   }
 
   public destroy() {
+    console.log('[FLOW: Step 5 - MarketStreamClient destroy / unsubscribe]:', {
+      unsubscribingSymbol: this.activeSymbol,
+      interval: this.activeInterval
+    });
     this.isDestroyed = true;
     this.cleanupConnection();
   }

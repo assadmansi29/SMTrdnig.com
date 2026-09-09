@@ -329,7 +329,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="bg-[#080C13] border-b border-slate-800/60 py-1.5 px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto relative flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs min-h-[32px]">
           {/* Market Status (MARKET OPEN) aligned on the left under SMTrading.pro */}
-          <div className="flex items-center shrink-0 z-10">
+          <div className="flex items-center shrink-0 z-10 ltr:pl-5 sm:ltr:pl-7 md:ltr:pl-9 rtl:pr-5 sm:rtl:pr-7 md:rtl:pr-9">
             <MarketStatusIndicator
               id="brand-bar-market-status"
               compact={true}

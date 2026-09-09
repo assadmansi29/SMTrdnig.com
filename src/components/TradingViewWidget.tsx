@@ -107,6 +107,18 @@ const getStrategyStorageKey = (sym: string, strategy?: string | null): string =>
   return `tv_drawings_${cleanSym}_${stratKey}`;
 };
 
+const sanitizeDrawingsList = (drawings: any[]): any[] => {
+  if (!Array.isArray(drawings)) return [];
+  return drawings.filter((d: any) => {
+    if (!d || !d.type || !Array.isArray(d.anchors) || d.anchors.length === 0) return false;
+    return d.anchors.every((a: any) => {
+      const p = typeof a?.price === 'number' ? a.price : parseFloat(a?.price);
+      const t = typeof a?.time === 'number' ? a.time : parseFloat(a?.time);
+      return !isNaN(p) && isFinite(p) && p > 0 && p < 1e9 && !isNaN(t) && t > 0;
+    });
+  });
+};
+
 const saveStrategyDrawingsLocal = (
   sym: string,
   arg2: string | null | undefined | any[],
@@ -122,8 +134,9 @@ const saveStrategyDrawingsLocal = (
       strategy = arg2;
       drawings = arg3 || [];
     }
+    const cleanDrawings = sanitizeDrawingsList(drawings);
     const key = getStrategyStorageKey(sym, strategy);
-    localStorage.setItem(key, JSON.stringify(drawings || []));
+    localStorage.setItem(key, JSON.stringify(cleanDrawings));
   } catch (err) {
     console.warn('[Financial Chart] Local storage save failed:', err);
   }
@@ -133,12 +146,15 @@ const loadStrategyDrawingsLocal = (sym: string, strategy?: string | null): any[]
   try {
     const key = getStrategyStorageKey(sym, strategy);
     const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return sanitizeDrawingsList(parsed);
+    }
     // Legacy fallback for default view
     if (!strategy || strategy === 'default') {
       const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
       const legacy = localStorage.getItem(`tv_drawings_${cleanSym}`);
-      return legacy ? JSON.parse(legacy) : [];
+      return legacy ? sanitizeDrawingsList(JSON.parse(legacy)) : [];
     }
     return [];
   } catch {
@@ -212,6 +228,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   activeStrategy = null,
   onSelectStrategy,
 }) => {
+  console.log('[FLOW: Step 4 - TradingViewWidget received symbol prop]:', { symbol, interval, activeStrategy });
   const { user, token: authToken } = useAuth();
   const isOwnerOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.email === 'am29multibrand@gmail.com';
   const isOwnerOrAdminRef = useRef<boolean>(isOwnerOrAdmin);
@@ -700,6 +717,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     const requestKey = `${sym}_${inv}`;
     const isColdMount = candlesRef.current.length === 0;
 
+    console.log('[FLOW: Step 6 - fetchCandles start]:', {
+      sym,
+      inv,
+      isSilent,
+      isTimeframeChange,
+      isSymbolChange,
+      isColdMount,
+      requestKey
+    });
+
     // Capture visible time and price window before updating if timeframe change
     const prevTimeRange = isTimeframeChange ? chartApiRef.current?.timeScale().getVisibleRange() : null;
     const prevPriceRange = isTimeframeChange ? chartApiRef.current?.priceScale('right')?.getVisibleRange() : null;
@@ -775,9 +802,43 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         // Update LuxAlgo Smart Money Concepts (SMC) Indicator
         updateSmcIndicator(incomingCandles);
 
+        // Dynamic price formatting: configure precision and minMove accurately for the asset category (Forex, Indices, Metals, Crypto)
+        const lastCandle = incomingCandles[incomingCandles.length - 1];
+        const samplePrice = lastCandle ? Number(lastCandle.close) : 0;
+        let pricePrecision = 2;
+        let minMove = 0.01;
+        const upperSym = (sym || '').toUpperCase();
+        if (upperSym.includes('EURUSD') || upperSym.includes('GBPUSD') || (samplePrice > 0 && samplePrice < 5)) {
+          pricePrecision = 5;
+          minMove = 0.00001;
+        } else if (upperSym.includes('DXY') || (samplePrice >= 5 && samplePrice < 500)) {
+          pricePrecision = 3;
+          minMove = 0.001;
+        }
+        seriesApiRef.current?.applyOptions({
+          priceFormat: {
+            type: 'price',
+            precision: pricePrecision,
+            minMove: minMove,
+          },
+        });
+
         if (seriesApiRef.current) {
-          if (isSymbolChange) {
-            // Explicit symbol change initiated by user: initialize future whitespace and set comfortable initial viewport
+          console.log('[FLOW: Step 6 - seriesApiRef.current exists, applying candles]:', {
+            sym,
+            isSymbolChange,
+            isColdMount,
+            candleCount: incomingCandles.length,
+            firstBar: incomingCandles[0],
+            lastBar: incomingCandles[incomingCandles.length - 1]
+          });
+
+          const isKeyMismatch = lastLoadedKeyRef.current !== requestKey;
+          const isFullReload = isSymbolChange || isColdMount || isKeyMismatch;
+
+          if (isFullReload) {
+            // Explicit symbol change, initial mount, or key mismatch: ALWAYS perform full setData and autoscale!
+            chartApiRef.current?.priceScale('right')?.applyOptions({ autoScale: true });
             const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
             if (whitespaceSeriesApiRef.current) {
               const fullTimeline = [
@@ -787,31 +848,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               whitespaceSeriesApiRef.current.setData(fullTimeline);
             }
             seriesApiRef.current.setData(incomingCandles);
+            console.log('[FLOW: Step 6 - seriesApiRef.setData COMPLETED for full reload]:', sym, 'count:', incomingCandles.length);
+
             const totalReal = incomingCandles.length;
             const visibleBars = 100;
             const futureMargin = 25;
             const from = Math.max(0, totalReal - visibleBars + futureMargin);
             const to = totalReal + futureMargin;
             chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
+            chartApiRef.current?.priceScale('right')?.applyOptions({ autoScale: true });
             userHasManuallyInteractedRef.current = false;
-            hasInitialFitCompletedRef.current = true;
-          } else if (isColdMount && !hasInitialFitCompletedRef.current && !userHasManuallyInteractedRef.current) {
-            // First time loading candles on cold start: initialize future whitespace and set comfortable initial viewport once
-            const futureWhitespace = generateFutureWhitespaceScale(incomingCandles, inv, 500);
-            if (whitespaceSeriesApiRef.current) {
-              const fullTimeline = [
-                ...incomingCandles.map((c: any) => ({ time: c.time })),
-                ...futureWhitespace,
-              ];
-              whitespaceSeriesApiRef.current.setData(fullTimeline);
-            }
-            seriesApiRef.current.setData(incomingCandles);
-            const totalReal = incomingCandles.length;
-            const visibleBars = 100;
-            const futureMargin = 25;
-            const from = Math.max(0, totalReal - visibleBars + futureMargin);
-            const to = totalReal + futureMargin;
-            chartApiRef.current?.timeScale().setVisibleLogicalRange({ from, to });
             hasInitialFitCompletedRef.current = true;
           } else if (isTimeframeChange) {
             // Timeframe change: update future whitespace and dataset
@@ -826,8 +872,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             seriesApiRef.current.setData(incomingCandles);
 
             // Cleanly position viewport to display the latest price action with optimal density.
-            // If the previous visible range safely maps to a healthy bar count on the new timeframe,
-            // maintain that range; otherwise, reset to standard 100 visible bars + 20 future margin.
             const totalReal = incomingCandles.length;
             let appliedValidRange = false;
             if (prevTimeRange && typeof prevTimeRange.from === 'number' && typeof prevTimeRange.to === 'number' && prevTimeRange.to > prevTimeRange.from) {
@@ -853,11 +897,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             }
             chartApiRef.current?.priceScale('right')?.applyOptions({ autoScale: true });
           } else {
-            // Live candle updates / background streaming polling:
-            // The chart must NEVER automatically call fitContent, reset the visible range,
-            // recreate the chart, or restore the default viewport after the user manually zooms or pans.
-            // Live candle updates update the data only (via series.update) and must not change the user's current viewport.
-            // Never call setData on either series or touch the viewport during live updates.
+            // Background polling / silent refresh for the EXACT SAME symbol & interval
             if (incomingCandles.length > 0) {
               const lastIncoming = incomingCandles[incomingCandles.length - 1];
               seriesApiRef.current.update(lastIncoming);
@@ -2426,13 +2466,23 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   // 9. Load Market Data & Published Drawings on Symbol/Interval Change
   useEffect(() => {
     const key = `${symbol}_${interval}`;
-    // If the chart already has this exact symbol and interval loaded, DO NOT reload!
-    if (lastLoadedKeyRef.current === key) {
+    const isInitialMount = !prevSymbolRef.current;
+    const isSymbolChange = Boolean(prevSymbolRef.current && prevSymbolRef.current !== symbol);
+
+    console.log('[FLOW: Step 4 - TradingViewWidget useEffect on Symbol Change]:', {
+      symbol,
+      interval,
+      prevSymbol: prevSymbolRef.current,
+      isInitialMount,
+      isSymbolChange,
+      lastLoadedKey: lastLoadedKeyRef.current
+    });
+
+    // If neither initial mount nor symbol change, and interval already loaded, DO NOT reload!
+    if (!isInitialMount && !isSymbolChange && lastLoadedKeyRef.current === key) {
       return;
     }
 
-    const isInitialMount = !prevSymbolRef.current;
-    const isSymbolChange = Boolean(prevSymbolRef.current && prevSymbolRef.current !== symbol);
     prevSymbolRef.current = symbol;
 
     if (isInitialMount || isSymbolChange) {
@@ -2440,6 +2490,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       batchSaveRef.current?.();
       if (isSymbolChange) {
         drawingManagerRef.current?.clearAll();
+        candlesRef.current = [];
+        setLastBarInfo(null);
+        seriesApiRef.current?.setData([]);
+        if (whitespaceSeriesApiRef.current) {
+          whitespaceSeriesApiRef.current.setData([]);
+        }
       }
       fetchCandles(symbol, interval, false, false, isSymbolChange);
       loadPostgresDrawings(symbol, interval, true, activeStrategy);
@@ -2475,9 +2531,60 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // Persistent real-time market data stream (WebSocket with auto-fallback to SSE) for lowest possible latency (0s delay)
   useEffect(() => {
+    const getIntervalDuration = (inv: string): number => {
+      const norm = (inv || '15').trim().toLowerCase();
+      if (norm === '1' || norm === '1m') return 60;
+      if (norm === '5' || norm === '5m') return 300;
+      if (norm === '15' || norm === '15m') return 900;
+      if (norm === '30' || norm === '30m') return 1800;
+      if (norm === '60' || norm === '1h' || norm === 'h') return 3600;
+      if (norm === '120' || norm === '2h') return 7200;
+      if (norm === '240' || norm === '4h') return 14400;
+      if (norm === 'd' || norm === '1d' || norm === 'day') return 86400;
+      if (norm === 'w' || norm === '1w' || norm === 'week') return 604800;
+      if (norm === 'm' || norm === '1m_month' || norm === '1mo' || norm === 'month') return 2592000;
+      const parsed = parseInt(norm, 10);
+      return isNaN(parsed) ? 900 : parsed * 60;
+    };
+
     const handleStreamEvent = (data: any) => {
       if (!seriesApiRef.current || !candlesRef.current || candlesRef.current.length === 0) {
         return;
+      }
+
+      // Check if incoming event belongs to current symbol (tolerant of broker prefixes e.g. BLACKBULL:NAS100 vs NAS100 vs OANDA:NAS100USD)
+      const eventSymbol = data.symbol || data.tvSymbol;
+      if (!eventSymbol) {
+        return;
+      }
+      const norm = (s: string) => {
+        const raw = s.includes(':') ? s.split(':')[1] : s;
+        return raw.toUpperCase().replace(/USD|EUR|USDT|\.P|1!/g, '').replace(/US3O/g, 'US30');
+      };
+      const curNorm = norm(symbol);
+      const incomingNorm = norm(data.symbol || '');
+      const tvNorm = data.tvSymbol ? norm(data.tvSymbol) : '';
+      const isMatch =
+        data.symbol === symbol ||
+        data.tvSymbol === symbol ||
+        curNorm === incomingNorm ||
+        curNorm === tvNorm ||
+        ((curNorm === 'NAS100' || curNorm === 'NQ' || curNorm === 'NASDAQ') && (incomingNorm === 'NAS100' || tvNorm === 'NAS100')) ||
+        ((curNorm === 'US30' || curNorm === 'DOW' || curNorm === 'DJ30') && (incomingNorm === 'US30' || tvNorm === 'US30')) ||
+        ((curNorm === 'GER40' || curNorm === 'DAX' || curNorm === 'DE30') && (incomingNorm === 'GER40' || incomingNorm === 'DE30' || tvNorm === 'GER40' || tvNorm === 'DE30'));
+      if (!isMatch) {
+        return;
+      }
+
+      // Cross-market price corruption guard: reject any tick whose price is wildly incompatible with the active candle
+      const activeCandles = candlesRef.current;
+      const lastActiveBar = activeCandles[activeCandles.length - 1];
+      const incomingPrice = typeof data.price === 'number' ? data.price : (data.bar ? data.bar.close : null);
+      if (typeof incomingPrice === 'number' && incomingPrice > 0 && lastActiveBar && lastActiveBar.close > 0) {
+        const ratio = incomingPrice / lastActiveBar.close;
+        if (ratio < 0.4 || ratio > 2.5) {
+          return;
+        }
       }
 
       if (data.type === 'bar' && data.bar) {
@@ -2498,23 +2605,53 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         const current = candlesRef.current;
         if (current.length > 0) {
           const last = current[current.length - 1];
-          const updatedBar: CandleData = {
-            ...last,
-            close: price,
-            high: Math.max(last.high, price),
-            low: Math.min(last.low, price),
-          };
-          current[current.length - 1] = updatedBar;
-          seriesApiRef.current.update(updatedBar as any);
-          setLastBarInfo({ open: updatedBar.open, high: updatedBar.high, low: updatedBar.low, close: updatedBar.close });
+          const durationSec = getIntervalDuration(interval);
+          const tickTimeSec = typeof data.time === 'number' && data.time > 0 ? data.time : Math.floor(Date.now() / 1000);
+          const currentBarTime = Math.floor(tickTimeSec / durationSec) * durationSec;
+
+          if (currentBarTime > Number(last.time)) {
+            // A genuine new candle timeframe has started: spawn the real-time bar!
+            const newBar: CandleData = {
+              time: currentBarTime,
+              open: price,
+              high: price,
+              low: price,
+              close: price,
+              volume: 1,
+            };
+            current.push(newBar);
+            seriesApiRef.current.update(newBar as any);
+            updateSmcIndicator(current);
+            setLastBarInfo({ open: newBar.open, high: newBar.high, low: newBar.low, close: newBar.close });
+          } else {
+            // Update active candle with incoming tick
+            const updatedBar: CandleData = {
+              ...last,
+              close: price,
+              high: Math.max(last.high, price),
+              low: Math.min(last.low, price),
+              volume: (last.volume || 0) + 1,
+            };
+            current[current.length - 1] = updatedBar;
+            seriesApiRef.current.update(updatedBar as any);
+            setLastBarInfo({ open: updatedBar.open, high: updatedBar.high, low: updatedBar.low, close: updatedBar.close });
+          }
         }
       }
     };
 
+    console.log('[FLOW: Step 5 - TradingViewWidget initiating MarketStreamClient subscribe]:', { symbol, interval });
     const client = new MarketStreamClient(handleStreamEvent, (status) => {
       setStreamStatus(status);
     });
     client.subscribe(symbol, interval);
+
+    // Periodic background sync: quietly reconcile full candle bars from institutional feed without moving viewport
+    const backgroundSyncTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && chartApiRef.current && !dragStateRef.current) {
+        fetchCandles(symbol, interval, true);
+      }
+    }, 25000);
 
     // Visibility change handler: when user returns to tab after sleeping, quietly re-sync completed candles
     const handleVisibilityChange = () => {
@@ -2525,6 +2662,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      console.log('[FLOW: Step 5 - TradingViewWidget unmounting/changing symbol, destroying MarketStreamClient]:', { oldSymbol: symbol, interval });
+      clearInterval(backgroundSyncTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       client.destroy();
     };
@@ -2560,8 +2699,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // Derive broker name and clean ticker symbol from composite symbol (e.g. BLACKBULL:XAUUSD -> BlackBull + XAUUSD)
   const [rawBroker, rawTicker] = symbol.includes(':') ? symbol.split(':') : ['', symbol];
-  const brokerName = rawBroker === 'BLACKBULL' ? 'BlackBull' : rawBroker === 'CME_MINI' ? 'CME' : rawBroker === 'TVC' ? 'TVC' : rawBroker;
-  const displayTicker = rawTicker || symbol;
+  const brokerName =
+    rawBroker === 'BLACKBULL' ? 'BlackBull' :
+    rawBroker === 'OANDA' ? 'OANDA' :
+    rawBroker === 'BINANCE' ? 'Binance' :
+    rawBroker === 'CME_MINI' || rawBroker === 'CME' ? 'CME' :
+    rawBroker === 'CAPITALCOM' ? 'Capital.com' :
+    rawBroker === 'NASDAQ' ? 'NASDAQ' :
+    rawBroker || 'BlackBull';
+  const displayTicker =
+    rawTicker === 'NAS100USD' ? 'NAS100' :
+    rawTicker === 'US30USD' ? 'US30' :
+    rawTicker === 'DE30EUR' ? 'GER40' :
+    rawTicker === 'BTCUSDT' ? 'BTCUSD' :
+    rawTicker || symbol;
 
   return (
     <div

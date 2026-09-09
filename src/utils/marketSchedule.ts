@@ -271,7 +271,30 @@ export function getMarketMetadata(symbolOrBenchmark: string): MarketMetadata {
     };
   }
 
-  // 3. European Market / Indices
+  // 3. US Index CFDs & Futures (Nasdaq 100, Dow Jones 30, S&P 500)
+  if (
+    sym.includes('NAS100') ||
+    sym.includes('US30') ||
+    sym.includes('US3O') ||
+    sym.includes('SPX500') ||
+    sym.includes('ES1!') ||
+    sym.includes('NQ1!') ||
+    sym.includes('NASDAQ') ||
+    sym.includes('DOW')
+  ) {
+    return {
+      type: 'index_cfd',
+      categoryName: 'US Index Futures & CFDs',
+      exchangeName: 'CME Globex / BlackBull Markets',
+      timeZone: 'America/New_York',
+      timeZoneLabel: 'New York (EDT/EST)',
+      regularHoursSummary: 'Sun 18:00 – Fri 17:00 NY',
+      dailyBreakSummary: 'Daily Maintenance Break: 17:00 – 18:00 NY (Mon–Thu)',
+      is24x7: false,
+    };
+  }
+
+  // 4. European Market / Indices
   if (
     sym === 'LONDON_SESSION' ||
     sym.includes('GER40') ||
