@@ -342,17 +342,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     }
   };
 
-  const handleRenewSubscription = async (months: number, planName: string) => {
-    setRenewing(true);
-    setRenewMsg(null);
-    const res = await activateSubscription(months, planName);
-    setRenewing(false);
-    if (res.success) {
-      setRenewMsg(res.message || 'Subscription successfully updated!');
-      setTimeout(() => setRenewMsg(null), 3000);
-    } else {
-      setRenewMsg(`Error: ${res.error}`);
-    }
+  const handleRenewSubscription = (months: number, planName: string) => {
+    const text = encodeURIComponent(`Hello @SMTrading_SUPPORT, I would like to renew my subscription to the ${planName} (${months} Months). Please assist with USDT TRC20 payment & account activation.`);
+    window.open(`https://t.me/SMTrading_SUPPORT?text=${text}`, '_blank');
   };
 
   const handleChangePasswordSubmit = async (e: React.FormEvent) => {

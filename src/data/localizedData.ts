@@ -21,6 +21,11 @@ export const getAuthorsByLanguage = (lang: LanguageCode): Record<string, Author>
         role: 'المؤسس وكبير المهندسين الكميين',
         bio: 'مؤسس منصة تداول الأموال الذكية (SMTrading.pro). متخصص كمي في البنية الدقيقة لتدفق الأوامر ومفاهيم الأموال الذكية (SMC) وهندسة السيولة الخوارزمية.'
       },
+      ahmadNader: {
+        ...base.ahmadNader,
+        role: 'المؤسس الشريك',
+        bio: 'المؤسس الشريك لمنصة تداول الأموال الذكية (SMTrading.pro).'
+      },
       alex: {
         ...base.alex,
         role: 'كبير الاستراتيجيين الكميين',
@@ -49,6 +54,11 @@ export const getAuthorsByLanguage = (lang: LanguageCode): Record<string, Author>
         ...base.abuAsad,
         role: 'Основатель и главный квант-архитектор',
         bio: 'Основатель Smart Money Trading (SMTrading.pro). Количественный аналитик, специализирующийся на институциональном Order Flow, концепциях Smart Money (SMC) и микроструктуре алгоритмической ликвидности.'
+      },
+      ahmadNader: {
+        ...base.ahmadNader,
+        role: 'Сооснователь',
+        bio: 'Сооснователь Smart Money Trading (SMTrading.pro).'
       },
       alex: {
         ...base.alex,
@@ -79,6 +89,11 @@ export const getAuthorsByLanguage = (lang: LanguageCode): Record<string, Author>
         role: 'Засновник та головний квант-архітектор',
         bio: 'Засновник Smart Money Trading (SMTrading.pro). Кількісний аналітик, що спеціалізується на інституційному Order Flow, концепціях Smart Money (SMC) та мікроструктурі алгоритмічної ліквідності.'
       },
+      ahmadNader: {
+        ...base.ahmadNader,
+        role: 'Співзасновник',
+        bio: 'Співзасновник Smart Money Trading (SMTrading.pro).'
+      },
       alex: {
         ...base.alex,
         role: 'Головний кількісний стратег',
@@ -92,7 +107,7 @@ export const getAuthorsByLanguage = (lang: LanguageCode): Record<string, Author>
       marcus: {
         ...base.marcus,
         role: 'Старший архітектор деривативів',
-        bio: 'Провідний маркет-мейкер індексних опціонів та дисперсійних свопів. Автор книги «The Volatility Matrix & Convex Payoffs».'
+        bio: 'Провідний маркет-мейкер індексних опционів та дисперсійних свопів. Автор книги «The Volatility Matrix & Convex Payoffs».'
       },
       sarah: {
         ...base.sarah,

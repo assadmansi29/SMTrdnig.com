@@ -24,6 +24,11 @@ export const uk: Record<TranslationKey, string> = {
   navChartStudio: 'Студія TradingView',
   navChartStudioTitle: 'Живий графік TradingView та симулятор SMC',
   navSavedArticlesTitle: 'Збережені матеріали',
+  navPlatformOverview: 'Огляд платформи',
+  navStrategiesCharts: 'Стратегії та графіки',
+  navCoursesAcademy: 'Курси та академія',
+  navLiveAnalysts: 'Аналітики',
+  navPricingPlans: 'Ціни та плани',
   languageSelector: 'Мова',
 
   // Categories

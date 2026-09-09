@@ -22,9 +22,9 @@ export const AUTHORS: Record<string, Author> = {
   ahmadNader: {
     id: 'author-1',
     name: 'Ahmad Nader Attar',
-    role: 'Co-Founder & Lead Quantitative Analyst',
+    role: 'Co-Founder',
     avatar: ahmadNaderImg,
-    bio: 'Co-Founder of Smart Money Trading (SMTrading.pro). Lead Quantitative Analyst and institutional order flow strategist.',
+    bio: 'Co-Founder of Smart Money Trading (SMTrading.pro).',
     twitter: '@ahmad_nader',
     linkedin: 'ahmad-nader-attar',
   },

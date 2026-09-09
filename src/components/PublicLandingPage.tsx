@@ -59,7 +59,7 @@ export const PublicLandingPage: React.FC = () => {
   const handleScrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -102,34 +102,39 @@ export const PublicLandingPage: React.FC = () => {
           {/* Center Navigation Links (Desktop) */}
           <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
             <button 
+              type="button"
               onClick={() => handleScrollToSection('features-section')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer py-1"
             >
-              Platform Overview
+              <span className="pointer-events-none">{t('navPlatformOverview')}</span>
             </button>
             <button 
+              type="button"
               onClick={() => handleScrollToSection('strategies-section')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer py-1"
             >
-              Strategies & Charts
+              <span className="pointer-events-none">{t('navStrategiesCharts')}</span>
             </button>
             <button 
+              type="button"
               onClick={() => handleScrollToSection('academy-section')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer py-1"
             >
-              Courses & Academy
+              <span className="pointer-events-none">{t('navCoursesAcademy')}</span>
             </button>
             <button 
+              type="button"
               onClick={() => handleScrollToSection('analysts-section')}
-              className="hover:text-amber-400 transition-colors cursor-pointer"
+              className="hover:text-amber-400 transition-colors cursor-pointer py-1"
             >
-              Live Analysts
+              <span className="pointer-events-none">{t('navLiveAnalysts')}</span>
             </button>
             <button 
+              type="button"
               onClick={() => handleScrollToSection('pricing-section')}
-              className="text-amber-400 hover:text-amber-300 transition-colors cursor-pointer font-bold"
+              className="text-amber-400 hover:text-amber-300 transition-colors cursor-pointer font-bold py-1"
             >
-              Pricing & Plans
+              <span className="pointer-events-none">{t('navPricingPlans')}</span>
             </button>
           </nav>
 
@@ -594,8 +599,11 @@ export const PublicLandingPage: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
-                    <p className="text-xs text-amber-400 font-medium">Founder & CEO / Head Quantitative & SMC Mentor</p>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
+                      <BlueVerifiedBadge size="sm" />
+                    </div>
+                    <p className="text-xs text-amber-400 font-medium">Founder & CEO</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
                     "Institutional order flow is an objective science. We teach you how to follow smart money footprints, not retail emotion."
@@ -616,8 +624,11 @@ export const PublicLandingPage: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Ahmad Nader Attar</h4>
-                    <p className="text-xs text-amber-400 font-medium">Co-Founder & Quantitative Operations</p>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <h4 className="text-sm font-bold text-white">Ahmad Nader Attar</h4>
+                      <BlueVerifiedBadge size="sm" />
+                    </div>
+                    <p className="text-xs text-amber-400 font-medium">Co-Founder</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
                     "Robust infrastructure and flawless trade execution form the bedrock of institutional success."

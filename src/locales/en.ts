@@ -22,6 +22,11 @@ export const en = {
   navChartStudio: 'TradingView Studio',
   navChartStudioTitle: 'Live TradingView Chart & SMC Simulator',
   navSavedArticlesTitle: 'Saved Reading List',
+  navPlatformOverview: 'Platform Overview',
+  navStrategiesCharts: 'Strategies & Charts',
+  navCoursesAcademy: 'Courses & Academy',
+  navLiveAnalysts: 'Live Analysts',
+  navPricingPlans: 'Pricing & Plans',
   languageSelector: 'Language',
 
   // Categories

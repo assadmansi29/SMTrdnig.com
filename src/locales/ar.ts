@@ -24,6 +24,11 @@ export const ar: Record<TranslationKey, string> = {
   navChartStudio: 'استوديو TradingView',
   navChartStudioTitle: 'مخطط TradingView الحي ومحاكي SMC',
   navSavedArticlesTitle: 'قائمة القراءة المحفوظة',
+  navPlatformOverview: 'نظرة عامة على المنصة',
+  navStrategiesCharts: 'الاستراتيجيات والرسوم البيانية',
+  navCoursesAcademy: 'الدورات والأكاديمية',
+  navLiveAnalysts: 'المحللون المباشرون',
+  navPricingPlans: 'الأسعار والخطط',
   languageSelector: 'اللغة',
 
   // Categories

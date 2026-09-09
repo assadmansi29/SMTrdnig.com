@@ -109,9 +109,10 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-extrabold text-white">Ahmad Nader Attar</span>
+                      <BlueVerifiedBadge size="sm" />
                     </div>
                     <span className="text-[11px] text-amber-300/90 font-medium">
-                      Co-Founder
+                      {AUTHORS.ahmadNader.role}
                     </span>
                   </div>
                 </div>

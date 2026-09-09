@@ -169,10 +169,6 @@ export const Footer: React.FC<FooterProps> = ({
           <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerEditorialTitle')}</h4>
           <ul className="space-y-1.5 text-slate-400">
             <li className="text-amber-300 font-semibold flex items-center gap-1">
-              <span>{t('footerFounderRole')}</span>
-              <BlueVerifiedBadge size="xs" />
-            </li>
-            <li className="text-amber-300 font-semibold flex items-center gap-1">
               <span>Ahmad Nader Attar (Co-Founder)</span>
               <BlueVerifiedBadge size="xs" />
             </li>
