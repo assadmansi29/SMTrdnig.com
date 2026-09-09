@@ -579,26 +579,50 @@ export const PublicLandingPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="lg:col-span-4 flex flex-col items-center justify-center text-center p-6 bg-[#080B14] border border-slate-800 rounded-2xl space-y-3">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 p-0.5 shadow-xl">
-                  <div className="w-full h-full rounded-full bg-[#0E1526] overflow-hidden flex items-center justify-center">
-                    <img
-                      src="/abu_asad_almansi.jpg"
-                      alt="Abu Asad Almansi"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
+              <div className="lg:col-span-4 space-y-4">
+                <div className="flex flex-col items-center justify-center text-center p-6 bg-[#080B14] border border-slate-800 rounded-2xl space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 p-0.5 shadow-xl">
+                    <div className="w-full h-full rounded-full bg-[#0E1526] overflow-hidden flex items-center justify-center">
+                      <img
+                        src="/abu_asad_almansi.jpg"
+                        alt="Abu Asad Almansi"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
                   </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
+                    <p className="text-xs text-amber-400 font-medium">Founder & CEO / Head Quantitative & SMC Mentor</p>
+                  </div>
+                  <p className="text-[11px] text-slate-400 italic">
+                    "Institutional order flow is an objective science. We teach you how to follow smart money footprints, not retail emotion."
+                  </p>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
-                  <p className="text-xs text-amber-400 font-medium">Head Quantitative & SMC Mentor</p>
+
+                <div className="flex flex-col items-center justify-center text-center p-6 bg-[#080B14] border border-slate-800 rounded-2xl space-y-3">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 p-0.5 shadow-xl">
+                    <div className="w-full h-full rounded-full bg-[#0E1526] overflow-hidden flex items-center justify-center">
+                      <img
+                        src="/ahmad_nader_attar.jpg"
+                        alt="Ahmad Nader Attar"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Ahmad Nader Attar</h4>
+                    <p className="text-xs text-amber-400 font-medium">Co-Founder & Quantitative Operations</p>
+                  </div>
+                  <p className="text-[11px] text-slate-400 italic">
+                    "Robust infrastructure and flawless trade execution form the bedrock of institutional success."
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-400 italic">
-                  "Institutional order flow is an objective science. We teach you how to follow smart money footprints, not retail emotion."
-                </p>
               </div>
 
             </div>

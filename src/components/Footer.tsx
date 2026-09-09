@@ -172,9 +172,14 @@ export const Footer: React.FC<FooterProps> = ({
               <span>{t('footerFounderRole')}</span>
               <BlueVerifiedBadge size="xs" />
             </li>
-            <li>Dr. Alexander Vance (Quant)</li>
-            <li>Elena Rostova (Macro & FX)</li>
-            <li>Marcus Sterling, CFA (Derivatives)</li>
+            <li className="text-amber-300 font-semibold flex items-center gap-1">
+              <span>Ahmad Nader Attar (Co-Founder)</span>
+              <BlueVerifiedBadge size="xs" />
+            </li>
+            <li className="text-amber-300 font-semibold flex items-center gap-1">
+              <span>Abu Asad Almansi (Founder & CEO)</span>
+              <BlueVerifiedBadge size="xs" />
+            </li>
             <li>Dr. Sarah Chen (Risk Neuroscience)</li>
             <li className="pt-2 border-t border-slate-800/80">
               <a 

@@ -140,7 +140,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
                 )}
               </div>
               <span className="text-[10px] text-amber-400/90 block leading-tight truncate font-mono-num">
-                {article.author.role.includes('Founder') ? 'Founder / SMC Lead' : article.author.role}
+                {article.author.name.includes('Abu Asad') || article.author.role.includes('Founder')
+                  ? 'Founder & CEO'
+                  : article.author.role}
               </span>
             </div>
           </div>

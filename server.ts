@@ -25,6 +25,9 @@ async function startServer() {
   const server = http.createServer(app);
   const PORT = 3000;
 
+  // Trust upstream reverse proxy (Nginx / Cloud Run container ingress)
+  app.set("trust proxy", 1);
+
   // Initialize Real-time Market Data WebSocket Server on /api/market/ws
   marketStreamManager.initWebSocketServer(server);
 

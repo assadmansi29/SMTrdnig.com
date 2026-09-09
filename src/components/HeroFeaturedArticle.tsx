@@ -3,6 +3,7 @@ import { Article } from '../types';
 import { Clock, Eye, Bookmark, ArrowRight, Sparkles, TrendingUp, ShieldCheck, Flame } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useAbuAsadAvatar } from '../context/AvatarContext';
+import { AUTHORS } from '../data/blogData';
 
 interface HeroFeaturedArticleProps {
   article: Article;
@@ -66,30 +67,55 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
 
           {/* Bottom Action / Author Row */}
           <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="relative shrink-0">
-                <img
-                  src={avatarSrc}
-                  alt={article.author.name}
-                  referrerPolicy="no-referrer"
-                  className="w-11 h-11 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
-                />
-                <span className="absolute -bottom-0.5 -right-0.5 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
-                  <ShieldCheck className="w-2.5 h-2.5" />
-                </span>
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-extrabold text-white">{article.author.name}</span>
-                  {article.author.name.includes('Abu Asad') && (
-                    <BlueVerifiedBadge size="sm" />
-                  )}
-                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-mono-num font-bold px-1.5 py-0.2 rounded border border-amber-400/30">
-                    AUTHOR
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {/* Abu Asad Almansi */}
+              <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  <img
+                    src={avatarSrc}
+                    alt={article.author.name}
+                    referrerPolicy="no-referrer"
+                    className="w-10 h-10 rounded-full object-cover object-top border-2 border-amber-400 shadow-sm"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
+                    <ShieldCheck className="w-2.5 h-2.5" />
                   </span>
                 </div>
-                <span className="text-xs text-amber-300/90 font-medium">{article.author.role}</span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-extrabold text-white">Abu Asad Almansi</span>
+                    <BlueVerifiedBadge size="sm" />
+                  </div>
+                  <span className="text-[11px] text-amber-300/90 font-medium">
+                    Founder & CEO
+                  </span>
+                </div>
               </div>
+
+              {/* Ahmad Nader Attar (for Lead Quantitative Study) */}
+              {article.id === 'art-1' && (
+                <div className="flex items-center gap-3 sm:border-l sm:border-slate-800 sm:pl-4">
+                  <div className="relative shrink-0">
+                    <img
+                      src={AUTHORS.ahmadNader.avatar}
+                      alt="Ahmad Nader Attar"
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover object-top border-2 border-amber-400/80 shadow-sm"
+                    />
+                    <span className="absolute -bottom-0.5 -right-0.5 bg-amber-400 text-slate-950 p-0.5 rounded-full ring-2 ring-[#0B0F19]">
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                    </span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-extrabold text-white">Ahmad Nader Attar</span>
+                    </div>
+                    <span className="text-[11px] text-amber-300/90 font-medium">
+                      Co-Founder
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-3">

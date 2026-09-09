@@ -395,7 +395,7 @@ export const ar: Record<TranslationKey, string> = {
   footerSectorsTitle: 'قطاعات الأبحاث',
   footerToolsTitle: 'الأدوات المؤسسية',
   footerEditorialTitle: 'مجلس التحرير والخبراء',
-  footerFounderRole: 'أبو أسد المنسي (المؤسس وقائد التصميم الكمي)',
+  footerFounderRole: 'أبو أسد المنسي (Founder & CEO)',
   footerRiskWarningTitle: 'تحذير المخاطر وإفصاح CFTC:',
   footerRiskWarningText: 'ينطوي تداول العقود الآجلة، الأسهم، الخيارات، العملات الأجنبية، والأصول الرقمية على مخاطر خسارة كبيرة ولا يناسب جميع المستثمرين. إن درجة الرافعة المالية العالية قد تعمل ضدك تماماً كما تعمل لصالحك. جميع المواد المنشورة على SMTrading.pro هي لأغراض تعليمية وإعلامية وبحثية كمية فقط ولا تشكل أي نصيحة مالية أو استثمارية.',
   footerCopyright: '© 2026 SMTrading.pro بإشراف أبو أسد المنسي. جميع الحقوق محفوظة.',

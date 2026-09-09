@@ -1,5 +1,12 @@
 import rateLimit from 'express-rate-limit';
 
+// Standard validation options for containerized / reverse-proxy environments (Nginx / Cloud Run)
+const proxyValidationConfig = {
+  xForwardedForHeader: false,
+  forwardedHeader: false,
+  default: true,
+};
+
 /**
  * Rate Limiter for Login Attempts
  * Limits each IP to 10 authentication requests per 15 minutes.
@@ -10,6 +17,7 @@ export const loginRateLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: proxyValidationConfig,
   message: {
     error: 'Too many login attempts from this IP. Please wait 15 minutes before trying again.',
   },
@@ -25,6 +33,7 @@ export const verificationCodeLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: proxyValidationConfig,
   message: {
     error: 'Too many verification code requests. Please wait 10 minutes before requesting another code.',
   },
@@ -39,6 +48,7 @@ export const payoutRateLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: proxyValidationConfig,
   message: {
     error: 'Too many payout requests submitted. Please wait 15 minutes before trying again.',
   },
@@ -52,6 +62,7 @@ export const passwordResetLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: proxyValidationConfig,
   message: {
     error: 'Too many password reset requests. Please wait 15 minutes before trying again.',
   },

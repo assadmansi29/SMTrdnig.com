@@ -393,7 +393,7 @@ export const en = {
   footerSectorsTitle: 'Research Sectors',
   footerToolsTitle: 'Institutional Tools',
   footerEditorialTitle: 'Editorial Board',
-  footerFounderRole: 'Abu Asad Almansi (Founder & Lead Architect)',
+  footerFounderRole: 'Abu Asad Almansi (Founder & CEO)',
   footerRiskWarningTitle: 'CFTC & Risk Warning:',
   footerRiskWarningText: 'Trading futures, equities, options, foreign exchange, and digital assets carries substantial risk of loss and is not suitable for every investor. The high degree of leverage that is often obtainable in commodity trading can work against you as well as for you. Content published on SMTrading.pro is strictly for educational, informational, and quantitative research purposes and does not constitute financial, investment, or trading advice.',
   footerCopyright: '© 2026 SMTrading.pro by Abu Asad Almansi. All Rights Reserved.',

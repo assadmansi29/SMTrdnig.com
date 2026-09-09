@@ -250,7 +250,9 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                     )}
                   </div>
                   <span className="text-xs text-amber-300/90 font-medium block">
-                    {leadArticle.author.role}
+                    {leadArticle.author.name.includes('Abu Asad') || leadArticle.author.role.includes('Founder')
+                      ? 'Founder & CEO'
+                      : leadArticle.author.role}
                   </span>
                 </div>
               </div>
