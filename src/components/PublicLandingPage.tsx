@@ -57,9 +57,11 @@ export const PublicLandingPage: React.FC = () => {
   };
 
   const handleScrollToSection = (id: string) => {
-    const el = document.getElementById(id);
+    const el = document.getElementById(id) || document.querySelector(`#${id}`);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -99,8 +101,8 @@ export const PublicLandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Navigation Links (Desktop) */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
+          {/* Center Navigation Links (Responsive) */}
+          <nav className="hidden md:flex items-center gap-3 lg:gap-6 text-xs font-semibold text-slate-300">
             <button 
               type="button"
               onClick={() => handleScrollToSection('features-section')}
@@ -150,7 +152,7 @@ export const PublicLandingPage: React.FC = () => {
               onClick={() => setIsLoginModalOpen(true)}
               className="h-9 md:h-10 px-3.5 md:px-4 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 whitespace-nowrap flex items-center justify-center"
             >
-              Client Login
+              <span>{t('clientLogin')}</span>
             </button>
 
             {/* Main Primary CTA: Subscribe Now */}
@@ -159,7 +161,7 @@ export const PublicLandingPage: React.FC = () => {
               onClick={handleScrollToPricing}
               className="h-9 md:h-10 px-4 md:px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-black rounded-xl text-xs md:text-sm tracking-tight transition-all shadow-md sm:shadow-lg shadow-amber-500/20 cursor-pointer shrink-0 flex items-center justify-center gap-1.5 whitespace-nowrap"
             >
-              <span>Subscribe Now</span>
+              <span>{t('subscribeNow')}</span>
               <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180 shrink-0" />
             </button>
           </div>
@@ -223,7 +225,7 @@ export const PublicLandingPage: React.FC = () => {
             onClick={() => setIsLoginModalOpen(true)}
             className="flex-1 h-10 px-2.5 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-slate-200 hover:text-white border border-slate-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center justify-center whitespace-nowrap"
           >
-            Client Login
+            <span>{t('clientLogin')}</span>
           </button>
 
           {/* Subscribe Now */}
@@ -232,7 +234,7 @@ export const PublicLandingPage: React.FC = () => {
             onClick={handleScrollToPricing}
             className="flex-1 h-10 px-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-black rounded-xl text-xs tracking-tight transition-all shadow-md shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
           >
-            <span>Subscribe</span>
+            <span>{t('subscribe')}</span>
             <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180 shrink-0" />
           </button>
         </div>
@@ -269,7 +271,7 @@ export const PublicLandingPage: React.FC = () => {
                 onClick={handleScrollToPricing}
                 className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-2xl text-sm sm:text-base tracking-tight shadow-xl shadow-amber-500/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer transform hover:-translate-y-0.5"
               >
-                <span>Subscribe Now</span>
+                <span>{t('subscribeNow')}</span>
                 <ArrowRight className="w-4 h-4 rtl:rotate-180" />
               </button>
 

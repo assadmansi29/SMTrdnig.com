@@ -27,6 +27,9 @@ export const en = {
   navCoursesAcademy: 'Courses & Academy',
   navLiveAnalysts: 'Live Analysts',
   navPricingPlans: 'Pricing & Plans',
+  clientLogin: 'Client Login',
+  subscribeNow: 'Subscribe Now',
+  subscribe: 'Subscribe',
   languageSelector: 'Language',
 
   // Categories

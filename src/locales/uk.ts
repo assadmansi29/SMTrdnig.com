@@ -29,6 +29,9 @@ export const uk: Record<TranslationKey, string> = {
   navCoursesAcademy: 'Курси та академія',
   navLiveAnalysts: 'Аналітики',
   navPricingPlans: 'Ціни та плани',
+  clientLogin: 'Вхід для клієнтів',
+  subscribeNow: 'Підписатися',
+  subscribe: 'Підписка',
   languageSelector: 'Мова',
 
   // Categories

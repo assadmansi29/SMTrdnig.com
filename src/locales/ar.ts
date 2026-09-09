@@ -29,6 +29,9 @@ export const ar: Record<TranslationKey, string> = {
   navCoursesAcademy: 'الدورات والأكاديمية',
   navLiveAnalysts: 'المحللون المباشرون',
   navPricingPlans: 'الأسعار والخطط',
+  clientLogin: 'تسجيل دخول العملاء',
+  subscribeNow: 'اشترك الآن',
+  subscribe: 'اشتراك',
   languageSelector: 'اللغة',
 
   // Categories
