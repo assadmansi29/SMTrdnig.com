@@ -59,7 +59,20 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   // Resolve source URL
   let resolvedSrc: string | null = null;
 
-  if (avatarUrl && !imageError) {
+  const isAbuAsad = 
+    displayName.toLowerCase().includes('abu asad') ||
+    username.toLowerCase().includes('abuasad') ||
+    (user as any)?.email?.toLowerCase() === 'am29multibrand@gmail.com' ||
+    role === 'super_admin';
+
+  if (isAbuAsad) {
+    // When Abu Asad Almansi is displayed, strictly use his actual stored photo from SM Trading Pro
+    if (avatarUrl && !avatarUrl.includes('images.unsplash.com') && !imageError) {
+      resolvedSrc = avatarUrl;
+    } else {
+      resolvedSrc = '/abu_asad_almansi.jpg';
+    }
+  } else if (avatarUrl && !imageError) {
     resolvedSrc = avatarUrl;
   } else if (!imageError) {
     if (role === 'admin') {
@@ -111,7 +124,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       </div>
 
       {/* Role Badge Indicator */}
-      {showRoleBadge && role === 'admin' && (
+      {showRoleBadge && (role === 'admin' || role === 'super_admin' || isAbuAsad) && (
         <div
           className={`absolute rounded-full bg-amber-500 text-slate-950 border border-amber-300 flex items-center justify-center shadow-md ${badgeClass}`}
           title="Master Admin"

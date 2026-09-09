@@ -479,6 +479,7 @@ export default function App() {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         onOpenAdmin={() => handleOpenAdmin('users')}
+        onOpenCoachingDesk={handleOpenCoachingDesk}
       />
 
       <AdminPanelModal

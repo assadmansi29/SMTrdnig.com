@@ -289,7 +289,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="w-full flex items-center justify-center gap-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer"
           >
             <Search className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="truncate">{t('navSearchPlaceholder').replace('...', '')}</span>
+            <span className="truncate">{(t('navSearchPlaceholder') || 'Search').replace('...', '')}</span>
           </button>
 
           <div className="w-full">

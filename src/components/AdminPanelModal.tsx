@@ -754,10 +754,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     if (!auditSearch) return true;
     const q = auditSearch.toLowerCase();
     return (
-      log.actorUsername.toLowerCase().includes(q) ||
-      log.action.toLowerCase().includes(q) ||
+      (log.actorUsername || '').toLowerCase().includes(q) ||
+      (log.action || '').toLowerCase().includes(q) ||
       (log.targetUsername || '').toLowerCase().includes(q) ||
-      log.details.toLowerCase().includes(q)
+      (log.details || '').toLowerCase().includes(q)
     );
   });
 
@@ -1503,7 +1503,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                             : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         }`}>
-                          {student.trainingStatus.replace('_', ' ')}
+                          {(student.trainingStatus || 'active_training').replace(/_/g, ' ')}
                         </span>
                       </div>
 
@@ -1514,12 +1514,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           <span>Curriculum Milestones</span>
                         </span>
                         {student.trainingProgress?.map((m, idx) => {
-                          const pct = Math.round((m.completedLessons / m.totalLessons) * 100);
+                          const total = m.totalLessons || 1;
+                          const completed = m.completedLessons ?? 0;
+                          const pct = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
                           return (
-                            <div key={m.id} className="bg-slate-900/60 p-2 rounded-lg border border-slate-800/60">
+                            <div key={m.id || idx} className="bg-slate-900/60 p-2 rounded-lg border border-slate-800/60">
                               <div className="flex items-center justify-between text-[11px] mb-1">
-                                <span className="font-semibold text-slate-200">{m.courseName}</span>
-                                <span className="font-mono text-emerald-400 font-bold">{m.completedLessons}/{m.totalLessons} ({pct}%)</span>
+                                <span className="font-semibold text-slate-200">{m.courseName || `Phase ${idx + 1}`}</span>
+                                <span className="font-mono text-emerald-400 font-bold">{completed}/{total} ({pct}%)</span>
                               </div>
                               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1.5">
                                 <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -1528,13 +1530,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                 <span className="text-slate-400">Lessons Completed</span>
                                 <div className="flex items-center gap-1">
                                   <button
-                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.max(0, m.completedLessons - 1))}
+                                    type="button"
+                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.max(0, completed - 1))}
                                     className="px-1.5 py-0.2 bg-slate-800 hover:bg-slate-700 text-white rounded cursor-pointer"
                                   >
                                     -
                                   </button>
                                   <button
-                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.min(m.totalLessons, m.completedLessons + 1))}
+                                    type="button"
+                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.min(total, completed + 1))}
                                     className="px-1.5 py-0.2 bg-emerald-600 hover:bg-emerald-500 text-white rounded cursor-pointer"
                                   >
                                     +1 Lesson
@@ -1768,7 +1772,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               </td>
                               <td className="px-4 py-3">
                                 <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px] uppercase font-semibold">
-                                  {item.type.replace('_', ' ')}
+                                  {(item.type || 'operational').replace(/_/g, ' ')}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
@@ -1790,7 +1794,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                                     : 'bg-slate-800 text-slate-300'
                                 }`}>
-                                  {item.status.replace('_', ' ')}
+                                  {(item.status || 'pending').replace(/_/g, ' ')}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right">

@@ -51,12 +51,14 @@ interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenAdmin?: () => void;
+  onOpenCoachingDesk?: () => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   isOpen,
   onClose,
   onOpenAdmin,
+  onOpenCoachingDesk,
 }) => {
   const { t } = useTranslation();
   const { user, token, logout, updateProfile, activateSubscription, changePassword, sendProfileVerificationCode } = useAuth();
@@ -401,155 +403,192 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl bg-[#0C111E] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-8 duration-200"
+        className="relative w-full max-w-4xl bg-[#0C111E] border-t sm:border border-slate-700/90 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh] h-[94vh] sm:h-auto animate-in slide-in-from-bottom-8 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle Bar on mobile */}
-        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mt-3" />
+        <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto sm:hidden mt-2.5 shrink-0" />
         
-        {/* Modal Top Header */}
-        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800/80 flex items-center justify-between bg-[#080C14] gap-2 shrink-0 sticky top-0 z-20">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 pr-1 rtl:pr-0 rtl:pl-1">
-            <div className="relative group cursor-pointer shrink-0" onClick={() => setShowAvatarModal(true)} title="Click to change profile picture">
-              <UserAvatar
-                user={user}
-                size="lg"
-                isEditable={true}
-                onEditClick={() => setShowAvatarModal(true)}
-                className="w-10 h-10 sm:w-11 sm:h-11 ring-2 ring-amber-400/40 group-hover:ring-amber-400 transition-all rounded-xl shadow-md"
-              />
-              <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full shadow-sm border border-slate-900">
-                <Camera className="w-2.5 h-2.5" />
-              </span>
+        {/* Modal Top Header - Responsive & Non-overlapping on mobile */}
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-800/80 bg-[#080C14] shrink-0 sticky top-0 z-20 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            {/* User Identity Info */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="relative group cursor-pointer shrink-0" onClick={() => setShowAvatarModal(true)} title="Click to change profile picture">
+                <UserAvatar
+                  user={user}
+                  size="lg"
+                  isEditable={true}
+                  onEditClick={() => setShowAvatarModal(true)}
+                  className="w-10 h-10 sm:w-11 sm:h-11 ring-2 ring-amber-400/40 group-hover:ring-amber-400 transition-all rounded-xl shadow-md"
+                />
+                <span className="absolute -bottom-1 -right-1 bg-amber-400 text-slate-950 p-0.5 rounded-full shadow-sm border border-slate-900">
+                  <Camera className="w-2.5 h-2.5" />
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-extrabold text-sm sm:text-lg text-white truncate">
+                    {user.fullName || user.username}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">(@{user.username})</span>
+                  
+                  {/* Role Badge */}
+                  {isRoleSuperAdmin ? (
+                    <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1 shadow-sm shrink-0">
+                      <Crown className="w-3 h-3 text-amber-400" />
+                      <span>{t('profileRoleSuperAdmin')}</span>
+                    </span>
+                  ) : isRoleAdmin ? (
+                    <span className="bg-purple-400/20 text-purple-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-purple-400/50 flex items-center gap-1 shrink-0">
+                      <ShieldCheck className="w-3 h-3 text-purple-400" />
+                      <span>{t('profileRoleAdmin')}</span>
+                    </span>
+                  ) : isRoleCoach ? (
+                    <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/50 flex items-center gap-1 shrink-0">
+                      <GraduationCap className="w-3 h-3 text-emerald-400" />
+                      <span>{t('profileRoleCoach')}</span>
+                    </span>
+                  ) : isRoleEmployee ? (
+                    <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/50 flex items-center gap-1 shrink-0">
+                      <Briefcase className="w-3 h-3 text-blue-400" />
+                      <span>{t('profileRoleEmployee')}</span>
+                    </span>
+                  ) : (
+                    <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/40 flex items-center gap-1 shrink-0">
+                      <BlueVerifiedBadge size="sm" />
+                      <span>{t('profileRoleClient')}</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400 truncate mt-0.5">
+                  <span className="truncate">{user.email}</span>
+                </div>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <span className="font-extrabold text-sm sm:text-lg text-white truncate max-w-[130px] sm:max-w-none">
-                  {user.fullName || user.username}
-                </span>
-                <span className="text-xs text-slate-400 font-mono hidden sm:inline">(@{user.username})</span>
-                
-                {/* Role Badge */}
-                {isRoleSuperAdmin ? (
-                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1 shadow-sm shrink-0">
-                    <Crown className="w-3 h-3 text-amber-400" />
-                    <span className="hidden xs:inline">{t('profileRoleSuperAdmin')}</span>
-                  </span>
-                ) : isRoleAdmin ? (
-                  <span className="bg-purple-400/20 text-purple-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-purple-400/50 flex items-center gap-1 shrink-0">
-                    <ShieldCheck className="w-3 h-3 text-purple-400" />
-                    <span className="hidden xs:inline">{t('profileRoleAdmin')}</span>
-                  </span>
-                ) : isRoleCoach ? (
-                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/50 flex items-center gap-1 shrink-0">
-                    <GraduationCap className="w-3 h-3 text-emerald-400" />
-                    <span className="hidden xs:inline">{t('profileRoleCoach')}</span>
-                  </span>
-                ) : isRoleEmployee ? (
-                  <span className="bg-blue-400/20 text-blue-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-blue-400/50 flex items-center gap-1 shrink-0">
-                    <Briefcase className="w-3 h-3 text-blue-400" />
-                    <span className="hidden xs:inline">{t('profileRoleEmployee')}</span>
-                  </span>
-                ) : (
-                  <span className="bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-400/40 flex items-center gap-1 shrink-0">
-                    <BlueVerifiedBadge size="sm" />
-                    <span className="hidden xs:inline">{t('profileRoleClient')}</span>
-                  </span>
-                )}
+
+            {/* Right Controls: Staff / Close */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:block w-[84px] shrink-0">
+                <LanguageSelector />
               </div>
-              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-400 truncate">
-                <span className="truncate max-w-[140px] sm:max-w-none">{user.email}</span>
-                <span className="hidden sm:inline">•</span>
-                <span className="hidden sm:flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400'}`} />
-                  <span className={isExpired ? 'text-rose-400 font-bold' : 'text-emerald-300 font-medium'}>
-                    {isStaffRole ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
-                  </span>
-                </span>
-              </div>
+
+              {isStaffRole && onOpenAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAdmin();
+                  }}
+                  className="hidden xs:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20 shrink-0"
+                >
+                  {isRoleSuperAdmin ? <Crown className="w-3.5 h-3.5" /> : isRoleCoach ? <GraduationCap className="w-3.5 h-3.5" /> : isRoleEmployee ? <Briefcase className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                  <span className="hidden sm:inline">{isRoleSuperAdmin ? 'Super Admin' : isRoleCoach ? 'Coaching Desk' : isRoleEmployee ? 'Operations' : 'Admin'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
+                aria-label="Close user profile"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden sm:block w-[84px] shrink-0">
-              <LanguageSelector />
+          {/* Dedicated Status & Expiration Strip on Mobile & Desktop */}
+          <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2 bg-slate-900/90 rounded-xl border border-slate-800/90 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isExpired ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
+              <span className="text-slate-400 shrink-0 font-medium">Subscription:</span>
+              <span className={`font-bold truncate ${isExpired ? 'text-rose-400' : 'text-emerald-300'}`}>
+                {isStaffRole ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
+              </span>
             </div>
 
-            {isStaffRole && onOpenAdmin && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenAdmin();
-                }}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20 shrink-0"
-              >
-                {isRoleSuperAdmin ? <Crown className="w-3.5 h-3.5" /> : isRoleCoach ? <GraduationCap className="w-3.5 h-3.5" /> : isRoleEmployee ? <Briefcase className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                <span>{isRoleSuperAdmin ? 'Super Admin Desk' : isRoleCoach ? 'Coaching Desk' : isRoleEmployee ? 'Operations Desk' : 'Admin Desk'}</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-              aria-label="Close user profile"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {onOpenCoachingDesk && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenCoachingDesk();
+                  }}
+                  className="px-2 py-0.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <GraduationCap className="w-3 h-3 text-emerald-400" />
+                  <span>Coaching Desk</span>
+                </button>
+              )}
+              {!isStaffRole && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('subscription')}
+                  className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <CreditCard className="w-3 h-3" />
+                  <span>{isExpired ? 'Renew Access' : 'Manage Plan'}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-800 bg-[#080C14] overflow-x-auto no-scrollbar">
+        {/* Tab Navigation - Fully Responsive & Mobile-Clean Grid */}
+        <div className="grid grid-cols-4 gap-1 px-2 sm:px-6 pt-2 border-b border-slate-800 bg-[#080C14] shrink-0">
           <button
+            type="button"
             onClick={() => setActiveTab('profile')}
-            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`pb-2.5 px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all border-b-2 cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'profile'
                 ? 'border-amber-400 text-amber-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <User className="w-3.5 h-3.5" />
-            <span>{t('profileTabAccount')}</span>
+            <User className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{t('profileTabAccount')}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('referrals')}
-            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`pb-2.5 px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all border-b-2 cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'referrals'
                 ? 'border-amber-400 text-amber-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>{t('profileTabReferrals')}</span>
-            <span className="ml-1 bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded-full text-[10px] font-mono">
-              ${(user.balance ?? 0).toFixed(2)}
-            </span>
+            <Share2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{t('profileTabReferrals')}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('transactions')}
-            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`pb-2.5 px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all border-b-2 cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'transactions'
                 ? 'border-amber-400 text-amber-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Wallet className="w-3.5 h-3.5" />
-            <span>{t('profileTabTransactions')}</span>
+            <Wallet className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{t('profileTabTransactions')}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('subscription')}
-            className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            className={`pb-2.5 px-1 sm:px-3 text-[11px] sm:text-xs font-bold transition-all border-b-2 cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 ${
               activeTab === 'subscription'
                 ? 'border-amber-400 text-amber-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>{t('profileTabSubscription')}</span>
+            <CreditCard className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{t('profileTabSubscription')}</span>
           </button>
         </div>
 
@@ -1226,87 +1265,108 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <div className="space-y-6">
               
               {/* Current Active Plan Status */}
-              <div className="p-5 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="min-w-0">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">{t('profileCurrentPlan')}</span>
-                  <h3 className="text-lg font-black text-white">{user.subscriptionPlan || 'Pro Order Flow SMC'}</h3>
-                  <div className="mt-1 flex items-center gap-2 text-xs">
+                  <h3 className="text-base sm:text-lg font-black text-white truncate">{user.subscriptionPlan || 'Pro Order Flow SMC'}</h3>
+                  <div className="mt-1 flex items-center flex-wrap gap-2 text-xs">
                     <span className={`inline-flex items-center gap-1 font-bold ${isExpired ? 'text-rose-400' : 'text-emerald-400'}`}>
                       <span className={`w-2 h-2 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
                       <span>{isExpired ? t('profileSubExpiredStatus') : t('profileSubActiveStatus')}</span>
                     </span>
                     <span className="text-slate-600">•</span>
                     <span className="text-slate-400">
-                      {isRoleAdmin || isRoleEmployee ? t('profilePermanentDeskAccess') : `Expires on ${formattedExpiry}`}
+                      {isStaffRole ? t('profilePermanentDeskAccess') : `Expires: ${formattedExpiry}`}
                     </span>
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right">
+                <div className="flex flex-col sm:items-end gap-1.5 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
                   <span className="text-[10px] text-slate-500 block uppercase">{t('profilePermissions')}</span>
                   <span className="text-xs font-bold text-amber-300 uppercase">
                     {t('profileFullAlphaAccess')}
                   </span>
+                  {onOpenCoachingDesk && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenCoachingDesk();
+                      }}
+                      className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all cursor-pointer w-full sm:w-auto"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Access Coaching Desk</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
               {renewMsg && (
                 <div className="p-3 bg-emerald-950/80 border border-emerald-800 text-emerald-200 text-xs rounded-xl flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>{renewMsg}</span>
                 </div>
               )}
 
               {/* Renewal Options */}
               <div>
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">
-                  {t('profileExtendUpgrade')}
-                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    {t('profileExtendUpgrade')}
+                  </h4>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    USDT TRC20 Settle
+                  </span>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between">
+                  <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
                     <div>
                       <div className="text-xs font-bold text-white">{t('pricingPlanMonthly')}</div>
-                      <div className="text-xl font-black text-amber-400 mt-1">$120 <span className="text-xs text-slate-400 font-normal">/ 30 days</span></div>
+                      <div className="text-xl font-black text-amber-400 mt-1 font-mono-num">$120 <span className="text-xs text-slate-400 font-normal">/ 30 days</span></div>
                       <p className="text-[11px] text-slate-400 mt-1">{t('profileSingleMonthExt')}</p>
                     </div>
                     <button
+                      type="button"
                       disabled={renewing}
                       onClick={() => handleRenewSubscription(1, 'Pro Monthly SMC Pass')}
-                      className="mt-4 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
+                      className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
                       {renewing ? 'Updating...' : `${t('profileExtendBtn')} 1 Month`}
                     </button>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-400/60 flex flex-col justify-between relative">
-                    <span className="absolute -top-2 right-3 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.2 rounded-full">
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-400/60 flex flex-col justify-between space-y-3 relative">
+                    <span className="absolute -top-2 right-3 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
                       {t('profileBestValue')}
                     </span>
                     <div>
                       <div className="text-xs font-bold text-amber-300">{t('pricingPlanQuarterly')}</div>
-                      <div className="text-xl font-black text-white mt-1">$290 <span className="text-xs text-slate-400 font-normal">/ 90 days</span></div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$290 <span className="text-xs text-slate-400 font-normal">/ 90 days</span></div>
                       <p className="text-[11px] text-slate-400 mt-1">{t('profileQuarterlyDesc')}</p>
                     </div>
                     <button
+                      type="button"
                       disabled={renewing}
                       onClick={() => handleRenewSubscription(3, 'Pro Quarterly VIP Pass')}
-                      className="mt-4 w-full py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-lg transition-all cursor-pointer shadow-md shadow-amber-500/20"
+                      className="w-full min-h-[44px] py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shadow-amber-500/20 active:scale-98"
                     >
                       {renewing ? 'Updating...' : `${t('profileExtendBtn')} 3 Months ($290)`}
                     </button>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between">
+                  <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
                     <div>
                       <div className="text-xs font-bold text-emerald-300">{t('pricingPlanAnnual')}</div>
-                      <div className="text-xl font-black text-white mt-1">$990 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$990 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
                       <p className="text-[11px] text-slate-400 mt-1">{t('profileAnnualDesc')}</p>
                     </div>
                     <button
+                      type="button"
                       disabled={renewing}
                       onClick={() => handleRenewSubscription(12, 'Annual Institutional Elite')}
-                      className="mt-4 w-full py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
+                      className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
                       {renewing ? 'Updating...' : `${t('profileExtendBtn')} 1 Year ($990)`}
                     </button>
@@ -1319,12 +1379,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-slate-800/80 bg-[#080C14] flex items-center justify-between text-xs text-slate-500">
-          <span>{t('profileLoggedInAs')} @{user.username} ({user.role})</span>
+        {/* Modal Footer - Clean Responsive Wrap */}
+        <div className="px-4 sm:px-6 py-3 border-t border-slate-800/80 bg-[#080C14] flex items-center justify-between flex-wrap gap-2 text-xs text-slate-500 shrink-0">
+          <span className="truncate">{t('profileLoggedInAs')} @{user.username} ({user.role})</span>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer"
+            className="min-h-[38px] px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer transition-colors shrink-0"
           >
             {t('profileCloseModalBtn')}
           </button>

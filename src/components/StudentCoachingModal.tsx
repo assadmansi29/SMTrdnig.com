@@ -141,19 +141,33 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
         if (!isMounted) return;
         if (data.success) {
           if (data.assignedCoach) {
-            setAssignedCoach(data.assignedCoach);
+            // Guard against any external female placeholder image
+            const isAbuAsadCoach = data.assignedCoach.fullName?.toLowerCase().includes('abu asad') ||
+              data.assignedCoach.username?.toLowerCase().includes('abuasad');
+            setAssignedCoach({
+              ...data.assignedCoach,
+              avatarUrl: isAbuAsadCoach
+                ? '/abu_asad_almansi.jpg'
+                : (data.assignedCoach.avatarUrl?.includes('images.unsplash.com') ? '/abu_asad_almansi.jpg' : data.assignedCoach.avatarUrl)
+            });
           } else {
             setAssignedCoach({
               fullName: 'Abu Asad Almansi',
               username: 'abuasad2299',
               specialty: 'Chief Quantitative & Institutional SMC Mentor',
-              avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+              avatarUrl: '/abu_asad_almansi.jpg'
             });
           }
           if (data.trainingStatus) setTrainingStatus(data.trainingStatus);
           if (data.coachingNotes) setCoachingNotes(data.coachingNotes);
           if (data.trainingProgress && Array.isArray(data.trainingProgress) && data.trainingProgress.length > 0) {
-            setMilestones(data.trainingProgress);
+            const normalized: Milestone[] = data.trainingProgress.map((item: any, idx: number) => ({
+              id: item.id || `m${idx + 1}`,
+              courseName: item.courseName || item.name || `Phase ${idx + 1} Institutional Curriculum`,
+              completedLessons: typeof item.completedLessons === 'number' ? item.completedLessons : (item.completed ? (item.totalLessons || 1) : 0),
+              totalLessons: typeof item.totalLessons === 'number' && item.totalLessons > 0 ? item.totalLessons : 1,
+            }));
+            setMilestones(normalized);
           }
         }
       })
@@ -341,9 +355,9 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
 
   if (!isOpen || typeof document === 'undefined') return null;
 
-  const totalLessons = milestones.reduce((sum, m) => sum + m.totalLessons, 0);
-  const completedLessons = milestones.reduce((sum, m) => sum + m.completedLessons, 0);
-  const overallPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const totalLessons = milestones.reduce((sum, m) => sum + (m?.totalLessons || 1), 0);
+  const completedLessons = milestones.reduce((sum, m) => sum + (m?.completedLessons ?? 0), 0);
+  const overallPercentage = totalLessons > 0 ? Math.min(100, Math.max(0, Math.round((completedLessons / totalLessons) * 100))) : 0;
 
   return createPortal(
     <div
@@ -507,7 +521,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                             ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                             : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                         }`}>
-                          {student.trainingStatus.replace('_', ' ')}
+                          {(student.trainingStatus || 'active_training').replace(/_/g, ' ')}
                         </span>
                       </div>
 
@@ -518,12 +532,14 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                           <span>Curriculum Milestones</span>
                         </span>
                         {student.trainingProgress?.map((m, idx) => {
-                          const pct = Math.round((m.completedLessons / m.totalLessons) * 100);
+                          const total = m.totalLessons || 1;
+                          const completed = m.completedLessons ?? 0;
+                          const pct = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
                           return (
                             <div key={m.id || idx} className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/70 space-y-1.5">
                               <div className="flex items-center justify-between text-[11px]">
-                                <span className="font-semibold text-slate-200 truncate pr-2">{m.courseName}</span>
-                                <span className="font-mono text-emerald-400 font-bold shrink-0">{m.completedLessons}/{m.totalLessons} ({pct}%)</span>
+                                <span className="font-semibold text-slate-200 truncate pr-2">{m.courseName || `Phase ${idx + 1}`}</span>
+                                <span className="font-mono text-emerald-400 font-bold shrink-0">{completed}/{total} ({pct}%)</span>
                               </div>
                               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                 <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -533,7 +549,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
-                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.max(0, m.completedLessons - 1))}
+                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.max(0, completed - 1))}
                                     className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-white rounded font-bold cursor-pointer transition-colors"
                                     title="Decrement lesson"
                                   >
@@ -541,7 +557,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.min(m.totalLessons, m.completedLessons + 1))}
+                                    onClick={() => handleUpdateMilestone(student.id, idx, Math.min(total, completed + 1))}
                                     className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold cursor-pointer transition-colors"
                                     title="Add completed lesson"
                                   >
@@ -633,7 +649,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
                     <span>Training Status</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                      {trainingStatus.replace('_', ' ')}
+                      {(trainingStatus || 'active_training').replace(/_/g, ' ')}
                     </span>
                   </div>
                 </div>
@@ -652,7 +668,14 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400/30 to-amber-500/30 border border-emerald-500/40 p-0.5 shrink-0">
                       <div className="w-full h-full rounded-[14px] bg-slate-900 overflow-hidden flex items-center justify-center">
                         <UserAvatar
-                          user={assignedCoach ? { fullName: assignedCoach.fullName, username: assignedCoach.username, avatarUrl: assignedCoach.avatarUrl } as any : { fullName: 'Abu Asad Almansi', username: 'abuasad2299' } as any}
+                          user={{
+                            fullName: assignedCoach?.fullName || 'Abu Asad Almansi',
+                            username: assignedCoach?.username || 'abuasad2299',
+                            avatarUrl: (assignedCoach?.avatarUrl && !assignedCoach.avatarUrl.includes('images.unsplash.com'))
+                              ? assignedCoach.avatarUrl
+                              : '/abu_asad_almansi.jpg',
+                            role: 'super_admin'
+                          }}
                           size="md"
                         />
                       </div>
@@ -695,8 +718,10 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
 
                 <div className="grid grid-cols-1 gap-2.5">
                   {milestones.map((m, idx) => {
-                    const pct = Math.round((m.completedLessons / m.totalLessons) * 100);
-                    const isComplete = m.completedLessons >= m.totalLessons;
+                    const total = m.totalLessons || 1;
+                    const completed = m.completedLessons ?? 0;
+                    const pct = Math.min(100, Math.max(0, Math.round((completed / total) * 100)));
+                    const isComplete = completed >= total;
 
                     return (
                       <div
