@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Crown, 
@@ -38,6 +38,39 @@ import { MemberLoginModal } from './MemberLoginModal';
 
 export const PublicLandingPage: React.FC = () => {
   const { t, isRTL } = useTranslation();
+
+  // Live Alpha Feed Market Prices State with real-time micro-ticks
+  const [feedTickers, setFeedTickers] = useState([
+    { symbol: 'XAU/USD', price: 2942.10, changePercent: 0.65 },
+    { symbol: 'NAS100', price: 21180.75, changePercent: 0.88 },
+    { symbol: 'US30', price: 43910.50, changePercent: 0.60 },
+    { symbol: 'BTC/USD', price: 96420.50, changePercent: 3.03 },
+    { symbol: 'EUR/USD', price: 1.0845, changePercent: -0.20 },
+  ]);
+  const [flashingSymbol, setFlashingSymbol] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFeedTickers(prev => {
+        const idx = Math.floor(Math.random() * prev.length);
+        const target = prev[idx];
+        const delta = (Math.random() - 0.48) * (target.price > 1000 ? 1.2 : 0.0003);
+        const newPrice = target.price + delta;
+        const newChange = target.changePercent + (delta > 0 ? 0.02 : -0.02);
+
+        setFlashingSymbol(target.symbol);
+        setTimeout(() => setFlashingSymbol(null), 800);
+
+        return prev.map((t, i) => i === idx ? {
+          ...t,
+          price: Number(newPrice.toFixed(t.symbol.includes('EUR') ? 4 : 2)),
+          changePercent: Number(newChange.toFixed(2))
+        } : t);
+      });
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Modal states
   const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<SubscriptionPlanInfo | null>(null);
@@ -177,31 +210,28 @@ export const PublicLandingPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6 font-mono text-[11px] text-slate-300">
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold">XAU/USD:</span>
-              <span className="text-emerald-400 font-bold">$2,908.40</span>
-              <span className="text-emerald-500/80 text-[10px]">+0.84%</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold">NAS100:</span>
-              <span className="text-emerald-400 font-bold">21,430.50</span>
-              <span className="text-emerald-500/80 text-[10px]">+1.12%</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold">US30:</span>
-              <span className="text-slate-200 font-bold">44,120.00</span>
-              <span className="text-emerald-500/80 text-[10px]">+0.45%</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold">BTC/USD:</span>
-              <span className="text-amber-400 font-bold">$88,450.00</span>
-              <span className="text-emerald-500/80 text-[10px]">+2.30%</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-slate-400 font-bold">EUR/USD:</span>
-              <span className="text-slate-200 font-bold">1.0482</span>
-              <span className="text-rose-400 text-[10px]">-0.15%</span>
-            </div>
+            {feedTickers.map((item) => {
+              const isPositive = item.changePercent >= 0;
+              const isFlashing = flashingSymbol === item.symbol;
+              return (
+                <div 
+                  key={item.symbol} 
+                  className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-colors ${
+                    isFlashing ? (isPositive ? 'bg-emerald-950/50' : 'bg-rose-950/50') : ''
+                  }`}
+                >
+                  <span className="text-slate-400 font-bold">{item.symbol}:</span>
+                  <span className={`font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {item.symbol.includes('EUR') 
+                      ? item.price.toFixed(4) 
+                      : `$${item.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </span>
+                  <span className={`text-[10px] ${isPositive ? 'text-emerald-500/80' : 'text-rose-400'}`}>
+                    {isPositive ? '+' : ''}{item.changePercent.toFixed(2)}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-2 text-slate-400 text-[11px]">
@@ -605,7 +635,7 @@ export const PublicLandingPage: React.FC = () => {
                       <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
                       <BlueVerifiedBadge size="sm" />
                     </div>
-                    <p className="text-xs text-amber-400 font-medium">Founder & CEO</p>
+                    <p className="text-xs text-amber-400 font-medium">LEADER & FLAGSHIP MENTOR</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
                     "Institutional order flow is an objective science. We teach you how to follow smart money footprints, not retail emotion."
