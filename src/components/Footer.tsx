@@ -111,7 +111,11 @@ export const Footer: React.FC<FooterProps> = ({
               <li key={c}>
                 <button
                   onClick={() => {
-                    onSelectCategory(c);
+                    if (c === 'Trade Now') {
+                      onOpenChart();
+                    } else {
+                      onSelectCategory(c);
+                    }
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className="hover:text-amber-300 transition-colors text-left rtl:text-right cursor-pointer"

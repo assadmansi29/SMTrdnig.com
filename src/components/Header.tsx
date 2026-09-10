@@ -369,7 +369,13 @@ export const Header: React.FC<HeaderProps> = ({
               return (
                 <button
                   key={cat}
-                  onClick={() => onSelectCategory(cat)}
+                  onClick={() => {
+                    if (cat === 'Trade Now') {
+                      onOpenChart();
+                    } else {
+                      onSelectCategory(cat);
+                    }
+                  }}
                   className={`px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 font-bold scale-[1.02]'
