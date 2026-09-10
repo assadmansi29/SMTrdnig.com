@@ -103,39 +103,43 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Renew Your SM Trading Pro Membership
+              {t('authSubRenewHeading')}
             </h1>
             <p className="mt-2 text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Hello <strong className="text-amber-400">@{user.username}</strong>, your access expired on {expiresFormatted}. Select a renewal package below to re-activate your terminal access via USDT:
+              {t('authSubRenewDesc', { username: user.username, expires: expiresFormatted })}
             </p>
 
             {/* Site Subscription Packages Grid */}
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-              {SITE_SUBSCRIPTION_PLANS.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="p-5 rounded-2xl bg-[#090D15] border border-slate-800 hover:border-amber-400/50 transition-all flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-2">
-                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{plan.name}</div>
-                    <div className="text-2xl font-black text-white font-mono-num">{plan.priceDisplay}</div>
-                    <span className="text-[11px] text-slate-400 block">{plan.billingPeriod} • USDT</span>
-                    <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-300 font-semibold leading-snug">
-                      “Courses and educational programs are NOT included in this subscription.”
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedPlanForCheckout(plan);
-                      setIsCheckoutOpen(true);
-                    }}
-                    className="w-full py-2.5 px-3 bg-slate-800 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+              {SITE_SUBSCRIPTION_PLANS.map((plan) => {
+                const planNameKey = plan.id === 'monthly' ? 'planMonthlyName' : plan.id === '6months' ? 'plan6MonthsName' : 'plan1YearName';
+                const planBillingKey = plan.id === 'monthly' ? 'planMonthlyBilling' : plan.id === '6months' ? 'plan6MonthsBilling' : 'plan1YearBilling';
+                return (
+                  <div
+                    key={plan.id}
+                    className="p-5 rounded-2xl bg-[#090D15] border border-slate-800 hover:border-amber-400/50 transition-all flex flex-col justify-between space-y-4"
                   >
-                    Renew with USDT
-                  </button>
-                </div>
-              ))}
+                    <div className="space-y-2">
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t(planNameKey)}</div>
+                      <div className="text-2xl font-black text-white font-mono-num">{plan.priceDisplay}</div>
+                      <span className="text-[11px] text-slate-400 block">{t(planBillingKey)} • USDT</span>
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-300 font-semibold leading-snug">
+                        {t('authSubCoursesNotIncluded')}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlanForCheckout(plan);
+                        setIsCheckoutOpen(true);
+                      }}
+                      className="w-full py-2.5 px-3 bg-slate-800 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+                    >
+                      {t('authSubRenewBtn')}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Standalone All-Inclusive Package Renewal */}
@@ -143,9 +147,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30 uppercase">
                   <Crown className="w-3 h-3" />
-                  <span>BEST OFFER • BEST PACKAGE</span>
+                  <span>{t('planAllInclusiveBadge')}</span>
                 </div>
-                <h4 className="text-sm font-black text-white">{PREMIUM_ALL_INCLUSIVE_PLAN.name} ({PREMIUM_ALL_INCLUSIVE_PLAN.priceDisplay}/Year)</h4>
+                <h4 className="text-sm font-black text-white">{t('planAllInclusiveName')} ({PREMIUM_ALL_INCLUSIVE_PLAN.priceDisplay}/Year)</h4>
                 <p className="text-xs text-slate-300">
                   Full 12-month platform access + SMC Trading Course + 144 Strategy Course.
                 </p>
@@ -158,14 +162,14 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 }}
                 className="w-full sm:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl transition-all shrink-0 cursor-pointer shadow-md shadow-amber-500/20"
               >
-                Upgrade to All-Inclusive ($999)
+                {t('authSubUpgradeAllInclusive')}
               </button>
             </div>
 
             {/* Direct Support Assistance */}
             <div className="mt-6 pt-5 border-t border-slate-800 flex items-center justify-between flex-wrap gap-3">
               <div className="text-xs text-slate-400">
-                Payment Method: <strong className="text-emerald-400">USDT ONLY</strong>. Contact support for direct renewal assistance.
+                {t('authSubPaymentSupport')}
               </div>
               <a
                 href="https://t.me/SMTrading_SUPPORT"
@@ -174,7 +178,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                 className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-bold"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Contact @SMTrading_SUPPORT</span>
+                <span>{t('authSubContactSupport')}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>

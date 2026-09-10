@@ -187,16 +187,6 @@ export const PublicLandingPage: React.FC = () => {
             >
               <span>{t('clientLogin')}</span>
             </button>
-
-            {/* Main Primary CTA: Subscribe Now */}
-            <button
-              type="button"
-              onClick={handleScrollToPricing}
-              className="h-9 md:h-10 px-4 md:px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-black rounded-xl text-xs md:text-sm tracking-tight transition-all shadow-md sm:shadow-lg shadow-amber-500/20 cursor-pointer shrink-0 flex items-center justify-center gap-1.5 whitespace-nowrap"
-            >
-              <span>{t('subscribeNow')}</span>
-              <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180 shrink-0" />
-            </button>
           </div>
         </div>
       </header>
@@ -275,23 +265,35 @@ export const PublicLandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-4xl mx-auto space-y-6">
             
+            {/* Repositioned Subscribe Now Button Directly Above the Hero Badge (hidden on mobile) */}
+            <div className="hidden sm:flex justify-center pb-1">
+              <button
+                type="button"
+                onClick={handleScrollToPricing}
+                className="h-10 md:h-11 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-black rounded-xl text-sm tracking-tight transition-all shadow-lg shadow-amber-500/25 cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <span>{t('subscribeNow')}</span>
+                <ArrowRight className="w-4 h-4 rtl:rotate-180 shrink-0" />
+              </button>
+            </div>
+
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-amber-500/30 text-amber-300 text-xs font-bold tracking-wide shadow-lg shadow-amber-500/10">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>THE INSTITUTIONAL TRADING PLATFORM & DIRECT TRADING NETWORK</span>
+              <span>{t('landingBadge')}</span>
             </div>
 
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12]">
-              The Complete Trading Platform Built for <br className="hidden sm:block" />
+              {t('landingHeroTitlePre')} <br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
-                Serious & Professional Traders
+                {t('landingHeroTitleHighlight')}
               </span>
             </h1>
 
             {/* Descriptive Subtitle introducing all core offerings */}
             <p className="text-sm sm:text-lg text-slate-300 leading-relaxed max-w-3xl mx-auto">
-              SM Trading Pro delivers everything a professional market participant demands: <strong>ready-made trading strategies on professional charts</strong>, comprehensive <strong>trading courses and strategy education</strong>, institutional <strong>market analysis</strong>, direct access to <strong>professional analysts</strong>, daily <strong>live trading sessions</strong>, real-time <strong>trading recommendations</strong>, and breaking <strong>market news</strong>.
+              {t('landingHeroDesc')}
             </p>
 
             {/* Hero CTAs */}
@@ -312,7 +314,7 @@ export const PublicLandingPage: React.FC = () => {
                 className="w-full sm:w-auto px-6 py-4 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Send className="w-4 h-4 text-blue-400" />
-                <span>Contact Support (@SMTrading_SUPPORT)</span>
+                <span>{t('landingContactSupport')}</span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-70" />
               </a>
             </div>
@@ -320,23 +322,23 @@ export const PublicLandingPage: React.FC = () => {
             {/* Trust Metrics Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 max-w-3xl mx-auto text-left rtl:text-right border-t border-slate-800/80">
               <div className="p-3 bg-[#0B0F1C]/80 border border-slate-800 rounded-xl">
-                <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono-num">100%</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">USDT Settlement Only</div>
+                <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono-num">{t('landingMetric1Val')}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{t('landingMetric1Desc')}</div>
               </div>
 
               <div className="p-3 bg-[#0B0F1C]/80 border border-slate-800 rounded-xl">
-                <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono-num">Real-Time</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Live Analysts & Trades</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono-num">{t('landingMetric2Val')}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{t('landingMetric2Desc')}</div>
               </div>
 
               <div className="p-3 bg-[#0B0F1C]/80 border border-slate-800 rounded-xl">
-                <div className="text-xl sm:text-2xl font-black text-blue-400 font-mono-num">SMC & 144</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Ready-Made Strategies</div>
+                <div className="text-xl sm:text-2xl font-black text-blue-400 font-mono-num">{t('landingMetric3Val')}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{t('landingMetric3Desc')}</div>
               </div>
 
               <div className="p-3 bg-[#0B0F1C]/80 border border-slate-800 rounded-xl">
-                <div className="text-xl sm:text-2xl font-black text-purple-400 font-mono-num">24/7</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Telegram Support Desk</div>
+                <div className="text-xl sm:text-2xl font-black text-purple-400 font-mono-num">{t('landingMetric4Val')}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{t('landingMetric4Desc')}</div>
               </div>
             </div>
 
@@ -350,13 +352,13 @@ export const PublicLandingPage: React.FC = () => {
           
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-              WHAT SM TRADING PRO PROVIDES
+              {t('landingFeaturesTag')}
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              An End-to-End Institutional Trading Ecosystem
+              {t('landingFeaturesHeading')}
             </h2>
             <p className="text-sm text-slate-300">
-              Engineered to replace fragmented tools with one cohesive, institutional-grade environment.
+              {t('landingFeaturesSub')}
             </p>
           </div>
 
@@ -369,10 +371,10 @@ export const PublicLandingPage: React.FC = () => {
                 <LineChart className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition-colors">
-                Ready-Made Strategies on Charts
+                {t('landingFeature1Title')}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Institutional setups automatically framed on high-precision TradingView charts: Smart Money Concepts (SMC), liquidity pool sweeps, fair value gaps (FVG), order blocks, and the 144 Institutional Strategy.
+                {t('landingFeature1Desc')}
               </p>
             </div>
 
@@ -382,10 +384,10 @@ export const PublicLandingPage: React.FC = () => {
                 <GraduationCap className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors">
-                Trading Courses & Education
+                {t('landingFeature2Title')}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Comprehensive curriculum designed for institutional mastery: Complete SMC Masterclasses, Strategy 144 proprietary framework, Order Flow Bookmap analysis, and Prop Firm evaluation guidance.
+                {t('landingFeature2Desc')}
               </p>
             </div>
 
@@ -395,10 +397,10 @@ export const PublicLandingPage: React.FC = () => {
                 <BarChart3 className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
-                Deep Institutional Market Analysis
+                {t('landingFeature3Title')}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Uncompromising macro and micro liquidity analysis: Central bank interest rate tracks, CME futures positioning, global market sentiment gauges, and quantitative alpha breakdowns.
+                {t('landingFeature3Desc')}
               </p>
             </div>
 
@@ -408,10 +410,10 @@ export const PublicLandingPage: React.FC = () => {
                 <Radio className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors">
-                Professional Analysts & Live Trading
+                {t('landingFeature4Title')}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Trade alongside verified analysts in real time: Live trading broadcasts during New York and London opens, audio commentary, live execution breakdowns, and interactive mentorship.
+                {t('landingFeature4Desc')}
               </p>
             </div>
 
@@ -421,10 +423,10 @@ export const PublicLandingPage: React.FC = () => {
                 <Zap className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white group-hover:text-rose-300 transition-colors">
-                Actionable Trading Recommendations
+                {t('landingFeature5Title')}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Clear, high-probability trade setups based strictly on the platform’s strategies with defined entry triggers, precise invalidation stop-loss boundaries, and multi-tier take-profit objectives.
+                {t('landingFeature5Desc')}
               </p>
             </div>
 
@@ -434,10 +436,10 @@ export const PublicLandingPage: React.FC = () => {
                 <Newspaper className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white group-hover:text-teal-300 transition-colors">
-                Latest Market News & Catalysts
+                {t('landingFeature6Title')}
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Instant institutional intelligence: High-impact economic calendar, real-time alerts on CPI, NFP, and central bank speeches, keeping you ahead of volatile market-moving catalysts.
+                {t('landingFeature6Desc')}
               </p>
             </div>
 
@@ -453,39 +455,39 @@ export const PublicLandingPage: React.FC = () => {
             <div className="lg:col-span-6 space-y-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>EXECUTION PRECISION</span>
+                <span>{t('landingStrategyTag')}</span>
               </div>
 
               <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                Ready-Made Strategy Execution Directly on Professional Charts
+                {t('landingStrategyHeading')}
               </h2>
 
               <p className="text-sm text-slate-300 leading-relaxed">
-                Experience algorithmic clarity with our proprietary SMC & 144 strategy engine. Rather than guessing retail indicators, our charts systematically identify:
+                {t('landingStrategyDesc')}
               </p>
 
               <div className="space-y-3">
                 <div className="flex items-start gap-3 p-3.5 bg-[#0C1220] border border-slate-800 rounded-xl">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-xs text-white block">Liquidity Pool Sweeps & Order Blocks</strong>
-                    <span className="text-xs text-slate-400">Institutional manipulation zones where wholesale liquidity is seized.</span>
+                    <strong className="text-xs text-white block">{t('landingStrategyPoint1Title')}</strong>
+                    <span className="text-xs text-slate-400">{t('landingStrategyPoint1Desc')}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3.5 bg-[#0C1220] border border-slate-800 rounded-xl">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-xs text-white block">Fair Value Gap (FVG) Retracements</strong>
-                    <span className="text-xs text-slate-400">High-probability price imbalances mapped for precise discount entries.</span>
+                    <strong className="text-xs text-white block">{t('landingStrategyPoint2Title')}</strong>
+                    <span className="text-xs text-slate-400">{t('landingStrategyPoint2Desc')}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3.5 bg-[#0C1220] border border-slate-800 rounded-xl">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-xs text-white block">The 144 Institutional Strategy</strong>
-                    <span className="text-xs text-slate-400">Mathematical time-and-price framework tested across FX, Gold, and Indices.</span>
+                    <strong className="text-xs text-white block">{t('landingStrategyPoint3Title')}</strong>
+                    <span className="text-xs text-slate-400">{t('landingStrategyPoint3Desc')}</span>
                   </div>
                 </div>
               </div>
@@ -496,7 +498,7 @@ export const PublicLandingPage: React.FC = () => {
                   onClick={handleScrollToPricing}
                   className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm tracking-tight transition-all cursor-pointer shadow-lg shadow-amber-500/20"
                 >
-                  Get Strategy Access Now
+                  {t('landingStrategyBtn')}
                 </button>
               </div>
             </div>
@@ -516,9 +518,9 @@ export const PublicLandingPage: React.FC = () => {
                 <div className="p-4 bg-[#090D17] border border-slate-800 rounded-xl mt-3 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="font-bold text-white font-mono">XAUUSD 1H SMC BREAKOUT</span>
+                    <span className="font-bold text-white font-mono">{t('landingStrategyChartBadge')}</span>
                   </div>
-                  <span className="text-emerald-400 font-mono font-bold">R:R 1:4.8 VALIDATED</span>
+                  <span className="text-emerald-400 font-mono font-bold">{t('landingStrategyChartTag')}</span>
                 </div>
               </div>
             </div>
@@ -532,13 +534,13 @@ export const PublicLandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
-              INSTITUTIONAL CURRICULUM
+              {t('landingAcademyTag')}
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Trading Courses & Strategy Education
+              {t('landingAcademyHeading')}
             </h2>
             <p className="text-sm text-slate-300">
-              Master the exact mechanics of institutional execution under senior mentorship.
+              {t('landingAcademySub')}
             </p>
           </div>
 
@@ -547,16 +549,16 @@ export const PublicLandingPage: React.FC = () => {
             <div className="p-6 bg-[#0D1424] border border-slate-800 rounded-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
-                  Flagship Masterclass
+                  {t('landingCourse1Badge')}
                 </span>
-                <span className="text-xs font-mono text-slate-400">5 Phases • 24 Modules</span>
+                <span className="text-xs font-mono text-slate-400">{t('landingCourse1Meta')}</span>
               </div>
-              <h3 className="text-lg font-bold text-white">SMC Trading Course</h3>
+              <h3 className="text-lg font-bold text-white">{t('landingCourse1Title')}</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Smart Money Concepts from foundational market structure to advanced CME futures footprint order flow, liquidity sweeps, and prop firm certification protocols.
+                {t('landingCourse1Desc')}
               </p>
               <div className="text-xs text-amber-400/90 font-medium">
-                ★ Included in the All-Inclusive Package ($999/Year)
+                {t('landingCourse1Include')}
               </div>
             </div>
 
@@ -564,16 +566,16 @@ export const PublicLandingPage: React.FC = () => {
             <div className="p-6 bg-[#0D1424] border border-slate-800 rounded-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
-                  Proprietary Framework
+                  {t('landingCourse2Badge')}
                 </span>
-                <span className="text-xs font-mono text-slate-400">Time & Price Mastery</span>
+                <span className="text-xs font-mono text-slate-400">{t('landingCourse2Meta')}</span>
               </div>
-              <h3 className="text-lg font-bold text-white">144 Strategy Course</h3>
+              <h3 className="text-lg font-bold text-white">{t('landingCourse2Title')}</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Proprietary algorithmic timing framework uniting Gann vibrational cycles with institutional price imbalances for high-precision trade timing.
+                {t('landingCourse2Desc')}
               </p>
               <div className="text-xs text-amber-400/90 font-medium">
-                ★ Included in the All-Inclusive Package ($999/Year)
+                {t('landingCourse2Include')}
               </div>
             </div>
           </div>
@@ -589,29 +591,29 @@ export const PublicLandingPage: React.FC = () => {
               <div className="lg:col-span-8 space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold uppercase">
                   <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-                  <span>Live Trading Floor & Analysts</span>
+                  <span>{t('landingAnalystLiveBadge')}</span>
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                  Trade Live With Verified Senior Analysts
+                  {t('landingAnalystHeading')}
                 </h2>
 
                 <p className="text-sm text-slate-300 leading-relaxed">
-                  Never trade in isolation. As a subscriber, you get direct live access to daily trading desk broadcasts during London and New York market openings. Watch real-time order execution, ask questions directly to analysts, and receive high-probability setups before the market moves.
+                  {t('landingAnalystDesc')}
                 </p>
 
                 <div className="flex flex-wrap gap-4 pt-2 text-xs font-bold text-slate-300">
                   <span className="flex items-center gap-1.5">
                     <Check className="w-4 h-4 text-emerald-400" />
-                    Daily NY / London Live Streams
+                    {t('landingAnalystCheck1')}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Check className="w-4 h-4 text-emerald-400" />
-                    Direct Q&A with Analysts
+                    {t('landingAnalystCheck2')}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Check className="w-4 h-4 text-emerald-400" />
-                    Real-Time Recommendations & Invalidation
+                    {t('landingAnalystCheck3')}
                   </span>
                 </div>
               </div>
@@ -635,10 +637,10 @@ export const PublicLandingPage: React.FC = () => {
                       <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
                       <BlueVerifiedBadge size="sm" />
                     </div>
-                    <p className="text-xs text-amber-400 font-medium">LEADER & FLAGSHIP MENTOR</p>
+                    <p className="text-xs text-amber-400 font-medium">{t('mentorAbuRoleBadge')}</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
-                    "Institutional order flow is an objective science. We teach you how to follow smart money footprints, not retail emotion."
+                    {t('landingAnalystQuote1')}
                   </p>
                 </div>
 
@@ -660,10 +662,10 @@ export const PublicLandingPage: React.FC = () => {
                       <h4 className="text-sm font-bold text-white">Ahmad Nader Attar</h4>
                       <BlueVerifiedBadge size="sm" />
                     </div>
-                    <p className="text-xs text-amber-400 font-medium">Co-Founder</p>
+                    <p className="text-xs text-amber-400 font-medium">{t('mentorAhmadRoleBadge')}</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
-                    "Robust infrastructure and flawless trade execution form the bedrock of institutional success."
+                    {t('landingAnalystQuote2')}
                   </p>
                 </div>
               </div>
@@ -681,15 +683,15 @@ export const PublicLandingPage: React.FC = () => {
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold tracking-wide">
               <Crown className="w-4 h-4 text-amber-400" />
-              <span>TRANSPARENT INSTITUTIONAL TIERS</span>
+              <span>{t('landingPricingBadge')}</span>
             </div>
 
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              Choose Your Subscription Package
+              {t('landingPricingHeading')}
             </h2>
 
             <p className="text-sm sm:text-base text-slate-300">
-              Select your membership tier and settle securely via <strong>USDT</strong>. Instant manual onboarding and verification by our official support team.
+              {t('landingPricingSub')}
             </p>
           </div>
 
@@ -697,77 +699,87 @@ export const PublicLandingPage: React.FC = () => {
           <div className="space-y-4 mb-10">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div>
-                <h3 className="text-lg font-bold text-white">Site Subscription Packages</h3>
-                <p className="text-xs text-slate-400">Full platform, news, analyst access, ready-made strategy setups, and recommendations</p>
+                <h3 className="text-lg font-bold text-white">{t('landingSiteSubscriptionsTitle')}</h3>
+                <p className="text-xs text-slate-400">{t('landingSiteSubscriptionsSub')}</p>
               </div>
               <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                USDT ACCEPTED ONLY
+                {t('landingUsdtAcceptedOnly')}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {SITE_SUBSCRIPTION_PLANS.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="bg-[#0C1220] border border-slate-800 hover:border-slate-700 rounded-3xl p-6 sm:p-7 flex flex-col justify-between space-y-6 transition-all shadow-xl hover:shadow-2xl relative"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        {plan.name}
-                      </span>
-                      {plan.badge && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                          {plan.badge}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Price Display */}
-                    <div>
-                      <div className="text-3xl sm:text-4xl font-black text-white font-mono-num tracking-tight">
-                        {plan.priceDisplay}
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        {plan.billingPeriod} • Settle in USDT
-                      </div>
-                    </div>
-
-                    {/* Inclusions */}
-                    <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
-                      <span className="text-xs font-bold text-slate-300 block">Includes:</span>
-                      <ul className="space-y-2 text-xs text-slate-300">
-                        {plan.features.map((feat, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                            <span className="leading-snug">{feat}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Prominent Educational Disclaimer mandated by prompt */}
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                        <p className="text-xs font-bold text-amber-300 leading-snug">
-                          “Courses and educational programs are NOT included in this subscription.”
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Subscribe Now Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleSubscribeClick(plan)}
-                    className="w-full py-3.5 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-100 font-black rounded-2xl text-xs sm:text-sm tracking-tight transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md group"
+              {SITE_SUBSCRIPTION_PLANS.map((plan) => {
+                const planNameKey = plan.id === 'monthly' ? 'planMonthlyName' : plan.id === '6months' ? 'plan6MonthsName' : 'plan1YearName';
+                const planBillingKey = plan.id === 'monthly' ? 'planMonthlyBilling' : plan.id === '6months' ? 'plan6MonthsBilling' : 'plan1YearBilling';
+                const planBadgeKey = plan.id === 'monthly' ? 'planMonthlyBadge' : plan.id === '6months' ? 'plan6MonthsBadge' : 'plan1YearBadge';
+                return (
+                  <div
+                    key={plan.id}
+                    className="bg-[#0C1220] border border-slate-800 hover:border-slate-700 rounded-3xl p-6 sm:p-7 flex flex-col justify-between space-y-6 transition-all shadow-xl hover:shadow-2xl relative"
                   >
-                    <span>Subscribe Now</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
-                  </button>
-                </div>
-              ))}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          {t(planNameKey)}
+                        </span>
+                        {plan.badge && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                            {t(planBadgeKey)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Price Display */}
+                      <div>
+                        <div className="text-3xl sm:text-4xl font-black text-white font-mono-num tracking-tight">
+                          {plan.priceDisplay}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">
+                          {t(planBillingKey)} • USDT
+                        </div>
+                      </div>
+
+                      {/* Inclusions */}
+                      <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+                        <span className="text-xs font-bold text-slate-300 block">{t('landingPlanIncludes')}</span>
+                        <ul className="space-y-2 text-xs text-slate-300">
+                          {(plan.id === 'monthly' 
+                            ? [t('planMonthlyFeat1'), t('planMonthlyFeat2'), t('planMonthlyFeat3'), t('planMonthlyFeat4'), t('planMonthlyFeat5')]
+                            : plan.id === '6months'
+                            ? [t('plan6MonthsFeat1'), t('plan6MonthsFeat2'), t('plan6MonthsFeat3'), t('plan6MonthsFeat4'), t('plan6MonthsFeat5')]
+                            : [t('plan1YearFeat1'), t('plan1YearFeat2'), t('plan1YearFeat3'), t('plan1YearFeat4'), t('plan1YearFeat5')]
+                          ).map((feat, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                              <span className="leading-snug">{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Prominent Educational Disclaimer mandated by prompt */}
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                          <p className="text-xs font-bold text-amber-300 leading-snug">
+                            {t('authSubCoursesNotIncluded')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subscribe Now Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleSubscribeClick(plan)}
+                      className="w-full py-3.5 bg-slate-800 hover:bg-emerald-600 hover:text-white text-slate-100 font-black rounded-2xl text-xs sm:text-sm tracking-tight transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md group"
+                    >
+                      <span>{t('subscribeNow')}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -779,7 +791,7 @@ export const PublicLandingPage: React.FC = () => {
               <div className="absolute -top-0.5 left-1/2 -translate-x-1/2">
                 <div className="px-5 py-1.5 rounded-b-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg flex items-center gap-1.5">
                   <Crown className="w-3.5 h-3.5 text-slate-950" />
-                  <span>BEST OFFER • BEST PACKAGE • MAXIMUM VALUE</span>
+                  <span>{t('planAllInclusiveBadge')}</span>
                 </div>
               </div>
 
@@ -789,40 +801,40 @@ export const PublicLandingPage: React.FC = () => {
                 <div className="lg:col-span-6 space-y-4">
                   <div>
                     <span className="text-xs font-bold text-amber-400 uppercase tracking-widest block">
-                      ULTIMATE INSTITUTIONAL BUNDLE
+                      {t('landingAllInclusiveTag')}
                     </span>
                     <h3 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                      {PREMIUM_ALL_INCLUSIVE_PLAN.name}
+                      {t('planAllInclusiveName')}
                     </h3>
                   </div>
 
                   <div>
                     <div className="text-4xl sm:text-5xl font-black text-amber-400 font-mono-num tracking-tight">
-                      {PREMIUM_ALL_INCLUSIVE_PLAN.priceDisplay} <span className="text-sm font-semibold text-slate-400">/ Year</span>
+                      {PREMIUM_ALL_INCLUSIVE_PLAN.priceDisplay} <span className="text-sm font-semibold text-slate-400">{t('landingAllInclusiveAnnual')}</span>
                     </div>
                     <p className="text-xs text-slate-300 mt-1">
-                      Full 12 Months Platform Access + Complete Course Suite • Settle in USDT
+                      {t('landingAllInclusiveSub')}
                     </p>
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    This is the <strong>complete all-inclusive package and the best value</strong> for serious traders. You receive everything in the Site Subscription for a full 12 months, plus both flagship proprietary courses:
+                    {t('landingAllInclusiveDesc')}
                   </p>
 
                   {/* Included Courses Box */}
                   <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
                     <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>COURSES INCLUDED IN THIS PACKAGE:</span>
+                      <span>{t('landingAllInclusiveCoursesTitle')}</span>
                     </span>
                     <ul className="space-y-1.5 text-xs text-slate-200">
                       <li className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        <strong>SMC Trading Course</strong> (Smart Money Concepts Masterclass)
+                        <span>{t('landingAllInclusiveCourse1')}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        <strong>144 Strategy Course</strong> (Complete Institutional Methodology)
+                        <span>{t('landingAllInclusiveCourse2')}</span>
                       </li>
                     </ul>
                   </div>
@@ -831,37 +843,37 @@ export const PublicLandingPage: React.FC = () => {
                 {/* Right side: Complete Inclusions & CTA */}
                 <div className="lg:col-span-6 space-y-5 bg-[#090D17]/80 p-5 sm:p-6 rounded-2xl border border-slate-800">
                   <span className="text-xs font-bold text-white block">
-                    Full Package Inclusions:
+                    {t('landingAllInclusiveInclusionsTitle')}
                   </span>
                   
                   <ul className="space-y-2 text-xs text-slate-300">
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>Everything in the Site Subscription for a full 12 months</span>
+                      <span>{t('landingAllInclusiveItem1')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>SMC Trading Course + 144 Strategy Course included in full</span>
+                      <span>{t('landingAllInclusiveItem2')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>Full platform access & live TradingView strategy charts</span>
+                      <span>{t('landingAllInclusiveItem3')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>Latest market news & institutional macro analysis</span>
+                      <span>{t('landingAllInclusiveItem4')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>Daily live access to analysts & live trading sessions</span>
+                      <span>{t('landingAllInclusiveItem5')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>Ready-made strategy setups & algorithmic execution</span>
+                      <span>{t('landingAllInclusiveItem6')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                      <span>Direct trading recommendations with precision invalidation</span>
+                      <span>{t('landingAllInclusiveItem7')}</span>
                     </li>
                   </ul>
 
@@ -870,13 +882,13 @@ export const PublicLandingPage: React.FC = () => {
                     onClick={() => handleSubscribeClick(PREMIUM_ALL_INCLUSIVE_PLAN)}
                     className="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-2xl text-sm sm:text-base tracking-tight shadow-xl shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
                   >
-                    <span>Subscribe Now — All-Inclusive ($999/Year)</span>
+                    <span>{t('landingAllInclusiveBtn')}</span>
                     <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
 
                   <div className="text-center">
                     <span className="text-[11px] text-slate-400">
-                      USDT Only • Contact Support for Instant Activation
+                      {t('landingAllInclusiveFooter')}
                     </span>
                   </div>
                 </div>
@@ -896,20 +908,20 @@ export const PublicLandingPage: React.FC = () => {
             <div className="space-y-3 max-w-xl text-center md:text-left rtl:md:text-right">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold">
                 <Send className="w-3.5 h-3.5" />
-                <span>OFFICIAL TELEGRAM SUPPORT</span>
+                <span>{t('landingSupportTag')}</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-white">
-                Payment Method: USDT (TRC20)
+                {t('landingSupportTitle')}
               </h3>
               <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-medium">
-                “To complete your subscription, contact our support team to receive the USDT TRC20 payment address and payment instructions.”
+                {t('landingSupportDesc')}
               </p>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-400">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Instant verification — subscription will be activated after confirmation.</span>
+                <span>{t('landingSupportVerified')}</span>
               </div>
               <p className="text-xs text-slate-400">
-                Official support username: <strong className="text-white font-mono">@SMTrading_SUPPORT</strong> • Network: <strong className="text-emerald-400 font-mono">TRC20 ONLY</strong>
+                {t('landingSupportUsernameLabel')} <strong className="text-white font-mono">@SMTrading_SUPPORT</strong> • {t('landingSupportNetworkLabel')} <strong className="text-emerald-400 font-mono">TRC20 ONLY</strong>
               </p>
             </div>
 
@@ -928,7 +940,7 @@ export const PublicLandingPage: React.FC = () => {
                 className="px-6 py-3 bg-[#24A1DE] hover:bg-[#2094cc] text-white font-black rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-[#24A1DE]/20 transition-all cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>Contact Support for Payment Details</span>
+                <span>{t('landingSupportBtn')}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
 
@@ -946,39 +958,39 @@ export const PublicLandingPage: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="text-center space-y-2">
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Subscription & Payment FAQ
+              {t('landingFaqHeading')}
             </h2>
             <p className="text-xs sm:text-sm text-slate-400">
-              Clear answers regarding our membership activation and USDT settlement.
+              {t('landingFaqSub')}
             </p>
           </div>
 
           <div className="space-y-4">
             <div className="p-5 bg-[#0C1220] border border-slate-800 rounded-2xl space-y-2">
-              <h4 className="text-sm font-bold text-white">Why is payment strictly USDT?</h4>
+              <h4 className="text-sm font-bold text-white">{t('landingFaqQ1')}</h4>
               <p className="text-xs text-slate-300 leading-relaxed">
-                USDT provides instantaneous, borderless, irreversible settlement with minimal network fees. We do not support credit cards, PayPal, or bank wires to ensure privacy, zero processing delays, and global availability.
+                {t('landingFaqA1')}
               </p>
             </div>
 
             <div className="p-5 bg-[#0C1220] border border-slate-800 rounded-2xl space-y-2">
-              <h4 className="text-sm font-bold text-white">How do I receive my login credentials after subscribing?</h4>
+              <h4 className="text-sm font-bold text-white">{t('landingFaqQ2')}</h4>
               <p className="text-xs text-slate-300 leading-relaxed">
-                After you contact support or submit your payment confirmation with your Telegram handle and email, our official desk verifies the transaction and immediately activates your account, providing your direct access credentials.
+                {t('landingFaqA2')}
               </p>
             </div>
 
             <div className="p-5 bg-[#0C1220] border border-slate-800 rounded-2xl space-y-2">
-              <h4 className="text-sm font-bold text-white">What is the difference between Site Subscription and All-Inclusive?</h4>
+              <h4 className="text-sm font-bold text-white">{t('landingFaqQ3')}</h4>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Site Subscription packages (Monthly, 6 Months, 1 Year) include platform access, market news, live analyst access, ready-made strategy charts, and trading recommendations. <strong>Courses and educational programs are NOT included</strong> in Site Subscriptions. The <strong>All-Inclusive Package ($999/Year)</strong> includes everything plus the complete SMC Trading Course and 144 Strategy Course.
+                {t('landingFaqA3')}
               </p>
             </div>
 
             <div className="p-5 bg-[#0C1220] border border-slate-800 rounded-2xl space-y-2">
-              <h4 className="text-sm font-bold text-white">Can I contact support before subscribing?</h4>
+              <h4 className="text-sm font-bold text-white">{t('landingFaqQ4')}</h4>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Yes, our official support desk is available 24/7 on Telegram at <strong>@SMTrading_SUPPORT</strong> to answer any questions regarding the platform, strategies, and packages before payment.
+                {t('landingFaqA4')}
               </p>
             </div>
           </div>
@@ -1002,7 +1014,7 @@ export const PublicLandingPage: React.FC = () => {
           </div>
 
           <div className="text-center text-[11px] text-slate-500 max-w-md">
-            Risk Warning: Financial trading involves substantial risk of capital loss. Past performance of strategy setups is not indicative of future results.
+            {t('landingFooterRisk')}
           </div>
 
           <div className="flex items-center gap-4">
@@ -1021,7 +1033,7 @@ export const PublicLandingPage: React.FC = () => {
               onClick={() => setIsLoginModalOpen(true)}
               className="text-slate-400 hover:text-white transition-colors"
             >
-              Client Login
+              {t('clientLogin')}
             </button>
           </div>
         </div>
