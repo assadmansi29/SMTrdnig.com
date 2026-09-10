@@ -806,11 +806,11 @@ router.post('/payment-verifications/:id/approve', requirePermission('canManageCl
     let includedCourses: string[] = ['SMC Trading Course', '144 Strategy Course'];
 
     if (effectivePlanId === 'monthly' || effectivePlanId.toLowerCase().includes('monthly')) {
-      assignedPlanName = 'Site Subscription — Monthly (€80)';
+      assignedPlanName = 'Site Subscription — Monthly ($80)';
       durationDays = 30; // 1 month
       includedCourses = [];
     } else if (effectivePlanId === '6months' || effectivePlanId.toLowerCase().includes('6 month')) {
-      assignedPlanName = 'Site Subscription — 6 Months (€410)';
+      assignedPlanName = 'Site Subscription — 6 Months ($400)';
       durationDays = 180; // 6 months
       includedCourses = [];
     } else if (effectivePlanId === '1year' || effectivePlanId.toLowerCase().includes('1 year') || effectivePlanId.toLowerCase().includes('650')) {

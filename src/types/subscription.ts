@@ -18,8 +18,8 @@ export const SITE_SUBSCRIPTION_PLANS: SubscriptionPlanInfo[] = [
   {
     id: 'monthly',
     name: 'Monthly',
-    priceDisplay: '€80',
-    currency: '€',
+    priceDisplay: '$80',
+    currency: '$',
     amount: 80,
     billingPeriod: 'per month',
     badge: 'FLEXIBLE',
@@ -36,9 +36,9 @@ export const SITE_SUBSCRIPTION_PLANS: SubscriptionPlanInfo[] = [
   {
     id: '6months',
     name: '6 Months',
-    priceDisplay: '€410',
-    currency: '€',
-    amount: 410,
+    priceDisplay: '$400',
+    currency: '$',
+    amount: 400,
     billingPeriod: 'billed every 6 months',
     badge: 'POPULAR CHOICE',
     isSiteSubscription: true,
