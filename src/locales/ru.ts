@@ -678,5 +678,33 @@ export const ru: Record<TranslationKey, string> = {
   profileDigitCodeLabel: '6-значный код безопасности',
   profileResendIn: 'Повторная отправка через',
   profileResendCodeBtn: 'Отправить код повторно',
-  profileConfirmSaveBtn: 'Подтвердить и сохранить'
+  profileConfirmSaveBtn: 'Подтвердить и сохранить',
+
+  // Academy & Mentorship Cards
+  academySectionTag: 'Институциональное наставничество',
+  academySectionSubtitle: '• Прямое руководство основателя и элитная программа',
+  academySectionTitle: 'Институциональная торговая академия',
+  academySectionDesc: 'Освойте точные механики Smart Money Concepts (SMC) и количественного исполнения под руководством опытных наставников.',
+  
+  mentorAbuRoleBadge: 'ЛИДЕР И ГЛАВНЫЙ НАСТАВНИК',
+  mentorAbuSpecialty: 'SMC и Квадрат Ганна',
+  mentorAbuName: 'Абу Асад Альманси',
+  mentorAbuTitle: 'Основатель и генеральный директор',
+  mentorAbuSubtitle: 'Главный квант-стратег',
+  mentorAbuBio: 'Пионер концепций Smart Money (SMC) и микроструктуры институционального потока ордеров. Направление трейдеров от ритейл-гаданий к алгоритмической точности на глобальных рынках валют, индексов и сырья.',
+  mentorCoreFocus: 'Фокус основной программы',
+  mentorAbuItem1: 'Институциональные ордер-блоки и снятие пулов ликвидности',
+  mentorAbuItem2: 'Коррекции по дисбалансам (FVG) и матрицы премиум/дисконт',
+  mentorModulesCertification: '24 модуля • Полная сертификация',
+  mentorIncludedPass: 'Включено в комплексный пропуск (All-Inclusive Pass)',
+
+  mentorAhmadRoleBadge: 'Сооснователь и директор',
+  mentorAhmadSpecialty: 'Bookmap & Стратегия 144',
+  mentorAhmadName: 'Ахмад Надер Аттар',
+  mentorAhmadTitle: 'Сооснователь',
+  mentorAhmadSubtitle: 'Руководитель отдела исполнения и системной архитектуры',
+  mentorAhmadBio: 'Специалист по количественным моделям тайминга, вибрационным циклам Ганна и проприетарным фреймворкам Стратегии 144. Обеспечение надежной инфраструктуры исполнения сделок и риск-дисциплины.',
+  mentorAhmadItem1: 'Алгоритмический тайминг и цено-временные вибрации Ганна',
+  mentorAhmadItem2: 'Риск-архитектура проп-компаний и правила распределения капитала',
+  mentorAhmadAdvancedFramework: 'Продвинутый фреймворк • Живое наставничество'
 };

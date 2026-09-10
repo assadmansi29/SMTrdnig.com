@@ -678,5 +678,33 @@ export const ar: Record<TranslationKey, string> = {
   profileDigitCodeLabel: 'رمز الأمان المكون من 6 أرقام',
   profileResendIn: 'إعادة الإرسال بعد',
   profileResendCodeBtn: 'إعادة إرسال الرمز',
-  profileConfirmSaveBtn: 'تأكيد وحفظ'
+  profileConfirmSaveBtn: 'تأكيد وحفظ',
+
+  // Academy & Mentorship Cards
+  academySectionTag: 'الإرشاد المؤسسي',
+  academySectionSubtitle: '• إرشاد مباشر من المؤسس والمنهج النخبوي',
+  academySectionTitle: 'أكاديمية التداول المؤسسي',
+  academySectionDesc: 'أتقن الآليات الدقيقة لمفاهيم الأموال الذكية (SMC) والتنفيذ الكمي تحت إشراف نخبة من الموجهين.',
+  
+  mentorAbuRoleBadge: 'قائد وموجه رئيسي',
+  mentorAbuSpecialty: 'مفاهيم SMC ومربع غان',
+  mentorAbuName: 'أبو أسد المنسي',
+  mentorAbuTitle: 'المؤسس والرئيس التنفيذي',
+  mentorAbuSubtitle: 'الاستراتيجي الكمي الرئيسي',
+  mentorAbuBio: 'رائد مفاهيم الأموال الذكية (SMC) وبنية تدفق الأوامر المؤسسي. توجيه المتداولين من التخمين إلى الدقة الخوارزمية عبر أسواق العملات، المؤشرات، والسلع العالمية.',
+  mentorCoreFocus: 'تركيز المنهج الرئيسي',
+  mentorAbuItem1: 'كتل الأوامر المؤسسية وعمليات مسح سيولة السوق',
+  mentorAbuItem2: 'ارتدادات الفجوات السعرية (FVG) ومصفوفات الخصم والعلاوة',
+  mentorModulesCertification: '24 وحدة تعليمية • شهادة معتمدة كاملة',
+  mentorIncludedPass: 'مشمول في التصريح الشامل All-Inclusive Pass',
+
+  mentorAhmadRoleBadge: 'المؤسس المشارك والمدير',
+  mentorAhmadSpecialty: 'بوكماب والاستراتيجية 144',
+  mentorAhmadName: 'أحمد نادر عطار',
+  mentorAhmadTitle: 'المؤسس المشارك',
+  mentorAhmadSubtitle: 'رئيس التنفيذ وهندسة الأنظمة',
+  mentorAhmadBio: 'متخصص في نماذج التوقيت الكمي، دورات غان الاهتزازية، وهندسة الاستراتيجية 144 الخاصة. ضمان بنية تحتية قوية لتنفيذ الصفقات وانضباط المخاطر.',
+  mentorAhmadItem1: 'التوقيت الخوارزمي واهتزازات غان السعرية والزمنية',
+  mentorAhmadItem2: 'هندسة مخاطر شركات التمويل وقواعد تخصيص رأس المال',
+  mentorAhmadAdvancedFramework: 'إطار متقدم • إرشاد مباشر'
 };

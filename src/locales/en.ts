@@ -676,7 +676,35 @@ export const en = {
   profileDigitCodeLabel: '6-Digit Security Code',
   profileResendIn: 'Resend in',
   profileResendCodeBtn: 'Resend Code',
-  profileConfirmSaveBtn: 'Confirm & Save'
+  profileConfirmSaveBtn: 'Confirm & Save',
+
+  // Academy & Mentorship Cards
+  academySectionTag: 'Institutional Mentorship',
+  academySectionSubtitle: '• Direct Founder Guidance & Elite Curriculum',
+  academySectionTitle: 'Institutional Trading Academy',
+  academySectionDesc: 'Master the exact mechanics of Smart Money Concepts (SMC) and quantitative execution under senior mentorship.',
+  
+  mentorAbuRoleBadge: 'LEADER & FLAGSHIP MENTOR',
+  mentorAbuSpecialty: 'SMC & Gann Square',
+  mentorAbuName: 'Abu Asad Almansi',
+  mentorAbuTitle: 'Founder & CEO',
+  mentorAbuSubtitle: 'Chief Quantitative Strategist',
+  mentorAbuBio: 'Pioneering Smart Money Concepts (SMC) and institutional order flow microstructure. Guiding traders from retail guesswork to algorithmic precision across global currency, index, and commodity markets.',
+  mentorCoreFocus: 'Core Curriculum Focus',
+  mentorAbuItem1: 'Institutional Order Blocks & Liquidity Pool Sweeps',
+  mentorAbuItem2: 'Fair Value Gap (FVG) Retracements & Premium/Discount Arrays',
+  mentorModulesCertification: '24 Modules • Full Certification',
+  mentorIncludedPass: 'Included in All-Inclusive Pass',
+
+  mentorAhmadRoleBadge: 'Co-Founder & Director',
+  mentorAhmadSpecialty: 'Bookmap & Strategy 144',
+  mentorAhmadName: 'Ahmad Nader Attar',
+  mentorAhmadTitle: 'Co-Founder',
+  mentorAhmadSubtitle: 'Head of Execution & Systems Architecture',
+  mentorAhmadBio: 'Specializing in quantitative timing models, Gann vibrational cycles, and proprietary Strategy 144 frameworks. Ensuring robust trade execution infrastructure and risk discipline.',
+  mentorAhmadItem1: 'Algorithmic Timing & Gann Time-Price Vibrations',
+  mentorAhmadItem2: 'Prop Firm Risk Architecture & Capital Allocation Rules',
+  mentorAhmadAdvancedFramework: 'Advanced Framework • Live Mentorship'
 };
 
 export type TranslationKey = keyof typeof en;

@@ -33,17 +33,17 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-amber-400/15 to-transparent text-amber-300 text-[11px] font-mono-num font-bold px-3 py-1 rounded-full border border-amber-400/30 uppercase tracking-widest shadow-sm">
               <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
-              <span>Institutional Mentorship</span>
+              <span>{t('academySectionTag')}</span>
             </span>
             <span className="text-xs text-slate-400 font-mono-num hidden sm:inline">
-              • Direct Founder Guidance & Elite Curriculum
+              {t('academySectionSubtitle')}
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Institutional Trading Academy
+            {t('academySectionTitle')}
           </h2>
           <p className="text-sm text-slate-400 max-w-2xl">
-            Master the exact mechanics of Smart Money Concepts (SMC) and quantitative execution under senior mentorship.
+            {t('academySectionDesc')}
           </p>
         </div>
       </div>
@@ -59,10 +59,10 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
             <div className="flex items-center justify-between">
               <span className="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-400/20">
                 <Award className="w-3.5 h-3.5 fill-slate-950" />
-                LEADER & FLAGSHIP MENTOR
+                {t('mentorAbuRoleBadge')}
               </span>
               <span className="bg-slate-950/80 backdrop-blur-md text-amber-300 text-xs font-mono-num px-3 py-1 rounded-full border border-amber-400/30">
-                SMC Masterclass
+                {t('mentorAbuSpecialty')}
               </span>
             </div>
 
@@ -80,43 +80,43 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-lg font-black text-white">Abu Asad Almansi</h3>
+                  <h3 className="text-lg font-black text-white">{t('mentorAbuName')}</h3>
                   <BlueVerifiedBadge size="sm" />
                 </div>
                 <span className="text-xs text-amber-300 font-bold block mt-0.5">
-                  Founder & CEO
+                  {t('mentorAbuTitle')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono block">
-                  Chief Quantitative Strategist
+                  {t('mentorAbuSubtitle')}
                 </span>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Pioneering Smart Money Concepts (SMC) and institutional order flow microstructure. Guiding traders from retail guesswork to algorithmic precision across global currency, index, and commodity markets.
+              {t('mentorAbuBio')}
             </p>
 
             <div className="bg-[#070A11]/95 border border-slate-800 rounded-2xl p-4 space-y-2.5">
               <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 font-mono-num">
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
-                Core Curriculum Focus
+                {t('mentorCoreFocus')}
               </span>
               <ul className="space-y-1.5 text-xs text-slate-300">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Institutional Order Blocks & Liquidity Pool Sweeps</span>
+                  <span>{t('mentorAbuItem1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Fair Value Gap (FVG) Retracements & Premium/Discount Arrays</span>
+                  <span>{t('mentorAbuItem2')}</span>
                 </li>
               </ul>
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono-num text-slate-400">
-            <span>24 Modules • Full Certification</span>
-            <span className="text-amber-400 font-bold">Included in All-Inclusive Pass</span>
+            <span>{t('mentorModulesCertification')}</span>
+            <span className="text-amber-400 font-bold">{t('mentorIncludedPass')}</span>
           </div>
         </div>
 
@@ -128,10 +128,10 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
             <div className="flex items-center justify-between">
               <span className="bg-blue-500 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-blue-500/20">
                 <Award className="w-3.5 h-3.5 fill-slate-950" />
-                Co-Founder & Director
+                {t('mentorAhmadRoleBadge')}
               </span>
               <span className="bg-slate-950/80 backdrop-blur-md text-blue-300 text-xs font-mono-num px-3 py-1 rounded-full border border-blue-500/30">
-                Strategy 144 Masterclass
+                {t('mentorAhmadSpecialty')}
               </span>
             </div>
 
@@ -149,43 +149,43 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-lg font-black text-white">Ahmad Nader Attar</h3>
+                  <h3 className="text-lg font-black text-white">{t('mentorAhmadName')}</h3>
                   <BlueVerifiedBadge size="sm" />
                 </div>
                 <span className="text-xs text-blue-300 font-bold block mt-0.5">
-                  Co-Founder
+                  {t('mentorAhmadTitle')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono block">
-                  Head of Execution & Systems Architecture
+                  {t('mentorAhmadSubtitle')}
                 </span>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Specializing in quantitative timing models, Gann vibrational cycles, and proprietary Strategy 144 frameworks. Ensuring robust trade execution infrastructure and risk discipline.
+              {t('mentorAhmadBio')}
             </p>
 
             <div className="bg-[#070A11]/95 border border-slate-800 rounded-2xl p-4 space-y-2.5">
               <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5 font-mono-num">
                 <Zap className="w-3.5 h-3.5 text-blue-400" />
-                Core Curriculum Focus
+                {t('mentorCoreFocus')}
               </span>
               <ul className="space-y-1.5 text-xs text-slate-300">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Algorithmic Timing & Gann Time-Price Vibrations</span>
+                  <span>{t('mentorAhmadItem1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Prop Firm Risk Architecture & Capital Allocation Rules</span>
+                  <span>{t('mentorAhmadItem2')}</span>
                 </li>
               </ul>
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono-num text-slate-400">
-            <span>Advanced Framework • Live Mentorship</span>
-            <span className="text-blue-400 font-bold">Included in All-Inclusive Pass</span>
+            <span>{t('mentorAhmadAdvancedFramework')}</span>
+            <span className="text-blue-400 font-bold">{t('mentorIncludedPass')}</span>
           </div>
         </div>
 

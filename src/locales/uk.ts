@@ -678,5 +678,33 @@ export const uk: Record<TranslationKey, string> = {
   profileDigitCodeLabel: '6-значний код безпеки',
   profileResendIn: 'Повторне надсилання через',
   profileResendCodeBtn: 'Надіслати код повторно',
-  profileConfirmSaveBtn: 'Підтвердити та зберегти'
+  profileConfirmSaveBtn: 'Підтвердити та зберегти',
+
+  // Academy & Mentorship Cards
+  academySectionTag: 'Інституційне наставництво',
+  academySectionSubtitle: '• Пряме керівництво засновника та елітна програма',
+  academySectionTitle: 'Інституційна торгова академія',
+  academySectionDesc: 'Оволодійте точними механіками Smart Money Concepts (SMC) та кількісного виконання під керівництвом досвідчених наставників.',
+  
+  mentorAbuRoleBadge: 'ЛІДЕР ТА ГОЛОВНИЙ НАСТАВНИК',
+  mentorAbuSpecialty: 'SMC та Квадрат Ганна',
+  mentorAbuName: 'Абу Асад Альмансі',
+  mentorAbuTitle: 'Засновник та генеральний директор',
+  mentorAbuSubtitle: 'Головний квант-стратег',
+  mentorAbuBio: 'Піонер концепцій Smart Money (SMC) та мікроструктури інституційного потоку ордерів. Направлення трейдерів від ритейл-гадань до алгоритмічної точності на глобальних ринках валют, індексів та сировини.',
+  mentorCoreFocus: 'Фокус основної програми',
+  mentorAbuItem1: 'Інституційні ордер-блоки та зняття пулів ліквідності',
+  mentorAbuItem2: 'Корекції за дисбалансами (FVG) та матриці преміум/дисконт',
+  mentorModulesCertification: '24 модулі • Повна сертифікація',
+  mentorIncludedPass: 'Включено до комплексної перепустки (All-Inclusive Pass)',
+
+  mentorAhmadRoleBadge: 'Співзасновник та директор',
+  mentorAhmadSpecialty: 'Bookmap & Стратегія 144',
+  mentorAhmadName: 'Ахмад Надер Аттар',
+  mentorAhmadTitle: 'Співзасновник',
+  mentorAhmadSubtitle: 'Керівник відділу виконання та системної архітектури',
+  mentorAhmadBio: 'Спеціаліст з кількісних моделей таймінгу, вібраційних циклів Ганна та проприєтарних фреймворків Стратегії 144. Забезпечення надійної інфраструктури виконання угод та ризик-дисципліни.',
+  mentorAhmadItem1: 'Алгоритмічний таймінг та ціново-часові вібрації Ганна',
+  mentorAhmadItem2: 'Ризик-архітектура проп-компаній та правила розподілу капіталу',
+  mentorAhmadAdvancedFramework: 'Просунутий фреймворк • Живе наставництво'
 };
