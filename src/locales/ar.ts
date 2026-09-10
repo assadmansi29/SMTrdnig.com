@@ -695,6 +695,7 @@ export const ar: Record<TranslationKey, string> = {
   mentorCoreFocus: 'تركيز المنهج الرئيسي',
   mentorAbuItem1: 'كتل الأوامر المؤسسية وعمليات مسح سيولة السوق',
   mentorAbuItem2: 'ارتدادات الفجوات السعرية (FVG) ومصفوفات الخصم والعلاوة',
+  mentorAbuItem3: 'مصفوفة السعر والزمن لمربع غان الإسقاطات الزاوية',
   mentorModulesCertification: '24 وحدة تعليمية • شهادة معتمدة كاملة',
   mentorIncludedPass: 'مشمول في التصريح الشامل All-Inclusive Pass',
 
@@ -706,5 +707,6 @@ export const ar: Record<TranslationKey, string> = {
   mentorAhmadBio: 'متخصص في نماذج التوقيت الكمي، دورات غان الاهتزازية، وهندسة الاستراتيجية 144 الخاصة. ضمان بنية تحتية قوية لتنفيذ الصفقات وانضباط المخاطر.',
   mentorAhmadItem1: 'التوقيت الخوارزمي واهتزازات غان السعرية والزمنية',
   mentorAhmadItem2: 'هندسة مخاطر شركات التمويل وقواعد تخصيص رأس المال',
+  mentorAhmadItem3: 'خريطة تدفق الأوامر عبر Bookmap وتتبع اختلالات الحجم',
   mentorAhmadAdvancedFramework: 'إطار متقدم • إرشاد مباشر'
 };

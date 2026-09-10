@@ -693,6 +693,7 @@ export const en = {
   mentorCoreFocus: 'Core Curriculum Focus',
   mentorAbuItem1: 'Institutional Order Blocks & Liquidity Pool Sweeps',
   mentorAbuItem2: 'Fair Value Gap (FVG) Retracements & Premium/Discount Arrays',
+  mentorAbuItem3: 'Gann Square Price-Time Matrix & Angular Projections',
   mentorModulesCertification: '24 Modules • Full Certification',
   mentorIncludedPass: 'Included in All-Inclusive Pass',
 
@@ -704,6 +705,7 @@ export const en = {
   mentorAhmadBio: 'Specializing in quantitative timing models, Gann vibrational cycles, and proprietary Strategy 144 frameworks. Ensuring robust trade execution infrastructure and risk discipline.',
   mentorAhmadItem1: 'Algorithmic Timing & Gann Time-Price Vibrations',
   mentorAhmadItem2: 'Prop Firm Risk Architecture & Capital Allocation Rules',
+  mentorAhmadItem3: 'Bookmap Order Flow Heatmap & Volume Imbalance Tracking',
   mentorAhmadAdvancedFramework: 'Advanced Framework • Live Mentorship'
 };
 

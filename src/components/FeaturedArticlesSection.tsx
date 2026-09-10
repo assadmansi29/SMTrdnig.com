@@ -110,6 +110,10 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                   <span>{t('mentorAbuItem2')}</span>
                 </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{t('mentorAbuItem3')}</span>
+                </li>
               </ul>
             </div>
           </div>
@@ -171,13 +175,14 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
                 {t('mentorCoreFocus')}
               </span>
               <ul className="space-y-1.5 text-xs text-slate-300">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>{t('mentorAhmadItem1')}</span>
-                </li>
+
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                   <span>{t('mentorAhmadItem2')}</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{t('mentorAhmadItem3')}</span>
                 </li>
               </ul>
             </div>
