@@ -519,6 +519,24 @@ export async function isPostgresReady(): Promise<boolean> {
           ON admin_chart_analyses (updated_at DESC);
         `);
 
+        // Clean up any fake, mock, seeded, or placeholder referral statistics and demo balances
+        try {
+          await client.query(`
+            UPDATE users 
+            SET balance = 0, pending_balance = 0, total_earned = 0;
+            
+            DELETE FROM transactions WHERE type = 'commission';
+            
+            UPDATE users 
+            SET referred_by = NULL 
+            WHERE referred_by IS NOT NULL 
+              AND referred_by NOT IN (SELECT id FROM users) 
+              AND UPPER(referred_by) NOT IN (SELECT UPPER(referral_code) FROM users);
+          `);
+        } catch (cleanupErr) {
+          console.warn('[Database Cleanup Notice]', cleanupErr);
+        }
+
         // Verify connectivity and schema readiness without modifying any user data
         const verifyRes = await client.query('SELECT current_database(), current_user, count(*) as count FROM users;');
         const userCount = parseInt(verifyRes.rows[0].count, 10);

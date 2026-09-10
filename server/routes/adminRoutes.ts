@@ -56,20 +56,28 @@ router.get('/users', requirePermission('canManageClients'), async (req: AuthRequ
   const callerRole = req.user!.role;
   const users = await Database.getAllUsers();
 
-  // Aggregate referral counts across in-memory user list
+  // Aggregate referral counts across in-memory user list accurately
+  const userMap = new Map(users.map(u => [u.id, u]));
+  const codeToIdMap = new Map(users.filter(u => u.referralCode).map(u => [u.referralCode!.toUpperCase(), u.id]));
+
   const referralCounts: Record<string, number> = {};
   for (const u of users) {
-    if (u.referredBy) {
-      referralCounts[u.referredBy] = (referralCounts[u.referredBy] || 0) + 1;
+    if (!u.referredBy) continue;
+    const refTarget = u.referredBy.trim();
+    if (userMap.has(refTarget)) {
+      referralCounts[refTarget] = (referralCounts[refTarget] || 0) + 1;
+    } else {
+      const resolvedId = codeToIdMap.get(refTarget.toUpperCase());
+      if (resolvedId) {
+        referralCounts[resolvedId] = (referralCounts[resolvedId] || 0) + 1;
+      }
     }
   }
 
   const sanitized = users.map((u) => {
-    const byIdCount = referralCounts[u.id] || 0;
-    const byCodeCount = u.referralCode ? (referralCounts[u.referralCode] || referralCounts[u.referralCode.toUpperCase()] || 0) : 0;
     return {
       ...sanitizeUser(u, callerRole),
-      referralsCount: Math.max(byIdCount, byCodeCount, (byIdCount + byCodeCount)),
+      referralsCount: referralCounts[u.id] || 0,
     };
   });
 
