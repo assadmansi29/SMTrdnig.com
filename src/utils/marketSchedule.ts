@@ -4,7 +4,7 @@
  * daily maintenance breaks, weekend closures, and holiday schedules using real epoch timestamps.
  */
 
-export type MarketType = 'us_equity' | 'metals' | 'forex' | 'index_cfd' | 'crypto' | 'eu_index' | 'energy';
+export type MarketType = 'us_equity' | 'metals' | 'forex' | 'index_cfd' | 'crypto' | 'eu_index' | 'energy' | 'tokyo_session';
 
 export type BenchmarkMarketId = 'us_core' | 'cme_futures' | 'forex_24_5' | 'london_session' | 'tokyo_session' | 'crypto_24_7';
 
@@ -330,12 +330,12 @@ export function getMarketMetadata(symbolOrBenchmark: string): MarketMetadata {
   // 4. Asian / Tokyo Market
   if (sym === 'TOKYO_SESSION' || sym.includes('NIKKEI') || sym.includes('JP225') || sym.includes('TSE')) {
     return {
-      type: 'us_equity',
+      type: 'tokyo_session',
       categoryName: 'Tokyo Asian Session',
       exchangeName: 'Tokyo Stock Exchange (TSE)',
       timeZone: 'Asia/Tokyo',
       timeZoneLabel: 'Tokyo (JST)',
-      regularHoursSummary: 'Mon–Fri 09:00 – 15:00 JST',
+      regularHoursSummary: 'Mon–Fri 09:00 – 15:30 JST',
       dailyBreakSummary: 'Closed Evenings & Weekends',
       is24x7: false,
     };
@@ -480,6 +480,17 @@ function generateMarketSessions(metadata: MarketMetadata, centerDate: Date): Ses
           openTime: openMs,
           closeTime: closeMs,
           sessionName: 'European Regular Session',
+        });
+      }
+    } else if (metadata.type === 'tokyo_session') {
+      // Tokyo: Mon-Fri 09:00 to 15:30 Tokyo
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        const openMs = makeZonedTimestamp(y, m, d, 9, 0, timeZone);
+        const closeMs = makeZonedTimestamp(y, m, d, 15, 30, timeZone);
+        sessions.push({
+          openTime: openMs,
+          closeTime: closeMs,
+          sessionName: 'Tokyo Regular Session',
         });
       }
     }
@@ -870,7 +881,7 @@ export function getWorldMarketSessions(currentDate: Date = new Date()): WorldSes
 
   const nyEvent = getSessionEvent(currentDate, 'America/New_York', 9, 30, 16, 0);
   const lonEvent = getSessionEvent(currentDate, 'Europe/London', 8, 0, 16, 30);
-  const tokEvent = getSessionEvent(currentDate, 'Asia/Tokyo', 9, 0, 15, 0);
+  const tokEvent = getSessionEvent(currentDate, 'Asia/Tokyo', 9, 0, 15, 30);
   const sydEvent = getSessionEvent(currentDate, 'Australia/Sydney', 10, 0, 16, 0);
 
   return [
