@@ -46,6 +46,7 @@ export interface MarketStatusResult {
   holidayName?: string;
   timeZone: string;
   timeZoneLabel: string;
+  userTimeZone: string;
 }
 
 export interface SessionInterval {
@@ -55,6 +56,17 @@ export interface SessionInterval {
   isDailyBreak?: boolean;
   isHoliday?: boolean;
   holidayName?: string;
+}
+
+/**
+ * Automatically detect user's local timezone from browser/device using IANA timeZone method.
+ */
+export function getUserTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
 }
 
 // Easter calculation algorithm (Meeus/Jones/Butcher)
@@ -490,16 +502,22 @@ export function getMarketScheduleStatus(
 ): MarketStatusResult {
   const metadata = getMarketMetadata(symbolOrMarketId);
   const nowMs = currentDate.getTime();
+  const userTz = getUserTimeZone();
 
   // Crypto is continuous 24/7/365
   if (metadata.is24x7) {
-    const localTimeFormatted = currentDate.toLocaleTimeString('en-US', {
-      timeZone: 'UTC',
+    const timeFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: userTz,
+      weekday: 'short',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
+      timeZoneName: 'short',
       hour12: false,
-    }) + ' UTC';
+    });
+    const parts = timeFormatter.formatToParts(currentDate);
+    const getP = (t: string) => parts.find(x => x.type === t)?.value || '';
+    const localTimeFormatted = `${getP('weekday')} ${getP('hour')}:${getP('minute')}:${getP('second')} ${getP('timeZoneName') || userTz}`;
 
     return {
       symbol: symbolOrMarketId,
@@ -517,14 +535,15 @@ export function getMarketScheduleStatus(
       localTimeFormatted,
       activeSessionName: 'Global Crypto 24/7',
       isHoliday: false,
-      timeZone: 'UTC',
-      timeZoneLabel: 'UTC',
+      timeZone: metadata.timeZone,
+      timeZoneLabel: metadata.timeZoneLabel,
+      userTimeZone: userTz,
     };
   }
 
-  // Exchange local time formatting
+  // User local time formatting
   const timeFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: metadata.timeZone,
+    timeZone: userTz,
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
@@ -534,7 +553,7 @@ export function getMarketScheduleStatus(
   });
   const parts = timeFormatter.formatToParts(currentDate);
   const getP = (t: string) => parts.find(x => x.type === t)?.value || '';
-  const localTimeFormatted = `${getP('weekday')} ${getP('hour')}:${getP('minute')}:${getP('second')} ${getP('timeZoneName') || metadata.timeZoneLabel}`;
+  const localTimeFormatted = `${getP('weekday')} ${getP('hour')}:${getP('minute')}:${getP('second')} ${getP('timeZoneName') || userTz}`;
 
   // Check if today is a US market holiday
   const dateParts = new Intl.DateTimeFormat('en-US', {
@@ -583,6 +602,7 @@ export function getMarketScheduleStatus(
         holidayName: holiday?.name,
         timeZone: metadata.timeZone,
         timeZoneLabel: metadata.timeZoneLabel,
+        userTimeZone: userTz,
       };
     }
 
@@ -608,6 +628,7 @@ export function getMarketScheduleStatus(
       holidayName: holiday?.name,
       timeZone: metadata.timeZone,
       timeZoneLabel: metadata.timeZoneLabel,
+      userTimeZone: userTz,
     };
   }
 
@@ -634,6 +655,7 @@ export function getMarketScheduleStatus(
       holidayName: holiday?.name,
       timeZone: metadata.timeZone,
       timeZoneLabel: metadata.timeZoneLabel,
+      userTimeZone: userTz,
     };
   }
 
@@ -641,13 +663,14 @@ export function getMarketScheduleStatus(
   const secondsUntilOpen = Math.max(0, Math.floor(msUntilOpen / 1000));
   const minutesUntilOpen = Math.max(1, Math.ceil(secondsUntilOpen / 60));
 
-  // Format next open day/time in exchange timezone
+  // Format next open day/time in user's local timezone
   const openDateParts = new Intl.DateTimeFormat('en-US', {
-    timeZone: metadata.timeZone,
+    timeZone: userTz,
     weekday: 'short',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZoneName: 'short',
   }).format(new Date(nextSession.openTime));
 
   // Approaching opening time: 45 minutes or less
@@ -674,6 +697,7 @@ export function getMarketScheduleStatus(
       holidayName: holiday?.name,
       timeZone: metadata.timeZone,
       timeZoneLabel: metadata.timeZoneLabel,
+      userTimeZone: userTz,
     };
   }
 
@@ -702,6 +726,7 @@ export function getMarketScheduleStatus(
     holidayName: holiday?.name,
     timeZone: metadata.timeZone,
     timeZoneLabel: metadata.timeZoneLabel,
+    userTimeZone: userTz,
   };
 }
 
@@ -718,47 +743,135 @@ export interface WorldSessionInfo {
   isOpen: boolean;
   localTime: string;
   statusText: string;
+  countdownText: string;
+}
+
+function getDateInTz(year: number, month: number, day: number, hour: number, minute: number, tz: string): Date {
+  let utcMs = Date.UTC(year, month, day, hour, minute, 0);
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(utcMs);
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(d);
+    const getP = (t: string) => parseInt(parts.find(x => x.type === t)?.value || '0', 10);
+    const tzYear = getP('year');
+    const tzMonth = getP('month') - 1;
+    const tzDay = getP('day');
+    const tzHour = getP('hour');
+    const tzMin = getP('minute');
+    
+    const tzAsUtcMs = Date.UTC(tzYear, tzMonth, tzDay, tzHour, tzMin, 0);
+    const targetAsUtcMs = Date.UTC(year, month, day, hour, minute, 0);
+    const diff = targetAsUtcMs - tzAsUtcMs;
+    utcMs += diff;
+    if (Math.abs(diff) < 1000) break;
+  }
+  return new Date(utcMs);
+}
+
+function getSessionEvent(currentDate: Date, tz: string, openH: number, openM: number, closeH: number, closeM: number) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    weekday: 'short',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(currentDate);
+  const getP = (t: string) => parts.find(x => x.type === t)?.value || '';
+  
+  const year = parseInt(getP('year'), 10);
+  const month = parseInt(getP('month'), 10) - 1;
+  const day = parseInt(getP('day'), 10);
+  const hour = parseInt(getP('hour'), 10);
+  const minute = parseInt(getP('minute'), 10);
+  const weekday = getP('weekday');
+  
+  const isWeekend = weekday === 'Sat' || weekday === 'Sun';
+  const minOfDay = hour * 60 + minute;
+  const openMin = openH * 60 + openM;
+  const closeMin = closeH * 60 + closeM;
+  
+  const isOpen = !isWeekend && minOfDay >= openMin && minOfDay < closeMin;
+  
+  let targetDate: Date;
+  if (isOpen) {
+    targetDate = getDateInTz(year, month, day, closeH, closeM, tz);
+  } else {
+    let testOpen = getDateInTz(year, month, day, openH, openM, tz);
+    if (!isWeekend && minOfDay < openMin && testOpen.getTime() > currentDate.getTime()) {
+      targetDate = testOpen;
+    } else {
+      let d = new Date(year, month, day);
+      d.setDate(d.getDate() + 1);
+      while (true) {
+        const w = d.getDay();
+        if (w !== 0 && w !== 6) {
+          targetDate = getDateInTz(d.getFullYear(), d.getMonth(), d.getDate(), openH, openM, tz);
+          if (targetDate.getTime() > currentDate.getTime()) {
+            break;
+          }
+        }
+        d.setDate(d.getDate() + 1);
+      }
+    }
+  }
+  
+  const diffMs = targetDate.getTime() - currentDate.getTime();
+  const totalMins = Math.max(0, Math.floor(diffMs / 60000));
+  const days = Math.floor(totalMins / 1440);
+  const hours = Math.floor((totalMins % 1440) / 60);
+  const mins = totalMins % 60;
+  
+  let timeStr = '';
+  if (days > 0) {
+    timeStr = `${days}d ${hours}h ${mins}m`;
+  } else if (hours > 0) {
+    timeStr = `${hours}h ${mins}m`;
+  } else {
+    timeStr = `${mins}m`;
+  }
+  
+  const countdownText = isOpen ? `Closes in ${timeStr}` : `Opens in ${timeStr}`;
+  
+  return {
+    isOpen,
+    statusText: isOpen ? 'OPEN' : 'CLOSED',
+    countdownText,
+  };
 }
 
 export function getWorldMarketSessions(currentDate: Date = new Date()): WorldSessionInfo[] {
-  const checkSessionOpen = (tz: string, openH: number, openM: number, closeH: number, closeM: number) => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      weekday: 'short',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: false,
-    }).formatToParts(currentDate);
-
-    const getP = (t: string) => parts.find(x => x.type === t)?.value || '';
-    const weekday = getP('weekday');
-    const h = parseInt(getP('hour'), 10);
-    const m = parseInt(getP('minute'), 10);
-
-    // Weekends closed
-    if (weekday === 'Sat' || weekday === 'Sun') return false;
-
-    const minOfDay = h * 60 + m;
-    const startMin = openH * 60 + openM;
-    const endMin = closeH * 60 + closeM;
-
-    return minOfDay >= startMin && minOfDay < endMin;
-  };
-
   const getTzTime = (tz: string) => {
-    return currentDate.toLocaleTimeString('en-US', {
+    const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: tz,
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
+      timeZoneName: 'short',
       hour12: false,
     });
+    const parts = formatter.formatToParts(currentDate);
+    const getP = (t: string) => parts.find(x => x.type === t)?.value || '';
+    return `${getP('hour')}:${getP('minute')}:${getP('second')} ${getP('timeZoneName') || ''}`;
   };
 
-  const isNyOpen = checkSessionOpen('America/New_York', 9, 30, 16, 0);
-  const isLonOpen = checkSessionOpen('Europe/London', 8, 0, 16, 30);
-  const isTokOpen = checkSessionOpen('Asia/Tokyo', 9, 0, 15, 0);
-  const isSydOpen = checkSessionOpen('Australia/Sydney', 10, 0, 16, 0);
+  const nyEvent = getSessionEvent(currentDate, 'America/New_York', 9, 30, 16, 0);
+  const lonEvent = getSessionEvent(currentDate, 'Europe/London', 8, 0, 16, 30);
+  const tokEvent = getSessionEvent(currentDate, 'Asia/Tokyo', 9, 0, 15, 0);
+  const sydEvent = getSessionEvent(currentDate, 'Australia/Sydney', 10, 0, 16, 0);
 
   return [
     {
@@ -767,10 +880,11 @@ export function getWorldMarketSessions(currentDate: Date = new Date()): WorldSes
       city: 'Wall Street / CME',
       flag: '🇺🇸',
       timeZone: 'America/New_York',
-      hours: '09:30 – 16:00 EDT',
-      isOpen: isNyOpen,
-      localTime: `${getTzTime('America/New_York')} EDT`,
-      statusText: isNyOpen ? 'OPEN' : 'CLOSED',
+      hours: nyEvent.countdownText,
+      isOpen: nyEvent.isOpen,
+      localTime: getTzTime('America/New_York'),
+      statusText: nyEvent.statusText,
+      countdownText: nyEvent.countdownText,
     },
     {
       id: 'lon',
@@ -778,10 +892,11 @@ export function getWorldMarketSessions(currentDate: Date = new Date()): WorldSes
       city: 'LSE / Europe',
       flag: '🇬🇧',
       timeZone: 'Europe/London',
-      hours: '08:00 – 16:30 BST',
-      isOpen: isLonOpen,
-      localTime: `${getTzTime('Europe/London')} BST`,
-      statusText: isLonOpen ? 'OPEN' : 'CLOSED',
+      hours: lonEvent.countdownText,
+      isOpen: lonEvent.isOpen,
+      localTime: getTzTime('Europe/London'),
+      statusText: lonEvent.statusText,
+      countdownText: lonEvent.countdownText,
     },
     {
       id: 'tok',
@@ -789,10 +904,11 @@ export function getWorldMarketSessions(currentDate: Date = new Date()): WorldSes
       city: 'TSE / Asia',
       flag: '🇯🇵',
       timeZone: 'Asia/Tokyo',
-      hours: '09:00 – 15:00 JST',
-      isOpen: isTokOpen,
-      localTime: `${getTzTime('Asia/Tokyo')} JST`,
-      statusText: isTokOpen ? 'OPEN' : 'CLOSED',
+      hours: tokEvent.countdownText,
+      isOpen: tokEvent.isOpen,
+      localTime: getTzTime('Asia/Tokyo'),
+      statusText: tokEvent.statusText,
+      countdownText: tokEvent.countdownText,
     },
     {
       id: 'syd',
@@ -800,10 +916,11 @@ export function getWorldMarketSessions(currentDate: Date = new Date()): WorldSes
       city: 'ASX / Pacific',
       flag: '🇦🇺',
       timeZone: 'Australia/Sydney',
-      hours: '10:00 – 16:00 AEST',
-      isOpen: isSydOpen,
-      localTime: `${getTzTime('Australia/Sydney')} AEST`,
-      statusText: isSydOpen ? 'OPEN' : 'CLOSED',
+      hours: sydEvent.countdownText,
+      isOpen: sydEvent.isOpen,
+      localTime: getTzTime('Australia/Sydney'),
+      statusText: sydEvent.statusText,
+      countdownText: sydEvent.countdownText,
     },
   ];
 }

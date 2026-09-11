@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Clock, Globe, X, ChevronDown, AlertTriangle, ShieldCheck } from 'lucide-react';
 import {
   BenchmarkMarketId,
+  getUserTimeZone,
 } from '../../utils/marketSchedule';
 import { useMarketStatus } from '../../context/MarketStatusContext';
 
@@ -323,7 +324,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                       </span>
                     </div>
                     <div className="text-[10px] font-mono text-slate-400 mt-1 flex items-center justify-between">
-                      <span>{session.hours}</span>
+                      <span>{session.countdownText}</span>
                     </div>
                     <div className="text-[9px] font-mono text-slate-500 mt-0.5">
                       Time: {session.localTime}
@@ -362,6 +363,10 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
 
             {/* Active Schedule Details */}
             <div className="pt-2 border-t border-[#1A2338] space-y-1.5 text-[10px] text-slate-400 font-mono">
+              <div className="flex justify-between">
+                <span>Your Local Timezone:</span>
+                <span className="text-amber-300 font-bold">{getUserTimeZone()}</span>
+              </div>
               <div className="flex justify-between">
                 <span>Exchange / Market:</span>
                 <span className="text-slate-200">{status.metadata.exchangeName}</span>
