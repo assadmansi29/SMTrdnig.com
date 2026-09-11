@@ -286,7 +286,7 @@ export const PublicLandingPage: React.FC = () => {
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12]">
               {t('landingHeroTitlePre')} <br className="hidden sm:block" />
-              <span className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
+              <span className="block sm:inline text-2xl sm:text-5xl lg:text-6xl mt-1.5 sm:mt-0 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">
                 {t('landingHeroTitleHighlight')}
               </span>
             </h1>

@@ -132,16 +132,26 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
     if (compact) {
       if (status.status === 'MARKET WILL CLOSE SOON') {
         return (
-          <span className={`tracking-wide font-bold ${styles.titleText}`}>
-            CLOSES IN {status.minutesRemaining} MIN
-          </span>
+          <>
+            <span className={`tracking-tight font-bold sm:hidden`}>
+              CLOSES {status.minutesRemaining}m
+            </span>
+            <span className={`tracking-wide font-bold hidden sm:inline ${styles.titleText}`}>
+              CLOSES IN {status.minutesRemaining} MIN
+            </span>
+          </>
         );
       }
       if (status.status === 'MARKET WILL OPEN SOON') {
         return (
-          <span className={`tracking-wide font-bold ${styles.titleText}`}>
-            MARKET WILL OPEN IN {status.minutesRemaining} MIN
-          </span>
+          <>
+            <span className={`tracking-tight font-bold sm:hidden`}>
+              OPENS {status.minutesRemaining}m
+            </span>
+            <span className={`tracking-wide font-bold hidden sm:inline ${styles.titleText}`}>
+              MARKET WILL OPEN IN {status.minutesRemaining} MIN
+            </span>
+          </>
         );
       }
       if (status.status === 'MARKET OPEN') {
@@ -197,7 +207,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         onClick={() => setShowDetails(!showDetails)}
         title={`Live Market Status: ${status.status} — Click for Real-Time Session Schedule & Global Clocks`}
         className={`group relative flex items-center ${
-          compact ? 'gap-2 px-3 py-1 text-[10.5px]' : 'gap-2.5 px-3.5 py-1.5 text-[11px]'
+          compact ? 'gap-1.5 px-2.5 py-0.5 text-[9.5px] sm:gap-2 sm:px-3 sm:py-1 sm:text-[10.5px]' : 'gap-2.5 px-3.5 py-1.5 text-[11px]'
         } rounded-full border font-mono transition-all duration-200 cursor-pointer select-none backdrop-blur-md shrink-0 whitespace-nowrap active:scale-[0.98] hover:scale-[1.01] ${styles.badgeBg} ${styles.badgeBorder}`}
       >
         {/* Pulsing indicator status beacon */}

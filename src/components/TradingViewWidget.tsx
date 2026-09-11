@@ -2792,7 +2792,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               onClick={handleManualSaveStrategy}
               disabled={saveStatus === 'saving'}
               title="Save all drawings to PostgreSQL strategy database"
-              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/60 rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group"
+              className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/60 rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group"
             >
               {saveStatus === 'saving' ? (
                 <Loader2 className="w-3 h-3 text-amber-300 animate-spin" />
@@ -2800,15 +2800,22 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                 <Save className="w-3 h-3 text-amber-400 group-hover:scale-105 transition-transform" />
               )}
               <span className="tracking-tight">
-                {saveStatus === 'saving'
-                  ? 'Saving...'
-                  : activeStrategy === '144'
-                  ? 'Save (144)'
-                  : activeStrategy === 'smc'
-                  ? 'Save (SMC)'
-                  : activeStrategy === 'fib'
-                  ? 'Save (Fib)'
-                  : 'Save Strategy'}
+                {saveStatus === 'saving' ? (
+                  'Saving...'
+                ) : (
+                  <>
+                    <span className="sm:hidden">Save</span>
+                    <span className="hidden sm:inline">
+                      {activeStrategy === '144'
+                        ? 'Save (144)'
+                        : activeStrategy === 'smc'
+                        ? 'Save (SMC)'
+                        : activeStrategy === 'fib'
+                        ? 'Save (Fib)'
+                        : 'Save Strategy'}
+                    </span>
+                  </>
+                )}
               </span>
             </button>
           )}

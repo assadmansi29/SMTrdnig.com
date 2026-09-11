@@ -702,19 +702,22 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             )}
           </button>
+
+          <div className="h-4 w-px bg-slate-800/80 mx-1 hidden lg:block" />
+
+          {/* Professional Compact Market Status Indicator */}
+          <MarketStatusIndicator 
+            id="chart-toolbar-market-status-button"
+            symbol={currentSymbol} 
+            compact={true}
+            align="left"
+          />
         </div>
 
       </div>
 
-      {/* RIGHT SECTION: Market Status & Quick Actions */}
+      {/* RIGHT SECTION: Quick Actions */}
       <div className="flex items-center gap-2 shrink-0 ml-auto">
-        {/* Professional Compact Market Status Indicator */}
-        <MarketStatusIndicator 
-          id="chart-toolbar-market-status-button"
-          symbol={currentSymbol} 
-          compact={true}
-          align="right"
-        />
 
         {/* External TradingView Link */}
         <a
