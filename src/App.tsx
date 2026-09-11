@@ -13,7 +13,6 @@ import {
 import { 
   INITIAL_ARTICLES, 
   INITIAL_MARKET_TICKERS, 
-  INITIAL_ECONOMIC_EVENTS, 
   AUTHORS 
 } from './data/blogData';
 import { MarketTicker } from './components/MarketTicker';
@@ -39,7 +38,7 @@ import { AdminPanelModal, AdminPanelTabType } from './components/AdminPanelModal
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
 import { useAuth } from './context/AuthContext';
-import { getArticlesByLanguage, getEconomicEventsByLanguage } from './data/localizedData';
+import { getArticlesByLanguage } from './data/localizedData';
 import { getLocalizedCategory } from './locales';
 import { copyToClipboard } from './utils/clipboard';
 import { 
@@ -57,8 +56,6 @@ export default function App() {
   const { t, isRTL, language } = useTranslation();
   const [articles, setArticles] = useState<Article[]>(() => getArticlesByLanguage(language));
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
-
-  const localizedEvents = getEconomicEventsByLanguage(language);
 
   const { user } = useAuth();
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -246,7 +243,6 @@ export default function App() {
             setIsCalculatorOpen(true);
           }}
           onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
-          localizedEvents={localizedEvents}
         />
 
         {/* Professional Educational Academy Section (Positioned directly under TradingView chart) */}
@@ -433,7 +429,6 @@ export default function App() {
       <EconomicCalendarModal
         isOpen={isCalendarOpen}
         onClose={() => setIsCalendarOpen(false)}
-        events={localizedEvents}
       />
 
       <ChartSimulatorModal

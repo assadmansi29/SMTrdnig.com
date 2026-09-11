@@ -13,10 +13,12 @@ import {
   Info, 
   Check,
   Building,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from 'lucide-react';
 import { EconomicEvent } from '../types';
 import { useTranslation } from '../context/LanguageContext';
+import { useEconomicCalendar } from '../context/EconomicCalendarContext';
 import { 
   getUserTimezoneInfo, 
   formatEventLocalTime, 
@@ -32,17 +34,20 @@ import {
 interface EconomicCalendarModalProps {
   isOpen: boolean;
   onClose: () => void;
-  events: EconomicEvent[];
+  events?: EconomicEvent[];
 }
 
 export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
   isOpen,
   onClose,
-  events
+  events: propEvents
 }) => {
   const { t, language, isRTL } = useTranslation();
+  const { events: contextEvents, isLoading, error, refresh } = useEconomicCalendar();
+  const events = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
+
   const [filterImpact, setFilterImpact] = useState<string>('All');
-  const [expandedId, setExpandedId] = useState<string | null>('news-us-nfp-sep04');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState<number>(Date.now());
   const [selectedTz, setSelectedTz] = useState<string>(() => {
     return getStoredTimezonePreference() || 'AUTO';
@@ -300,7 +305,23 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
 
         {/* 4. Events Grouped By Local Calendar Day */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
-          {filteredEvents.length === 0 ? (
+          {isLoading && events.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 space-y-3">
+              <Loader2 className="w-6 h-6 text-amber-400 animate-spin mx-auto" />
+              <p className="text-sm">Loading verified live economic calendar from provider...</p>
+            </div>
+          ) : error && events.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 space-y-3">
+              <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
+              <p className="text-sm text-rose-300 font-semibold">Live economic calendar unavailable</p>
+              <button
+                onClick={() => refresh()}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Retry Connection
+              </button>
+            </div>
+          ) : filteredEvents.length === 0 ? (
             <div className="py-12 text-center text-slate-400 space-y-2">
               <p className="text-sm">No economic events matching current filters.</p>
               <button

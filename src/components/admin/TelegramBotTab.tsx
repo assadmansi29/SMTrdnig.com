@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Send, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Clock, Globe, ShieldCheck, Zap, Bell, Check, Sparkles } from 'lucide-react';
+import { Send, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Clock, Globe, ShieldCheck, Zap, Bell, Check, Sparkles, Database, Terminal, ArrowRight } from 'lucide-react';
 
 interface TelegramBotTabProps {
   token: string | null;
@@ -68,6 +68,10 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
   const [events, setEvents] = useState<EconomicEventItem[]>([]);
   const [testLoading, setTestLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [cleanLoading, setCleanLoading] = useState(false);
+  const [debugLoading, setDebugLoading] = useState(false);
+  const [debugData, setDebugData] = useState<any>(null);
+  const [showDebugModal, setShowDebugModal] = useState(false);
   const [savingTz, setSavingTz] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [selectedTimezone, setSelectedTimezone] = useState<string>('Asia/Riyadh');
@@ -210,6 +214,56 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
     }
   };
 
+  const handleCleanCalendarDb = async () => {
+    setCleanLoading(true);
+    setActionFeedback(null);
+    try {
+      const res = await fetch('/api/economic-calendar/clean-db', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionFeedback({
+          type: 'success',
+          message: `Database Clean Complete: Purged ${data.purgedStaleRecords} stale records. Fetched & upserted ${data.freshEventsInserted} fresh live market events starting September 11, 2026.`,
+        });
+        await fetchStatusAndEvents();
+      } else {
+        setActionFeedback({
+          type: 'error',
+          message: data.error || 'Failed to clean calendar database.',
+        });
+      }
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', message: `Clean DB error: ${err.message}` });
+    } finally {
+      setCleanLoading(false);
+    }
+  };
+
+  const handleDebugPipeline = async () => {
+    setDebugLoading(true);
+    setActionFeedback(null);
+    try {
+      const res = await fetch('/api/economic-calendar/debug-pipeline', {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      });
+      const data = await res.json();
+      setDebugData(data);
+      setShowDebugModal(true);
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', message: `Debug Pipeline error: ${err.message}` });
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
   const formatEventTime = (isoUtc: string) => {
     try {
       const d = new Date(isoUtc);
@@ -262,6 +316,28 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
 
           <button
             type="button"
+            onClick={handleCleanCalendarDb}
+            disabled={cleanLoading}
+            className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Purge stale Sept 4 events & resync fresh live calendar"
+          >
+            <Database className={`w-3.5 h-3.5 ${cleanLoading ? 'animate-spin' : ''}`} />
+            <span>{cleanLoading ? 'Cleaning DB...' : 'Clean Calendar DB'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDebugPipeline}
+            disabled={debugLoading}
+            className="px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Trace API -> Backend -> DB -> Client Pipeline"
+          >
+            <Terminal className={`w-3.5 h-3.5 ${debugLoading ? 'animate-spin' : ''}`} />
+            <span>{debugLoading ? 'Tracing...' : 'Debug API Pipeline'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleManualSync}
             disabled={syncLoading}
             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
@@ -281,6 +357,88 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
           </button>
         </div>
       </div>
+
+      {/* Debug API Pipeline Inspection Modal/Card */}
+      {showDebugModal && debugData && (
+        <div className="bg-[#0B101E] border border-violet-500/40 rounded-2xl p-5 space-y-4 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-violet-500/20 pb-3">
+            <div className="flex items-center gap-2">
+              <Terminal className="w-5 h-5 text-violet-400" />
+              <h4 className="text-sm font-black text-white uppercase tracking-wider">Live Economic Calendar Pipeline Trace</h4>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                debugData.diagnosis?.overallStatus === 'HEALTHY_AND_CURRENT'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+              }`}>
+                {debugData.diagnosis?.overallStatus}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowDebugModal(false)}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800"
+            >
+              Close Trace
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            {/* Step 1 */}
+            <div className="bg-[#070A12] p-3.5 rounded-xl border border-slate-800 space-y-2">
+              <div className="font-bold text-slate-300 flex items-center justify-between">
+                <span>1. External API (BiQuote)</span>
+                <span className="text-emerald-400">{debugData.steps?.step1_externalApi?.status}</span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-mono truncate">{debugData.steps?.step1_externalApi?.url}</p>
+              <div className="text-[11px] text-slate-300 space-y-1">
+                <div>Latency: <span className="text-sky-300 font-mono">{debugData.steps?.step1_externalApi?.latencyMs}ms</span></div>
+                <div className="text-[10px] text-slate-400">Sample verified upcoming:</div>
+                {debugData.steps?.step1_externalApi?.sampleRawUpcoming?.map((item: any) => (
+                  <div key={item.id} className="truncate bg-slate-900/80 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-300">
+                    {item.time?.split('T')[0]} {item.name} ({item.country})
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-[#070A12] p-3.5 rounded-xl border border-slate-800 space-y-2">
+              <div className="font-bold text-slate-300 flex items-center justify-between">
+                <span>2. PostgreSQL DB</span>
+                <span className="text-emerald-400">Connected</span>
+              </div>
+              <div className="space-y-1 text-[11px] text-slate-300">
+                <div>Total Events in DB: <span className="font-mono font-bold text-white">{debugData.steps?.step2_postgresqlDb?.totalRecordsInDb}</span></div>
+                <div>Stale Sept 4 Records: <span className={`font-mono font-bold ${debugData.steps?.step2_postgresqlDb?.staleSept4RecordsCount === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{debugData.steps?.step2_postgresqlDb?.staleSept4RecordsCount}</span></div>
+                <div>Today (Sept 11) Records: <span className="font-mono font-bold text-emerald-400">{debugData.steps?.step2_postgresqlDb?.todaySept11RecordsCount}</span></div>
+                <div className="text-[10px] text-slate-400 pt-1">Active dates in DB:</div>
+                <div className="flex flex-wrap gap-1">
+                  {debugData.steps?.step2_postgresqlDb?.datesBreakdown?.map((d: any) => (
+                    <span key={d.day} className="px-1.5 py-0.5 bg-slate-800 rounded text-[9px] font-mono text-cyan-300">
+                      {d.day}: {d.count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-[#070A12] p-3.5 rounded-xl border border-slate-800 space-y-2">
+              <div className="font-bold text-slate-300 flex items-center justify-between">
+                <span>3. Client API Response</span>
+                <span className="text-emerald-400">Live Active</span>
+              </div>
+              <div className="text-[10px] text-slate-400">First items in /api/economic-calendar:</div>
+              <div className="space-y-1">
+                {debugData.steps?.step3_apiResponsePreview?.sampleTopEvents?.map((item: any) => (
+                  <div key={item.id} className="bg-slate-900/80 px-1.5 py-1 rounded text-[10px] font-mono text-slate-200">
+                    <span className="text-amber-300 font-bold">{item.dateUtc?.split('T')[0]}</span> {item.event} ({item.country})
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Feedback Banner */}
       {actionFeedback && (

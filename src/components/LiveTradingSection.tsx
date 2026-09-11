@@ -10,7 +10,6 @@ import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { TranslationKey } from '../locales';
 import { EconomicEvent, ArticleCategory } from '../types';
-import { getEconomicEventsByLanguage } from '../data/localizedData';
 
 interface InstrumentOption {
   id: string;
@@ -66,7 +65,6 @@ interface LiveTradingSectionProps {
   onOpenCalendar: () => void;
   onOpenCalculator: () => void;
   onOpenAdminModal?: (tab?: string, symbol?: string, interval?: string) => void;
-  localizedEvents?: EconomicEvent[];
   activeCategory?: ArticleCategory;
 }
 
@@ -75,7 +73,6 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
   onOpenCalendar,
   onOpenCalculator,
   onOpenAdminModal,
-  localizedEvents,
   activeCategory = 'All'
 }) => {
   const { t, language } = useTranslation();
@@ -103,8 +100,6 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
     checkedAt,
     refresh
   } = useYouTubeLive();
-
-  const events = localizedEvents || getEconomicEventsByLanguage(language);
 
   const rawBroker = selectedSymbol.includes(':') ? selectedSymbol.split(':')[0] : 'BlackBull';
   const brokerName =
@@ -227,7 +222,6 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
             <div className="space-y-4 flex flex-col">
               {/* 1. MAJOR MARKET-MOVING ECONOMIC NEWS */}
               <EconomicNewsSection
-                events={events}
                 onOpenCalendar={onOpenCalendar}
                 onOpenChartModal={onOpenChartModal}
               />

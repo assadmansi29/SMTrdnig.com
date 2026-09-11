@@ -110,9 +110,32 @@ export async function ensureEconomicTables(pool: PgPool): Promise<void> {
           OR error_message ILIKE '%chat not found%'
           OR scheduled_for_utc < (NOW() - INTERVAL '3 hours')
         );
+
+      -- Purge stale economic events older than 24 hours to prevent outdated cards from cluttering the live feed
+      DELETE FROM economic_events
+      WHERE date_utc < (NOW() - INTERVAL '24 hours');
     `);
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Purges stale economic events older than specified hours (default 24h) from PostgreSQL.
+ * Cascades to event_notifications automatically.
+ */
+export async function purgeStaleEconomicEvents(pool: PgPool, olderThanHours: number = 24): Promise<number> {
+  try {
+    const res = await pool.query(`
+      DELETE FROM economic_events
+      WHERE date_utc < (NOW() - ($1 * INTERVAL '1 hour'));
+    `, [olderThanHours]);
+    const deleted = res.rowCount || 0;
+    console.log(`[Economic DB] Purged ${deleted} stale economic events older than ${olderThanHours} hours from PostgreSQL.`);
+    return deleted;
+  } catch (err: any) {
+    console.error(`[Economic DB] Error purging stale events: ${err.message}`);
+    throw err;
   }
 }
 

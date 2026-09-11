@@ -8,14 +8,16 @@ import {
   ChevronDown, 
   ChevronUp, 
   Globe, 
-  Flame,
-  Info,
-  Building,
-  RotateCcw,
-  Check
+  Flame, 
+  Info, 
+  Building, 
+  RotateCcw, 
+  Check,
+  Loader2
 } from 'lucide-react';
 import { EconomicEvent } from '../types';
 import { useTranslation } from '../context/LanguageContext';
+import { useEconomicCalendar } from '../context/EconomicCalendarContext';
 import { 
   getUserTimezoneInfo, 
   formatEventLocalTime, 
@@ -28,20 +30,23 @@ import {
 } from '../utils/economicNewsUtils';
 
 interface EconomicNewsSectionProps {
-  events: EconomicEvent[];
+  events?: EconomicEvent[];
   onOpenCalendar: () => void;
   onOpenChartModal?: (symbol?: string) => void;
 }
 
 export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
-  events,
+  events: propEvents,
   onOpenCalendar,
   onOpenChartModal
 }) => {
   const { t, language, isRTL } = useTranslation();
+  const { events: contextEvents, isLoading, error, refresh } = useEconomicCalendar();
+  const events = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
+
   const [now, setNow] = useState<number>(Date.now());
   const [filterImpact, setFilterImpact] = useState<string>('All');
-  const [expandedEventId, setExpandedEventId] = useState<string | null>('news-us-nfp-sep04');
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [selectedTz, setSelectedTz] = useState<string>(() => {
     return getStoredTimezonePreference() || 'AUTO';
   });
@@ -235,6 +240,38 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
 
       {/* 4. Streamlined Event Cards */}
       <div className="space-y-2.5">
+        {isLoading && events.length === 0 && (
+          <div className="py-8 text-center text-slate-400 space-y-2 bg-[#090D17] rounded-xl border border-slate-800">
+            <Loader2 className="w-5 h-5 text-amber-400 animate-spin mx-auto" />
+            <p className="text-xs">Loading verified live economic calendar...</p>
+          </div>
+        )}
+
+        {error && events.length === 0 && (
+          <div className="py-6 px-4 text-center text-slate-400 space-y-2 bg-[#090D17] rounded-xl border border-rose-500/30">
+            <AlertTriangle className="w-5 h-5 text-rose-400 mx-auto" />
+            <p className="text-xs text-rose-300 font-semibold">Live economic calendar unavailable</p>
+            <button
+              onClick={() => refresh()}
+              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] font-bold cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!isLoading && filteredEvents.length === 0 && (
+          <div className="py-8 text-center text-slate-400 space-y-2 bg-[#090D17] rounded-xl border border-slate-800">
+            <p className="text-xs">No events matching current filter.</p>
+            <button
+              onClick={() => setFilterImpact('All')}
+              className="px-2.5 py-1 bg-amber-400 text-slate-950 font-bold rounded text-[11px] cursor-pointer"
+            >
+              Reset Filter
+            </button>
+          </div>
+        )}
+
         {filteredEvents.slice(0, 4).map((evt) => {
           const isExpanded = expandedEventId === evt.id;
           const { text: countdownText, status, isApproaching, isLive } = getEventCountdown(evt, now, language);

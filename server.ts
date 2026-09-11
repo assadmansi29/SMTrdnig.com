@@ -16,6 +16,7 @@ import chartAnalysisRoutes from './server/routes/chartAnalysisRoutes';
 import tradingviewStorageRoutes, { ensureTradingViewStorageTable } from './server/routes/tradingviewStorageRoutes';
 import chartDrawingsRoutes, { ensureChartDrawingsTable } from './server/routes/chartDrawingsRoutes';
 import marketRoutes from './server/routes/marketRoutes';
+import economicCalendarRoutes from './server/routes/economicCalendarRoutes';
 import { ensureChartAnalysisTable } from './server/db/chartAnalysisDb';
 import { economicScheduler } from './server/services/economicScheduler';
 import { marketStreamManager } from './server/services/marketStreamService';
@@ -93,6 +94,7 @@ async function startServer() {
   app.use('/api/chart-analyses', requireDatabaseReady, chartAnalysisRoutes);
   app.use('/api/tradingview-storage', requireDatabaseReady, tradingviewStorageRoutes);
   app.use('/api/chart-drawings', requireDatabaseReady, chartDrawingsRoutes);
+  app.use('/api', requireDatabaseReady, economicCalendarRoutes);
   app.use('/api/market', marketRoutes);
   app.use('/api/chart', marketRoutes);
   app.use('/api', marketRoutes);
