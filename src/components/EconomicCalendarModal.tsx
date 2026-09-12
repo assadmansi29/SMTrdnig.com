@@ -1,35 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   Calendar, 
-  AlertTriangle, 
   Clock, 
-  Filter, 
-  Globe, 
   Flame, 
-  Radio, 
+  AlertTriangle, 
+  Globe, 
+  RotateCw, 
+  Check, 
+  Search, 
+  Filter, 
+  TrendingUp, 
+  TrendingDown, 
+  Minus,
   ChevronDown, 
   ChevronUp, 
   Info, 
-  Check,
-  Building,
-  RotateCcw,
-  Loader2
+  ArrowUpRight,
+  SlidersHorizontal
 } from 'lucide-react';
 import { EconomicEvent } from '../types';
 import { useTranslation } from '../context/LanguageContext';
 import { useEconomicCalendar } from '../context/EconomicCalendarContext';
 import { 
-  getUserTimezoneInfo, 
-  formatEventLocalTime, 
-  getEventCountdown, 
-  getImpactBadgeStyle,
-  groupEventsByLocalDate,
-  POPULAR_TRADING_TIMEZONES,
-  getStoredTimezonePreference,
+  resolveEffectiveTimezone, 
+  getStoredTimezonePreference, 
   setStoredTimezonePreference,
-  getDetectedTimezone
-} from '../utils/economicNewsUtils';
+  getTimezoneMeta,
+  formatEventInTimezone,
+  calculateLiveCountdown,
+  normalizeImpact,
+  getImpactStyle,
+  getCurrencyFlag,
+  filterGenuinelyUpcomingEvents,
+  filterPastReleasedEvents,
+  POPULAR_TIMEZONES
+} from '../utils/economicCalendarUtils';
 
 interface EconomicCalendarModalProps {
   isOpen: boolean;
@@ -42,499 +48,485 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
   onClose,
   events: propEvents
 }) => {
-  const { t, language, isRTL } = useTranslation();
-  const { events: contextEvents, isLoading, error, refresh } = useEconomicCalendar();
-  const events = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
+  const { isRTL } = useTranslation();
+  const { events: contextEvents, isLoading, isRefreshing, refresh } = useEconomicCalendar();
+  const allEvents = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
 
-  const [filterImpact, setFilterImpact] = useState<string>('All');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Active View Tab: 'upcoming' vs 'released'
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'released'>('upcoming');
+  const [activeImpactFilter, setActiveImpactFilter] = useState<'All' | 'High' | 'Medium' | 'Low'>('High');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+
+  // Timezone state
+  const [selectedTz, setSelectedTz] = useState<string>(() => getStoredTimezonePreference());
+  const [isTzPickerOpen, setIsTzPickerOpen] = useState<boolean>(false);
+
+  // Live ticking clock (ticking every 1s)
   const [now, setNow] = useState<number>(Date.now());
-  const [selectedTz, setSelectedTz] = useState<string>(() => {
-    return getStoredTimezonePreference() || 'AUTO';
-  });
-  const [isTzDropdownOpen, setIsTzDropdownOpen] = useState(false);
 
-  // Real-time ticking timer for countdowns
   useEffect(() => {
     if (!isOpen) return;
-    const interval = setInterval(() => {
+    const timer = setInterval(() => {
       setNow(Date.now());
     }, 1000);
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [isOpen]);
 
-  // Re-check detected timezone when window gains focus or visibility changes
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleFocus = () => {
-      setNow(Date.now());
-    };
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('visibilitychange', handleFocus);
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [isOpen]);
+  const effectiveTz = useMemo(() => resolveEffectiveTimezone(selectedTz), [selectedTz]);
+  const tzMeta = useMemo(() => getTimezoneMeta(effectiveTz, new Date(now)), [effectiveTz, now]);
+
+  const handleSelectTimezone = (tz: string) => {
+    setSelectedTz(tz);
+    setStoredTimezonePreference(tz);
+    setIsTzPickerOpen(false);
+  };
+
+  // Base list depending on active tab
+  const baseList = useMemo(() => {
+    if (activeTab === 'upcoming') {
+      return filterGenuinelyUpcomingEvents(allEvents, now, activeImpactFilter);
+    } else {
+      return filterPastReleasedEvents(allEvents, now, activeImpactFilter);
+    }
+  }, [allEvents, activeTab, now, activeImpactFilter]);
+
+  // Apply currency and search query filters
+  const filteredEvents = useMemo(() => {
+    return baseList.filter(ev => {
+      if (selectedCurrency !== 'All') {
+        const evCur = (ev.currency || '').toUpperCase();
+        if (evCur !== selectedCurrency) return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesName = ev.event.toLowerCase().includes(q);
+        const matchesCountry = ev.country.toLowerCase().includes(q);
+        const matchesCurrency = (ev.currency || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesCountry && !matchesCurrency) return false;
+      }
+      return true;
+    });
+  }, [baseList, selectedCurrency, searchQuery]);
+
+  // Group events by local date in user's active timezone
+  const groupedByLocalDate = useMemo(() => {
+    const groups: { dateKey: string; dateTitle: string; events: EconomicEvent[] }[] = [];
+    const groupMap = new Map<string, EconomicEvent[]>();
+
+    for (const ev of filteredEvents) {
+      const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz);
+      const dateKey = timeInfo.isoDateLocal || 'other';
+      if (!groupMap.has(dateKey)) {
+        groupMap.set(dateKey, []);
+      }
+      groupMap.get(dateKey)!.push(ev);
+    }
+
+    groupMap.forEach((evList, dateKey) => {
+      if (evList.length > 0) {
+        const sampleTime = formatEventInTimezone(evList[0].timestamp, effectiveTz);
+        let dateTitle = sampleTime.dateFormatted;
+        if (sampleTime.isToday) {
+          dateTitle = isRTL ? `اليوم • ${sampleTime.dateFormatted}` : `Today • ${sampleTime.dateFormatted}`;
+        } else if (sampleTime.isTomorrow) {
+          dateTitle = isRTL ? `غداً • ${sampleTime.dateFormatted}` : `Tomorrow • ${sampleTime.dateFormatted}`;
+        }
+        groups.push({ dateKey, dateTitle, events: evList });
+      }
+    });
+
+    return groups;
+  }, [filteredEvents, effectiveTz, isRTL]);
+
+  const majorCurrencies = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'NZD', 'CNY'];
 
   if (!isOpen) return null;
 
-  const tzInfo = getUserTimezoneInfo(selectedTz);
-  const activeTz = tzInfo.timeZone;
-  const detectedTz = getDetectedTimezone();
-
-  const handleSelectTz = (tz: string) => {
-    setSelectedTz(tz);
-    setStoredTimezonePreference(tz);
-    setIsTzDropdownOpen(false);
-  };
-
-  const filteredEvents = events.filter(e => {
-    if (filterImpact === 'All') return true;
-    if (filterImpact === 'Extreme') return e.impact === 'Extreme';
-    if (filterImpact === 'High') return e.impact === 'High';
-    if (filterImpact === 'Medium') return e.impact === 'Medium';
-    if (filterImpact === 'Low') return e.impact === 'Low';
-    if (filterImpact === 'Upcoming') {
-      const { status } = getEventCountdown(e, now, language);
-      return status === 'upcoming' || status === 'approaching' || status === 'live';
-    }
-    if (filterImpact === 'Released') {
-      const { status } = getEventCountdown(e, now, language);
-      return status === 'released';
-    }
-    return true;
-  });
-
-  // Calculate event-day grouping strictly from canonical UTC timestamps converted to user timezone
-  const dayGroups = groupEventsByLocalDate(filteredEvents, activeTz, language, now);
-
-  const approachingEvent = events.find(e => getEventCountdown(e, now, language).isApproaching);
-  const liveEvent = events.find(e => getEventCountdown(e, now, language).isLive);
-
-  const toggleExpand = (id: string) => {
-    setExpandedId(prev => (prev === id ? null : id));
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn overflow-y-auto">
-      <div className="bg-[#0D121F] border border-slate-700/80 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden text-slate-200 my-auto flex flex-col max-h-[92vh]">
-        {/* 1. Header with Timezone Selector */}
-        <div className="sticky top-0 z-20 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 bg-[#090D17] shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1 pr-2 rtl:pr-0 rtl:pl-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
-                <Flame className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-extrabold text-sm sm:text-base text-white truncate flex items-center gap-2">
-                  <span>{t('calModalTitle')}</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                </h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400 truncate">
-                  <span className="text-slate-400 hidden sm:inline">{t('calModalSubtitle')}</span>
-                  <span className="hidden sm:inline text-slate-600">•</span>
-                  <span className="text-emerald-400 font-mono-num text-[11px] font-medium">
-                    Verified Tier-1 Economic Calendar
-                  </span>
-                </div>
-              </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+      <div 
+        id="economic-calendar-modal-content"
+        className="bg-[#0A0E17] border border-slate-800 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-200"
+      >
+        {/* Modal Top Header */}
+        <div className="p-4 sm:p-5 border-b border-slate-800 bg-gradient-to-r from-[#0F1626] to-[#0A0E17] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
+              <Calendar className="w-5 h-5" />
             </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-              aria-label="Close economic calendar"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
+                  {isRTL ? 'المفكرة الاقتصادية المؤسسية' : 'Institutional Economic Calendar'}
+                </h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  {isRTL ? 'بيانات حقيقية مباشرة' : 'Real-Time Feed'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isRTL 
+                  ? 'جدول ومواعيد إصدارات الاقتصاد الكلي العالمي بالتوقيت المحلي بدعم التوقيت الصيفي' 
+                  : 'Global macroeconomic releases synchronized in your local timezone with full DST support'}
+              </p>
+            </div>
           </div>
 
-          {/* Timezone Switcher Toolbar */}
-          <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between flex-wrap gap-2 text-xs">
+          {/* Timezone Selector & Header Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Timezone picker dropdown */}
             <div className="relative">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400 flex items-center gap-1 font-mono-num text-[11px]">
-                  <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                  {t('ecoYourTzLabel')}:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsTzDropdownOpen(!isTzDropdownOpen)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 font-mono-num font-semibold text-xs cursor-pointer transition-all shadow-sm"
-                >
-                  <span>{tzInfo.isAutoDetected ? `🌐 Auto (${tzInfo.displayName})` : tzInfo.displayName}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isTzDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
+              <button
+                id="modal-btn-tz-select"
+                onClick={() => setIsTzPickerOpen(!isTzPickerOpen)}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <Globe className="w-3.5 h-3.5 text-blue-400" />
+                <span className="max-w-[140px] truncate">{tzMeta.display}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
 
-                {!tzInfo.isAutoDetected && (
-                  <button
-                    type="button"
-                    onClick={() => handleSelectTz('AUTO')}
-                    title={`Reset to auto-detected local device timezone (${detectedTz})`}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 cursor-pointer flex items-center gap-1 text-[11px]"
-                  >
-                    <RotateCcw className="w-3 h-3 text-amber-400" />
-                    <span className="hidden sm:inline">Reset to Local</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Timezone Dropdown Menu */}
-              {isTzDropdownOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-30" 
-                    onClick={() => setIsTzDropdownOpen(false)} 
-                  />
-                  <div className="absolute left-0 rtl:left-auto rtl:right-0 top-full mt-1.5 z-40 w-72 sm:w-80 bg-[#0B0F19] border border-cyan-500/30 rounded-xl shadow-2xl p-2 max-h-72 overflow-y-auto space-y-1 animate-fadeIn">
-                    <div className="px-2.5 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-bold">
-                      Institutional Trading Desks & Regions
-                    </div>
-                    {POPULAR_TRADING_TIMEZONES.map(option => {
-                      const isSelected = selectedTz === option.timeZone || (option.timeZone === 'AUTO' && selectedTz === 'AUTO');
-                      const optInfo = getUserTimezoneInfo(option.timeZone === 'AUTO' ? detectedTz : option.timeZone);
+              {isTzPickerOpen && (
+                <div className="absolute right-0 rtl:left-0 rtl:right-auto top-full mt-2 w-72 bg-[#0F172A] border border-slate-700 rounded-xl shadow-2xl py-2 z-50">
+                  <div className="px-3 py-1.5 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    {isRTL ? 'اختر النطاق الزمني' : 'Select Timezone'}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {POPULAR_TIMEZONES.map(tzOpt => {
+                      const isSelected = (selectedTz === tzOpt.timeZone) || (selectedTz === 'AUTO' && tzOpt.timeZone === 'AUTO');
                       return (
                         <button
-                          key={option.timeZone}
-                          type="button"
-                          onClick={() => handleSelectTz(option.timeZone)}
-                          className={`w-full text-left rtl:text-right px-3 py-2 rounded-lg text-xs font-mono-num flex items-center justify-between cursor-pointer transition-colors ${
-                            isSelected 
-                              ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' 
-                              : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          key={tzOpt.timeZone}
+                          onClick={() => handleSelectTimezone(tzOpt.timeZone)}
+                          className={`w-full text-left rtl:text-right px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-800 transition-colors ${
+                            isSelected ? 'text-amber-300 font-bold bg-slate-800/60' : 'text-slate-300'
                           }`}
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <span className="text-sm">{option.flag}</span>
-                            <div className="truncate">
-                              <div className="font-semibold leading-tight">{option.label}</div>
-                              <div className="text-[10px] text-slate-400 font-normal truncate">
-                                {option.timeZone === 'AUTO' ? `Device Local: ${detectedTz} (${optInfo.offsetString})` : `${optInfo.timeZone} • ${optInfo.offsetString}`}
-                              </div>
-                            </div>
+                            <span>{tzOpt.flag}</span>
+                            <span className="truncate">{tzOpt.label}</span>
                           </div>
-                          {isSelected && <Check className="w-4 h-4 text-cyan-400 shrink-0 ml-2 rtl:mr-2 rtl:ml-0" />}
+                          {isSelected && <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />}
                         </button>
                       );
                     })}
                   </div>
-                </>
+                </div>
               )}
             </div>
 
-            <div className="text-[11px] text-cyan-300 font-mono-num flex items-center gap-1.5 bg-cyan-950/40 border border-cyan-500/30 px-2.5 py-1 rounded-lg">
-              <Clock className="w-3 h-3 text-cyan-400" />
-              <span>
-                {t('ecoLocalTimeLabel')}:{' '}
-                <strong className="text-white">
-                  {new Intl.DateTimeFormat('en-US', {
-                    timeZone: activeTz,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                  }).format(new Date(now))}
-                </strong>
-                <span className="text-slate-400 ml-1">({tzInfo.abbreviation || tzInfo.offsetString})</span>
-              </span>
-            </div>
+            {/* Manual Sync Button */}
+            <button
+              id="modal-btn-refresh"
+              onClick={() => refresh()}
+              disabled={isRefreshing || isLoading}
+              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+              title={isRTL ? 'تحديث فوري' : 'Sync Live Market Data'}
+            >
+              <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
+            </button>
+
+            {/* Modal Close Button */}
+            <button
+              id="modal-btn-close"
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950/40 hover:text-rose-400 border border-slate-700/80 text-slate-400 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* 2. Approaching or Live Catalyst Banner */}
-        {liveEvent && (
-          <div className="bg-gradient-to-r from-rose-950/90 via-[#230C1C] to-rose-950/90 border-b border-rose-500/70 px-4 sm:px-6 py-2.5 flex items-center gap-2.5 text-xs">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping shrink-0"></span>
-            <span className="bg-rose-500 text-white font-black px-2 py-0.5 rounded text-[10px] uppercase">
-              {t('ecoStatusLive')}
-            </span>
-            <span className="font-bold text-white truncate">{liveEvent.event}</span>
-            <span className="text-rose-200 text-[11px] hidden md:inline ml-auto rtl:mr-auto rtl:ml-0">
-              {t('ecoLiveAlertDesc')}
-            </span>
-          </div>
-        )}
+        {/* View Mode Tabs (Upcoming Catalysts vs Recent Released Results) */}
+        <div className="px-4 sm:px-6 pt-3 pb-2 border-b border-slate-800 bg-[#090D15] flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              id="tab-upcoming-events"
+              onClick={() => setActiveTab('upcoming')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'upcoming'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>{isRTL ? 'الأحداث القادمة (عد تنازلي مباشر)' : 'Upcoming Catalysts (Live Countdown)'}</span>
+            </button>
 
-        {!liveEvent && approachingEvent && (
-          <div className="bg-gradient-to-r from-amber-950/90 via-[#261A0A] to-amber-950/90 border-b border-amber-500/70 px-4 sm:px-6 py-2.5 flex items-center gap-2.5 text-xs">
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
-            <span className="bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded text-[10px] uppercase">
-              {t('ecoApproachingAlert')}: {getEventCountdown(approachingEvent, now, language).text}
-            </span>
-            <span className="font-bold text-white truncate">{approachingEvent.event}</span>
-            <span className="text-amber-200 text-[11px] hidden md:inline ml-auto rtl:mr-auto rtl:ml-0">
-              {t('ecoApproachingAlertDesc')}
-            </span>
+            <button
+              id="tab-released-events"
+              onClick={() => setActiveTab('released')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                activeTab === 'released'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+              }`}
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>{isRTL ? 'النتائج الصادرة مؤخراً' : 'Recent Releases & Outcomes'}</span>
+            </button>
           </div>
-        )}
 
-        {/* 3. Filter Controls */}
-        <div className="px-4 sm:px-6 py-2.5 bg-[#0B0F19] border-b border-slate-800/80 flex items-center justify-between flex-wrap gap-2">
+          {/* Search Box */}
+          <div className="relative w-full md:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 rtl:right-3 rtl:left-auto top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isRTL ? 'ابحث عن حدث، دولة، عملة...' : 'Search event, currency, country...'}
+              className="w-full pl-9 pr-3 rtl:pr-9 rtl:pl-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 rtl:left-2.5 rtl:right-auto top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Pills Bar: Impact & Currency */}
+        <div className="px-4 sm:px-6 py-2.5 bg-[#080B12] border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          {/* Impact filters */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-slate-400 flex items-center gap-1 mr-1 rtl:mr-0 rtl:ml-1">
-              <Filter className="w-3.5 h-3.5" /> {t('calImpactLabel')}
+            <span className="text-[11px] font-semibold text-slate-500 uppercase mr-1 rtl:ml-1 rtl:mr-0">
+              {isRTL ? 'التأثير:' : 'Impact:'}
             </span>
-            {[
-              { key: 'All', label: t('ecoFilterAll') },
-              { key: 'Extreme', label: t('ecoFilterExtreme') },
-              { key: 'High', label: t('ecoFilterHigh') },
-              { key: 'Medium', label: t('ecoFilterMedium') },
-              { key: 'Upcoming', label: t('ecoFilterUpcomingOnly') },
-              { key: 'Released', label: t('ecoFilterReleasedOnly') },
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setFilterImpact(item.key)}
-                className={`text-xs px-2.5 py-1 rounded-lg font-mono-num transition-all cursor-pointer ${
-                  filterImpact === item.key
-                    ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
-                    : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+            {(['High', 'All', 'Medium', 'Low'] as const).map(imp => {
+              const isActive = activeImpactFilter === imp;
+              return (
+                <button
+                  key={imp}
+                  onClick={() => setActiveImpactFilter(imp)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                      : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  {imp === 'High' && (isRTL ? '🔥 عالي التأثير (CPI/NFP/فائدة)' : '🔥 High Impact (CPI/NFP/Rates)')}
+                  {imp === 'All' && (isRTL ? 'الكل' : 'All Impacts')}
+                  {imp === 'Medium' && (isRTL ? 'متوسط' : 'Medium')}
+                  {imp === 'Low' && (isRTL ? 'منخفض' : 'Low')}
+                </button>
+              );
+            })}
           </div>
 
-          <span className="text-[11px] text-slate-400 font-mono-num">
-            {filteredEvents.length} Verified Releases
-          </span>
+          {/* Major Currency Selectors */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase mr-1 rtl:ml-1 rtl:mr-0">
+              {isRTL ? 'العملة:' : 'Currency:'}
+            </span>
+            {majorCurrencies.map(cur => {
+              const isSelected = selectedCurrency === cur;
+              return (
+                <button
+                  key={cur}
+                  onClick={() => setSelectedCurrency(cur)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-colors ${
+                    isSelected
+                      ? 'bg-blue-600 text-white font-bold'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  {cur}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* 4. Events Grouped By Local Calendar Day */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
-          {isLoading && events.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 space-y-3">
-              <Loader2 className="w-6 h-6 text-amber-400 animate-spin mx-auto" />
-              <p className="text-sm">Loading verified live economic calendar from provider...</p>
-            </div>
-          ) : error && events.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 space-y-3">
-              <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto" />
-              <p className="text-sm text-rose-300 font-semibold">Live economic calendar unavailable</p>
-              <button
-                onClick={() => refresh()}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer"
-              >
-                Retry Connection
-              </button>
+        {/* Modal Scrollable Table Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {isLoading && filteredEvents.length === 0 ? (
+            <div className="py-16 text-center space-y-3 text-slate-400">
+              <RotateCw className="w-8 h-8 animate-spin mx-auto text-blue-400" />
+              <p className="text-sm">{isRTL ? 'جاري مزامنة المفكرة الاقتصادية...' : 'Synchronizing live economic calendar...'}</p>
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 space-y-2">
-              <p className="text-sm">No economic events matching current filters.</p>
-              <button
-                onClick={() => setFilterImpact('All')}
-                className="px-3.5 py-1.5 rounded-lg bg-amber-400 text-slate-950 text-xs font-bold cursor-pointer"
-              >
-                Reset Filters
-              </button>
+            <div className="py-16 text-center border border-slate-800/80 rounded-2xl bg-slate-900/30 p-8 space-y-3">
+              <Calendar className="w-10 h-10 mx-auto text-slate-600" />
+              <h4 className="text-sm font-semibold text-slate-300">
+                {isRTL ? 'لا توجد أحداث تطابق هذا الفلتر' : 'No economic events match the current filter'}
+              </h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                {activeTab === 'upcoming'
+                  ? (isRTL ? 'لا توجد أحداث قادمة بهذه المعايير في الأيام القادمة. جرب تبديل التأثير إلى "الكل" أو اختيار عملة أخرى.' : 'No upcoming scheduled catalysts in the next window for this filter. Try selecting "All Impacts" or another currency.')
+                  : (isRTL ? 'لا توجد نتائج سابقة مسجلة بهذه المعايير.' : 'No past releases found matching this filter.')}
+              </p>
             </div>
           ) : (
-            dayGroups.map((group) => (
-              <div key={group.dateKey} className="space-y-3">
-                {/* Day Header */}
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-800">
+            groupedByLocalDate.map(group => (
+              <div key={group.dateKey} className="space-y-2.5">
+                {/* Date Header Separator */}
+                <div className="sticky top-0 z-10 flex items-center justify-between py-1.5 px-3 rounded-lg bg-[#0F172A]/90 backdrop-blur-sm border border-slate-800 text-xs font-bold text-slate-300">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-cyan-400" />
-                    <h4 className="font-bold text-xs sm:text-sm text-slate-200 uppercase tracking-wider font-mono-num">
-                      {group.dateLabel}
-                    </h4>
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                    <span>{group.dateTitle}</span>
                   </div>
-                  {group.relativeDay === 'today' && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-[10px] uppercase font-mono-num">
-                      {group.relativeLabel}
-                    </span>
-                  )}
-                  {group.relativeDay === 'tomorrow' && (
-                    <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold text-[10px] uppercase font-mono-num">
-                      {group.relativeLabel}
-                    </span>
-                  )}
-                  {group.relativeDay === 'yesterday' && (
-                    <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 font-medium text-[10px] uppercase font-mono-num">
-                      {group.relativeLabel}
-                    </span>
-                  )}
-                  <span className="text-xs text-slate-500 ml-auto rtl:mr-auto rtl:ml-0 font-mono-num">
-                    {group.events.length} {group.events.length === 1 ? 'event' : 'events'}
+                  <span className="text-[11px] font-mono text-slate-500 font-normal">
+                    {group.events.length} {isRTL ? 'أحداث' : 'events'} • {tzMeta.offsetString}
                   </span>
                 </div>
 
-                {/* Day Events */}
-                <div className="space-y-3">
-                  {group.events.map((evt) => {
-                    const isExpanded = expandedId === evt.id;
-                    const { text: countdownText, status, isApproaching, isLive } = getEventCountdown(evt, now, language);
-                    const localTime = formatEventLocalTime(evt.timestamp, language, activeTz, now);
-                    const style = getImpactBadgeStyle(evt.impact);
+                {/* Events list within this date */}
+                <div className="space-y-2">
+                  {group.events.map(ev => {
+                    const isExpanded = expandedEventId === ev.id;
+                    const normImp = normalizeImpact(ev.impact, ev.event);
+                    const impStyle = getImpactStyle(normImp);
+                    const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz);
+                    const countdown = calculateLiveCountdown(ev.timestamp, now);
 
                     return (
                       <div
-                        key={evt.id}
-                        className={`rounded-2xl border transition-all overflow-hidden ${
-                          isLive
-                            ? 'bg-gradient-to-b from-[#1E0B19] to-[#0A0E18] border-rose-500 shadow-xl shadow-rose-950/20'
-                            : isApproaching
-                            ? 'bg-gradient-to-b from-[#221608] to-[#0A0E18] border-amber-500 shadow-xl shadow-amber-950/20'
-                            : isExpanded
-                            ? 'bg-[#0E1528] border-amber-400/50 shadow-lg'
-                            : 'bg-[#090D17] hover:bg-slate-800/40 border-slate-800'
+                        key={ev.id}
+                        id={`modal-card-${ev.id}`}
+                        onClick={() => setExpandedEventId(isExpanded ? null : ev.id)}
+                        className={`border rounded-xl p-3 sm:p-4 transition-all cursor-pointer ${
+                          isExpanded
+                            ? 'bg-slate-900 border-slate-700 shadow-lg'
+                            : 'bg-slate-900/60 hover:bg-slate-900 border-slate-800/80 hover:border-slate-700'
                         }`}
                       >
-                        {/* Clickable Header Card */}
-                        <div
-                          onClick={() => toggleExpand(evt.id)}
-                          className="p-3.5 sm:p-4 cursor-pointer flex flex-col gap-2.5"
-                        >
-                          {/* Top Row: Country, Local Time (in user's timezone), Impact, Status Badge */}
-                          <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-mono-num">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {/* Country */}
-                              <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-200 font-bold text-[11px] border border-slate-700">
-                                {evt.countryCode === 'US' ? '🇺🇸 US' : evt.countryCode === 'EU' ? '🇪🇺 EU' : evt.countryCode === 'JP' ? '🇯🇵 JP' : evt.countryCode === 'GB' ? '🇬🇧 UK' : evt.countryCode}
+                        {/* Primary Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          {/* Left: Time, Flag, Title */}
+                          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                            {/* Local Time badge */}
+                            <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 flex-shrink-0 min-w-[70px]">
+                              <span className="text-xs font-mono font-bold text-white tracking-tight">
+                                {timeInfo.timeFormatted}
                               </span>
-
-                              {/* Localized Time in User's Timezone */}
-                              <span className="text-amber-300 font-bold flex items-center gap-1.5 text-xs sm:text-sm">
-                                <Clock className="w-3.5 h-3.5 text-amber-400" />
-                                <span>{localTime.timeStr}</span>
-                                <span className="text-[10px] text-cyan-300 font-normal">
-                                  ({tzInfo.abbreviation || tzInfo.offsetString})
-                                </span>
+                              <span className="text-[9px] font-mono text-slate-500 mt-0.5">
+                                {tzMeta.offsetString}
                               </span>
-
-                              {/* Category */}
-                              {evt.category && (
-                                <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                                  {evt.category}
-                                </span>
-                              )}
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              {/* Impact Level: Extreme / High / Medium / Low */}
-                              <span className={`px-2.5 py-0.5 rounded-md text-[11px] uppercase tracking-wider ${style.badgeClass}`}>
-                                {evt.impact === 'Extreme' ? `⚡ ${t('ecoImpactExtreme')}` : evt.impact === 'High' ? t('ecoImpactHigh') : evt.impact === 'Medium' ? t('ecoImpactMedium') : t('ecoImpactLow')}
-                              </span>
+                            {/* Currency & Flag */}
+                            <div className="flex flex-col items-center justify-center w-9 h-9 rounded-lg bg-slate-800/80 border border-slate-700/60 flex-shrink-0">
+                              <span className="text-base leading-none">{getCurrencyFlag(ev.currency, ev.countryCode)}</span>
+                              <span className="text-[9px] font-bold text-slate-300 mt-0.5">{ev.currency || ev.countryCode}</span>
+                            </div>
 
-                              {/* Live / Approaching / Countdown / Released Badge */}
-                              {isLive ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-rose-600 text-white font-black text-[11px] uppercase tracking-wider animate-pulse shadow-md">
-                                  <Radio className="w-3 h-3" />
-                                  {t('ecoStatusLive')}
+                            {/* Event Details */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-xs sm:text-sm text-white hover:text-amber-300 transition-colors truncate">
+                                  {ev.event}
                                 </span>
-                              ) : isApproaching ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-[11px] uppercase tracking-wider animate-pulse shadow-md">
-                                  <AlertTriangle className="w-3 h-3" />
-                                  {countdownText}
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${impStyle.badge}`}>
+                                  {impStyle.label}
                                 </span>
-                              ) : status === 'released' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-[11px]">
-                                  ✓ {t('ecoStatusReleased')}
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-800/90 border border-slate-700 text-cyan-300 font-bold text-[11px]">
-                                  ⏱ {countdownText}
-                                </span>
-                              )}
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 flex-wrap">
+                                <span>{ev.country}</span>
+                                {ev.category && (
+                                  <>
+                                    <span className="text-slate-600">•</span>
+                                    <span className="text-slate-500">{ev.category}</span>
+                                  </>
+                                )}
+                                {ev.utcIso && (
+                                  <>
+                                    <span className="text-slate-600">•</span>
+                                    <span className="text-slate-500 font-mono text-[10px]">
+                                      {ev.utcIso.split('T')[1].substring(0, 5)} UTC
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
 
-                          {/* Middle Row: Event Title + Toggle Chevron */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h4 className="font-bold text-sm sm:text-base text-white hover:text-amber-300 transition-colors leading-snug">
-                                {evt.event}
-                              </h4>
-                              {evt.sourceLocalTime && evt.sourceTimezone && (
-                                <div className="text-[11px] text-slate-400 font-mono-num flex items-center gap-1.5 mt-0.5">
-                                  <Building className="w-3 h-3 text-slate-500" />
-                                  <span>
-                                    Official Source Release: <strong>{evt.sourceLocalTime}</strong> {evt.sourceTimezone}
-                                    {evt.sourceAgency ? ` • ${evt.sourceAgency}` : ''}
-                                  </span>
+                          {/* Right: Numbers or Countdown */}
+                          <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+                            {/* Forecast & Previous */}
+                            <div className="flex items-center gap-3 text-xs font-mono">
+                              <div className="text-right rtl:text-left">
+                                <div className="text-[10px] text-slate-500 uppercase">{isRTL ? 'السابق' : 'Prev'}</div>
+                                <div className="text-slate-300 font-medium">{ev.previous || '—'}</div>
+                              </div>
+                              <div className="text-right rtl:text-left">
+                                <div className="text-[10px] text-blue-400 uppercase">{isRTL ? 'التقدير' : 'Forecast'}</div>
+                                <div className="text-blue-300 font-semibold">{ev.forecast || '—'}</div>
+                              </div>
+
+                              {/* Actual (if in released tab or published) */}
+                              {(activeTab === 'released' || ev.actual) && (
+                                <div className="text-right rtl:text-left pl-2 border-l border-slate-800">
+                                  <div className="text-[10px] text-emerald-400 uppercase">{isRTL ? 'الفعلي' : 'Actual'}</div>
+                                  <div className="text-emerald-300 font-bold text-sm">
+                                    {ev.actual || '—'}
+                                  </div>
                                 </div>
                               )}
                             </div>
-                            <button 
-                              type="button" 
-                              aria-label="Toggle details"
-                              className="text-slate-400 hover:text-amber-300 p-1 shrink-0"
-                            >
-                              {isExpanded ? <ChevronUp className="w-5 h-5 text-amber-400" /> : <ChevronDown className="w-5 h-5" />}
-                            </button>
-                          </div>
 
-                          {/* Bottom Row: Previous / Forecast / Actual Bar */}
-                          <div className="grid grid-cols-3 gap-2.5 pt-1.5 border-t border-slate-800/80 text-center font-mono-num">
-                            <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
-                              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">{t('ecoPreviousLabel')}</span>
-                              <span className="text-xs sm:text-sm text-slate-200 font-bold">{evt.previous}</span>
-                            </div>
-                            <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
-                              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">{t('ecoForecastLabel')}</span>
-                              <span className="text-xs sm:text-sm text-amber-300 font-extrabold">{evt.forecast}</span>
-                            </div>
-                            <div className={`p-2 rounded-xl border ${
-                              evt.actual 
-                                ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300' 
-                                : 'bg-slate-950/60 border-slate-800/80 text-slate-500'
-                            }`}>
-                              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">{t('ecoActualLabel')}</span>
-                              <span className="text-xs sm:text-sm font-black">
-                                {evt.actual ? evt.actual : '—'}
+                            {/* Live Countdown badge for Upcoming tab */}
+                            {activeTab === 'upcoming' && (
+                              <div className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 border ${countdown.badgeClass}`}>
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>{countdown.formatted}</span>
+                              </div>
+                            )}
+
+                            {/* Outcome Badge for released tab */}
+                            {activeTab === 'released' && ev.outcome && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                ev.outcome === 'beat' 
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                                  : ev.outcome === 'miss' 
+                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' 
+                                  : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                              }`}>
+                                {ev.outcome}
                               </span>
+                            )}
+
+                            {/* Expand toggle */}
+                            <div className="text-slate-500">
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </div>
                           </div>
                         </div>
 
-                        {/* 5. Expanded View: Institutional Analysis */}
+                        {/* Expanded institutional details */}
                         {isExpanded && (
-                          <div className="px-4 pb-4 pt-2 border-t border-slate-800/80 bg-slate-950/60 space-y-3 animate-fadeIn text-xs">
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs uppercase tracking-wider">
-                                <Info className="w-4 h-4" />
-                                <span>{t('ecoWhyItMattersTitle')}</span>
+                          <div className="mt-3 pt-3 border-t border-slate-800 space-y-3 text-xs text-slate-300">
+                            {/* Why this matters */}
+                            {ev.whyItMatters && (
+                              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-1">
+                                <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
+                                  <Info className="w-3.5 h-3.5" />
+                                  <span>{isRTL ? 'الأثر التداولي والتفسير الاقتصادي:' : 'Trading Impact & Macro Context:'}</span>
+                                </div>
+                                <p className="text-slate-300 text-xs leading-relaxed">{ev.whyItMatters}</p>
                               </div>
-                              <p className="text-slate-200 text-xs sm:text-sm leading-relaxed bg-[#0B0F19] p-3 rounded-xl border border-slate-800/90 shadow-inner">
-                                {evt.whyItMatters || t('calVolNote')}
-                              </p>
-                            </div>
+                            )}
 
-                            {/* Key Affected Assets */}
-                            {evt.affectedAssets && evt.affectedAssets.length > 0 && (
-                              <div className="flex items-center gap-2 flex-wrap pt-1">
-                                <span className="text-xs text-slate-400 uppercase font-mono-num font-semibold">
-                                  {t('ecoAffectedAssetsLabel')}:
+                            {/* Affected Currency Pairs and Indices */}
+                            {ev.affectedAssets && ev.affectedAssets.length > 0 && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-semibold text-slate-400">
+                                  {isRTL ? 'الأصول الأكثر تأثراً بالتقلبات:' : 'Most Volatile Traded Assets:'}
                                 </span>
-                                {evt.affectedAssets.map(asset => (
+                                {ev.affectedAssets.map(asset => (
                                   <span
                                     key={asset}
-                                    className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 text-xs font-mono-num font-bold text-cyan-300"
+                                    className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-200 font-mono text-[11px] font-semibold border border-slate-700"
                                   >
                                     {asset}
                                   </span>
                                 ))}
                               </div>
                             )}
-
-                            {/* Canonical Metadata Display */}
-                            <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-[11px] font-mono-num text-slate-400 flex items-center justify-between flex-wrap gap-2">
-                              <span>Canonical UTC Timestamp: <strong className="text-slate-300">{evt.utcIso || new Date(evt.timestamp).toISOString()}</strong></span>
-                              <span>Source IANA Timezone: <strong className="text-amber-300">{evt.sourceTimezone || 'N/A'}</strong></span>
-                            </div>
-
-                            {/* Directional bias / note */}
-                            <div className="flex items-center justify-between gap-3 text-xs pt-2 border-t border-slate-800/80 text-slate-400">
-                              <span className="text-emerald-400 font-medium">
-                                ↑ {t('ecoMarketBiasBullish')}
-                              </span>
-                              <span className="text-slate-500 font-mono-num text-[11px]">
-                                SMTrading Macro Desk Feed
-                              </span>
-                            </div>
                           </div>
                         )}
                       </div>
@@ -546,18 +538,27 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           )}
         </div>
 
-        {/* 6. Footer */}
-        <div className="px-4 sm:px-6 py-3 bg-[#090D17] border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 truncate">
-            <Flame className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className="truncate">{t('calVolNote')}</span>
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl transition-colors font-bold cursor-pointer shrink-0 shadow-sm"
-          >
-            {t('calDone')}
-          </button>
+        {/* Modal Bottom Footer */}
+        <div className="p-3 sm:p-4 border-t border-slate-800 bg-[#090D15] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>
+              {isRTL ? 'جميع الأوقات محولة تلقائياً بدقة إلى' : 'All event times automatically localized to'}:{' '}
+              <strong className="text-white">{effectiveTz}</strong> ({tzMeta.offsetString})
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[11px] text-slate-500">
+              {filteredEvents.length} {isRTL ? 'أحداث معروضة' : 'events displayed'}
+            </span>
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-colors"
+            >
+              {isRTL ? 'إغلاق' : 'Close'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

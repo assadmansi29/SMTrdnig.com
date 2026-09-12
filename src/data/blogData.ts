@@ -1,5 +1,4 @@
-import { Article, Author, EconomicEvent, MarketTickerItem } from '../types';
-import { getMajorEconomicEvents } from './majorEconomicNews';
+import { Article, Author, MarketTickerItem } from '../types';
 import heroImg from '../assets/images/hero_trading_floor_1787615744296.jpg';
 import cryptoMacroImg from '../assets/images/crypto_macro_chart_1787615755280.jpg';
 import algoImg from '../assets/images/algorithmic_trading_1787615766945.jpg';
@@ -600,5 +599,3 @@ export const INITIAL_MARKET_TICKERS: MarketTickerItem[] = [
     sparkline: [14.8, 14.5, 14.2, 14.0, 13.9, 13.85, 13.82]
   }
 ];
-
-export const INITIAL_ECONOMIC_EVENTS: EconomicEvent[] = getMajorEconomicEvents('en');

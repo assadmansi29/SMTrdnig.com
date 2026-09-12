@@ -1,7 +1,6 @@
-import { Article, Author, EconomicEvent } from '../types';
+import { Article, Author } from '../types';
 import { LanguageCode } from '../locales';
-import { AUTHORS, INITIAL_ARTICLES, INITIAL_ECONOMIC_EVENTS } from './blogData';
-import { getMajorEconomicEvents } from './majorEconomicNews';
+import { AUTHORS, INITIAL_ARTICLES } from './blogData';
 import tradeSmcImg from '../assets/images/trade_smc_chart_1787936051770.jpg';
 import smcCourseImg from '../assets/images/smc_course_cover_1788811985326.jpg';
 import gannBoxCourseImg from '../assets/images/gann_box_course_1788812003836.jpg';
@@ -117,11 +116,6 @@ export const getAuthorsByLanguage = (lang: LanguageCode): Record<string, Author>
     };
   }
   return base;
-};
-
-// Localized Economic Events
-export const getEconomicEventsByLanguage = (lang: LanguageCode): EconomicEvent[] => {
-  return getMajorEconomicEvents(lang);
 };
 
 // Localized E-Commerce Products

@@ -111,9 +111,13 @@ export async function ensureEconomicTables(pool: PgPool): Promise<void> {
           OR scheduled_for_utc < (NOW() - INTERVAL '3 hours')
         );
 
-      -- Purge stale economic events older than 24 hours to prevent outdated cards from cluttering the live feed
+      -- Purge stale economic events older than 14 days to keep recently released events active
       DELETE FROM economic_events
-      WHERE date_utc < (NOW() - INTERVAL '24 hours');
+      WHERE date_utc < (NOW() - INTERVAL '14 days');
+
+      -- Purge any synthetic/mock events to strictly preserve authentic live market data
+      DELETE FROM economic_events
+      WHERE id LIKE 'inst_%' OR calendar_id LIKE 'inst_%';
     `);
   } finally {
     client.release();
@@ -121,10 +125,10 @@ export async function ensureEconomicTables(pool: PgPool): Promise<void> {
 }
 
 /**
- * Purges stale economic events older than specified hours (default 24h) from PostgreSQL.
+ * Purges stale economic events older than specified hours (default 14 days / 336h) from PostgreSQL.
  * Cascades to event_notifications automatically.
  */
-export async function purgeStaleEconomicEvents(pool: PgPool, olderThanHours: number = 24): Promise<number> {
+export async function purgeStaleEconomicEvents(pool: PgPool, olderThanHours: number = 336): Promise<number> {
   try {
     const res = await pool.query(`
       DELETE FROM economic_events

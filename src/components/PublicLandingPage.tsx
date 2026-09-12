@@ -23,8 +23,10 @@ import {
   ChevronRight,
   HelpCircle,
   Play,
-  Award
+  Award,
+  Copy
 } from 'lucide-react';
+import { copyToClipboard } from '../utils/clipboard';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
 import { useTranslation } from '../context/LanguageContext';
@@ -76,6 +78,17 @@ export const PublicLandingPage: React.FC = () => {
   const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<SubscriptionPlanInfo | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [channelHandleCopied, setChannelHandleCopied] = useState(false);
+
+  const handleCopyChannelHandle = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    await copyToClipboard('https://t.me/smtradingpro');
+    setChannelHandleCopied(true);
+    setTimeout(() => setChannelHandleCopied(false), 2500);
+  };
 
   const handleSubscribeClick = (plan: SubscriptionPlanInfo) => {
     setSelectedPlanForCheckout(plan);
@@ -163,6 +176,14 @@ export const PublicLandingPage: React.FC = () => {
               className="hover:text-amber-400 transition-colors cursor-pointer py-1"
             >
               <span className="pointer-events-none">{t('navLiveAnalysts')}</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => handleScrollToSection('proven-results-section')}
+              className="hover:text-cyan-300 text-slate-200 transition-colors cursor-pointer py-1 flex items-center gap-1.5 font-semibold"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="pointer-events-none">{t('navProvenResults')}</span>
             </button>
             <button 
               type="button"
@@ -340,6 +361,19 @@ export const PublicLandingPage: React.FC = () => {
                 <div className="text-xl sm:text-2xl font-black text-purple-400 font-mono-num">{t('landingMetric4Val')}</div>
                 <div className="text-[11px] text-slate-400 mt-0.5">{t('landingMetric4Desc')}</div>
               </div>
+            </div>
+
+            {/* Quick Proof Hint Banner */}
+            <div className="pt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={() => handleScrollToSection('proven-results-section')}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-[#24A1DE]/40 px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-sm group"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-slate-300 group-hover:text-white transition-colors">{t('landingHeroResultsProofHint')}</span>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-400 rtl:rotate-180 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform shrink-0" />
+              </button>
             </div>
 
           </div>
@@ -672,6 +706,257 @@ export const PublicLandingPage: React.FC = () => {
 
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* OUR PROVEN RESULTS SECTION (Social Proof & Official Telegram Channel) */}
+      <section id="proven-results-section" className="py-20 sm:py-28 bg-[#070A14] border-t border-slate-800/80 relative overflow-hidden">
+        {/* Ambient atmospheric glows */}
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-[#24A1DE]/10 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-10 -right-20 w-96 h-96 bg-amber-500/5 rounded-full blur-[140px] pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-16 space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#24A1DE]/15 border border-[#24A1DE]/30 text-[#45B7EE] text-xs font-bold tracking-wide shadow-lg shadow-[#24A1DE]/10">
+              <Send className="w-3.5 h-3.5 text-[#24A1DE]" />
+              <span>{t('landingResultsBadge')}</span>
+            </div>
+
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+              {t('landingResultsHeading')}
+            </h2>
+
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              {t('landingResultsSub')}
+            </p>
+          </div>
+
+          {/* Main Featured Showcase Card */}
+          <div className="relative rounded-3xl bg-gradient-to-br from-[#0D1527] via-[#090F1C] to-[#060A13] border border-[#24A1DE]/40 p-6 sm:p-10 lg:p-12 shadow-2xl shadow-[#24A1DE]/10 overflow-hidden mb-12">
+            {/* Top decorative gradient bar */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#24A1DE] to-transparent" />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              
+              {/* Left Column: Channel Presentation & Proof Breakdown */}
+              <div className="lg:col-span-7 space-y-6">
+                
+                {/* Channel Header Info */}
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-[#1E88C7] to-[#24A1DE] flex items-center justify-center text-white shadow-xl shadow-[#24A1DE]/30 shrink-0">
+                    <Send className="w-7 h-7 sm:w-8 sm:h-8 fill-white text-[#24A1DE] rtl:rotate-180" />
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-md bg-[#24A1DE]/20 border border-[#24A1DE]/40 text-[#45B7EE] text-[10px] font-black uppercase tracking-wider">
+                        {t('landingResultsLiveTag')}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>PUBLIC & VERIFIED</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                        {t('landingResultsChannelTitle')}
+                      </h3>
+                      <BlueVerifiedBadge size="md" />
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                      <span>Handle:</span>
+                      <a 
+                        href="https://t.me/smtradingpro" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#45B7EE] hover:text-[#78cbff] font-bold transition-colors underline-offset-2 hover:underline"
+                      >
+                        {t('landingResultsChannelHandle')}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                  {t('landingResultsChannelDesc')}
+                </p>
+
+                {/* Key Social Proof Highlights List */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                    <div className="text-xs">
+                      <strong className="text-white block font-semibold">{t('landingResultsPillar1Title')}</strong>
+                      <span className="text-slate-400">Timestamped entries & profit levels</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <TrendingUp className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                    <div className="text-xs">
+                      <strong className="text-white block font-semibold">{t('landingResultsPillar2Title')}</strong>
+                      <span className="text-slate-400">Transparent weekly PnL audits</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <LineChart className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                    <div className="text-xs">
+                      <strong className="text-white block font-semibold">{t('landingResultsPillar3Title')}</strong>
+                      <span className="text-slate-400">Before & after charting setups</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <Users className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+                    <div className="text-xs">
+                      <strong className="text-white block font-semibold">{t('landingResultsPillar4Title')}</strong>
+                      <span className="text-slate-400">Active trader results & feedback</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Column: CTA Conversion Card & Direct Link */}
+              <div className="lg:col-span-5">
+                <div className="p-6 sm:p-8 rounded-2xl bg-[#060913]/90 border border-slate-800/90 shadow-xl space-y-6">
+                  
+                  {/* Status indicator */}
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wide">
+                        {t('landingResultsLiveStatus')}
+                      </span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                      FREE OPEN ACCESS
+                    </span>
+                  </div>
+
+                  {/* Summary Metric Callouts */}
+                  <div className="space-y-3">
+                    <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/70 flex items-center justify-between">
+                      <div className="text-xs text-slate-300">
+                        <span className="text-slate-400 block text-[10px] uppercase font-mono">Channel Destination</span>
+                        <span className="font-bold text-white">t.me/smtradingpro</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-[#24A1DE]/20 text-[#45B7EE] text-xs font-mono font-bold">
+                        OFFICIAL
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/70 flex items-center justify-between">
+                      <div className="text-xs text-slate-300">
+                        <span className="text-slate-400 block text-[10px] uppercase font-mono">Verification Standard</span>
+                        <span className="font-bold text-emerald-400">Audited PnL & Real Charts</span>
+                      </div>
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    </div>
+                  </div>
+
+                  {/* Clear CTA Button */}
+                  <div className="space-y-3 pt-2">
+                    <a
+                      href="https://t.me/smtradingpro"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-4 px-6 bg-gradient-to-r from-[#24A1DE] to-[#1E88C7] hover:from-[#32ACEC] hover:to-[#24A1DE] text-white font-black rounded-2xl text-sm sm:text-base tracking-tight shadow-xl shadow-[#24A1DE]/30 transition-all flex items-center justify-center gap-3 cursor-pointer group transform hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                      <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0 rtl:rotate-180" />
+                      <span className="truncate">{t('landingResultsCtaBtn')}</span>
+                      <ExternalLink className="w-4 h-4 opacity-80 shrink-0" />
+                    </a>
+
+                    {/* Copy Handle / Link Option */}
+                    <button
+                      type="button"
+                      onClick={handleCopyChannelHandle}
+                      className="w-full py-2.5 px-4 bg-slate-900/80 hover:bg-slate-800/90 text-slate-300 hover:text-white border border-slate-800 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {channelHandleCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400 font-bold">Link Copied (t.me/smtradingpro)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Copy Channel Link (t.me/smtradingpro)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* 4 Supporting Proof Pillars Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            
+            {/* Pillar 1 */}
+            <div className="p-6 rounded-2xl bg-[#090F1C]/70 border border-slate-800 hover:border-emerald-500/40 transition-all space-y-3 group">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <h4 className="text-base font-bold text-white tracking-tight">
+                {t('landingResultsPillar1Title')}
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {t('landingResultsPillar1Desc')}
+              </p>
+            </div>
+
+            {/* Pillar 2 */}
+            <div className="p-6 rounded-2xl bg-[#090F1C]/70 border border-slate-800 hover:border-amber-500/40 transition-all space-y-3 group">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <h4 className="text-base font-bold text-white tracking-tight">
+                {t('landingResultsPillar2Title')}
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {t('landingResultsPillar2Desc')}
+              </p>
+            </div>
+
+            {/* Pillar 3 */}
+            <div className="p-6 rounded-2xl bg-[#090F1C]/70 border border-slate-800 hover:border-blue-500/40 transition-all space-y-3 group">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+                <LineChart className="w-5 h-5" />
+              </div>
+              <h4 className="text-base font-bold text-white tracking-tight">
+                {t('landingResultsPillar3Title')}
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {t('landingResultsPillar3Desc')}
+              </p>
+            </div>
+
+            {/* Pillar 4 */}
+            <div className="p-6 rounded-2xl bg-[#090F1C]/70 border border-slate-800 hover:border-purple-500/40 transition-all space-y-3 group">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
+                <Users className="w-5 h-5" />
+              </div>
+              <h4 className="text-base font-bold text-white tracking-tight">
+                {t('landingResultsPillar4Title')}
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {t('landingResultsPillar4Desc')}
+              </p>
+            </div>
+
+          </div>
+
         </div>
       </section>
 

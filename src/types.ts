@@ -104,15 +104,19 @@ export interface EconomicEvent {
   time: string;
   country: string;
   countryCode: string;
+  currency?: string;
   event: string;
   category?: 'Central Bank' | 'Inflation' | 'Employment' | 'Growth' | 'Macro';
   impact: EventImpact;
   forecast: string;
   previous: string;
   actual?: string;
+  revised?: string;
+  unit?: string;
   whyItMatters?: string;
   affectedAssets?: string[];
   statusOverride?: EventStatus;
+  outcome?: 'beat' | 'miss' | 'in-line' | 'neutral';
 }
 
 export type UserRole = 'super_admin' | 'admin' | 'employee' | 'coach' | 'client';

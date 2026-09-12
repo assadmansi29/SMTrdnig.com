@@ -43,12 +43,62 @@ function resolveCategory(cat: string, evtName: string): 'Central Bank' | 'Inflat
 // Impact mapper (1-4 -> Low, Medium, High, Extreme)
 function mapImpact(importance: number, evtName: string): 'Extreme' | 'High' | 'Medium' | 'Low' {
   const e = (evtName || '').toLowerCase();
-  if (importance >= 4 || e.includes('nonfarm payrolls') || e.includes('fomc rate decision') || e.includes('fed interest rate') || e.includes('ecb interest rate')) {
+
+  // Tier-1 Catalysts that move global markets significantly -> Extreme
+  const isCentralBankRateOrSpeech = 
+    e.includes('interest rate') || 
+    e.includes('rate decision') || 
+    e.includes('federal funds rate') || 
+    e.includes('fomc') || 
+    e.includes('monetary policy statement') || 
+    e.includes('press conference') || 
+    e.includes('official bank rate') || 
+    e.includes('policy rate') || 
+    e.includes('cash rate') ||
+    e.includes('powell') ||
+    e.includes('lagarde') ||
+    e.includes('bailey') ||
+    e.includes('ueda');
+
+  const isTier1Inflation = 
+    e.includes('cpi') || 
+    e.includes('consumer price') || 
+    e.includes('core pce') || 
+    e.includes('pce price index');
+
+  const isTier1Labor = 
+    e.includes('non-farm') || 
+    e.includes('nonfarm') || 
+    e.includes('unemployment rate') || 
+    (e.includes('employment change') && !e.includes('adp'));
+
+  const isTier1Growth = 
+    (e.includes('retail sales') && !e.includes('redbook')) || 
+    (e.includes('gdp') && (e.includes('advance') || e.includes('prelim') || e.includes('qoq') || e.includes('yoy')));
+
+  if (importance >= 4 || isCentralBankRateOrSpeech || isTier1Inflation || isTier1Labor || isTier1Growth) {
     return 'Extreme';
   }
-  if (importance === 3 || e.includes('cpi') || e.includes('ppi') || e.includes('unemployment rate') || e.includes('gdp') || e.includes('interest rate')) {
+
+  // Tier-2 / High Market Movers -> High
+  const isHighCatalyst = 
+    importance === 3 || 
+    e.includes('ppi') || 
+    e.includes('producer price') || 
+    e.includes('jobless claims') || 
+    e.includes('pmi') || 
+    e.includes('consumer sentiment') || 
+    e.includes('trade balance') || 
+    e.includes('zew') || 
+    e.includes('crude oil') || 
+    e.includes('industrial production') || 
+    e.includes('ism') ||
+    e.includes('claimant count');
+
+  if (isHighCatalyst) {
     return 'High';
   }
+
   if (importance === 2) {
     return 'Medium';
   }
@@ -99,6 +149,19 @@ function generateWhyItMatters(evtName: string, country: string, category: string
   return `Key tier-1 macroeconomic release for ${country}. Dictates monetary policy outlook, bond yield trajectories, and sovereign currency volatility.`;
 }
 
+function computeRealOutcome(actual?: string, forecast?: string): 'beat' | 'miss' | 'in-line' | undefined {
+  if (!actual || !forecast || forecast === '—' || actual === '—') return undefined;
+  const cleanA = actual.replace(/[^0-9.-]/g, '');
+  const cleanF = forecast.replace(/[^0-9.-]/g, '');
+  if (!cleanA || !cleanF) return undefined;
+  const a = parseFloat(cleanA);
+  const f = parseFloat(cleanF);
+  if (isNaN(a) || isNaN(f)) return undefined;
+  const diff = a - f;
+  if (Math.abs(diff) < 0.0001) return 'in-line';
+  return diff > 0 ? 'beat' : 'miss';
+}
+
 // In-memory cache with 60-second TTL per query key
 const queryCache = new Map<string, { timestamp: number; data: any[] }>();
 const CACHE_TTL_MS = 60 * 1000; // 60 seconds
@@ -125,13 +188,14 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
   }
 
   const forceRefresh = req.query.refresh === 'true';
-  const limit = Math.min(Math.max(parseInt(String(req.query.limit || '100'), 10), 5), 250);
-  // Default daysPast to 0 (max 1 day) so past weeks are strictly excluded from the active calendar
-  const daysPast = Math.min(Math.max(parseInt(String(req.query.daysPast || '0'), 10), 0), 1);
+  const onlyUpcoming = req.query.onlyUpcoming === 'true';
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit || '250'), 10), 5), 500);
+  // Default daysPast to 3 (max 30 days) to include verified past releases with real outcomes
+  const daysPast = onlyUpcoming ? 0 : Math.min(Math.max(parseInt(String(req.query.daysPast || '3'), 10), 0), 30);
   const daysAhead = Math.min(Math.max(parseInt(String(req.query.daysAhead || '14'), 10), 1), 60);
   const minImportance = Math.min(Math.max(parseInt(String(req.query.minImportance || '1'), 10), 1), 4);
 
-  const cacheKey = `${limit}_${daysPast}_${daysAhead}_${minImportance}`;
+  const cacheKey = `${limit}_${daysPast}_${daysAhead}_${minImportance}_${onlyUpcoming}`;
   const nowMs = Date.now();
   const cached = queryCache.get(cacheKey);
 
@@ -148,14 +212,14 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
   }
 
   try {
-    // If table is empty or older than 2 hours, trigger background provider fetch for today + upcoming
-    const countCheck = await pool.query('SELECT count(*) as count FROM economic_events;');
-    const totalInDb = parseInt(countCheck.rows[0]?.count || '0', 10);
+    // If real events count is low or forceRefresh, sync with live provider
+    const countCheck = await pool.query("SELECT count(*) as count FROM economic_events WHERE id NOT LIKE 'inst_%';");
+    const totalRealInDb = parseInt(countCheck.rows[0]?.count || '0', 10);
 
-    if (totalInDb === 0 || forceRefresh) {
+    if (totalRealInDb < 20 || forceRefresh) {
       try {
-        const start = new Date(Date.now() - 12 * 60 * 60 * 1000);
-        const end = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        const start = new Date(Date.now() - daysPast * 24 * 60 * 60 * 1000);
+        const end = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
         const freshEvents = await biquoteService.fetchCalendar(start, end);
         for (const ev of freshEvents) {
           await upsertEconomicEvent(pool, ev);
@@ -165,42 +229,54 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
       }
     }
 
-    // Query events chronologically starting from today (NOW - 12h or daysPast) through daysAhead
-    // Deduplicate across provider syncs using DISTINCT ON (country, event, date_utc)
-    const intervalHours = daysPast === 0 ? 12 : 24;
+    // Query real events chronologically starting from daysPast through daysAhead
+    // Focus on major tradable currencies and G7/major market economies
     const dbResult = await pool.query(`
       WITH distinct_events AS (
         SELECT DISTINCT ON (country, event, date_utc)
           id, calendar_id, date_utc, country, currency, event, category,
           importance, actual, forecast, previous, revised, unit, raw_data, last_updated_utc
         FROM economic_events
-        WHERE date_utc >= (NOW() - ($1 * INTERVAL '1 hour'))
-          AND date_utc <= (NOW() + ($2 * INTERVAL '1 day'))
-          AND importance >= $3
+        WHERE date_utc >= (CASE WHEN $1::boolean THEN NOW() ELSE (NOW() - ($2 * INTERVAL '1 day')) END)
+          AND date_utc <= (NOW() + ($3 * INTERVAL '1 day'))
+          AND importance >= $4
+          AND id NOT LIKE 'inst_%'
+          AND (
+            currency IN ('USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'CNY')
+            OR country IN ('United States', 'Eurozone', 'Germany', 'France', 'United Kingdom', 'Japan', 'Australia', 'Canada', 'Switzerland', 'New Zealand', 'China', 'Euro Area')
+          )
         ORDER BY country, event, date_utc, importance DESC
       )
       SELECT * FROM distinct_events
       ORDER BY date_utc ASC
-      LIMIT $4;
-    `, [intervalHours, daysAhead, minImportance, limit]);
+      LIMIT $5;
+    `, [onlyUpcoming, daysPast, daysAhead, minImportance, limit]);
 
     if (!dbResult.rows || dbResult.rows.length === 0) {
-      // If strict filter yielded no results, query without importance limit
+      // Fallback query without importance limit
       const fallbackResult = await pool.query(`
         SELECT DISTINCT ON (country, event, date_utc)
           id, calendar_id, date_utc, country, currency, event, category,
           importance, actual, forecast, previous, revised, unit, raw_data, last_updated_utc
         FROM economic_events
-        WHERE date_utc >= (NOW() - ($1 * INTERVAL '1 hour'))
-          AND date_utc <= (NOW() + ($2 * INTERVAL '1 day'))
+        WHERE date_utc >= (CASE WHEN $1::boolean THEN NOW() ELSE (NOW() - ($2 * INTERVAL '1 day')) END)
+          AND date_utc <= (NOW() + ($3 * INTERVAL '1 day'))
+          AND id NOT LIKE 'inst_%'
+          AND (
+            currency IN ('USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD', 'CNY')
+            OR country IN ('United States', 'Eurozone', 'Germany', 'France', 'United Kingdom', 'Japan', 'Australia', 'Canada', 'Switzerland', 'New Zealand', 'China', 'Euro Area')
+          )
         ORDER BY country, event, date_utc, importance DESC
-        LIMIT $3;
-      `, [intervalHours, daysAhead, limit]);
+        LIMIT $4;
+      `, [onlyUpcoming, daysPast, daysAhead, limit]);
 
       if (!fallbackResult.rows || fallbackResult.rows.length === 0) {
-        res.status(503).json({
-          status: 'error',
-          error: 'Live economic calendar unavailable'
+        res.json({
+          status: 'ok',
+          source: 'postgresql',
+          count: 0,
+          events: [],
+          serverTimeUtc: new Date().toISOString()
         });
         return;
       }
@@ -212,11 +288,14 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
       const dateObj = new Date(row.date_utc);
       const utcIso = dateObj.toISOString();
       const epochMs = dateObj.getTime();
+      const rawData = typeof row.raw_data === 'string' ? JSON.parse(row.raw_data) : (row.raw_data || {});
       const countryCode = resolveCountryCode(row.country);
       const category = resolveCategory(row.category, row.event);
       const impact = mapImpact(Number(row.importance), row.event);
-      const affectedAssets = resolveAffectedAssets(countryCode, category, row.event);
-      const whyItMatters = generateWhyItMatters(row.event, row.country, category);
+      const affectedAssets = (Array.isArray(rawData.affectedAssets) && rawData.affectedAssets.length > 0)
+        ? rawData.affectedAssets
+        : resolveAffectedAssets(countryCode, category, row.event);
+      const whyItMatters = rawData.whyItMatters || generateWhyItMatters(row.event, row.country, category);
 
       // Clean actual value: if empty string or null, strictly undefined
       const actualVal = (row.actual && String(row.actual).trim() !== '' && String(row.actual).trim() !== '—') 
@@ -235,13 +314,16 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
         time: utcIso.split('T')[1].substring(0, 5) + ' UTC', // Exact UTC time string
         country: row.country,
         countryCode: countryCode,
+        currency: row.currency || undefined,
         event: row.event,
         category: category,
         impact: impact,
         forecast: forecastVal,
         previous: previousVal,
         actual: actualVal,
+        revised: row.revised || undefined,
         unit: row.unit || undefined,
+        outcome: rawData.outcome || computeRealOutcome(actualVal, forecastVal),
         whyItMatters: whyItMatters,
         affectedAssets: affectedAssets,
         importance: Number(row.importance),
