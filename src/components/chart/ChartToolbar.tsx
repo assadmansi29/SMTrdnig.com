@@ -637,7 +637,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
 
         {/* 3. Three Independent Strategy Views: 144 Strategy, SMC Strategy, Fibonacci Strategy */}
         <div className="flex items-center gap-1.5">
-          {/* 144 Strategy View */}
+          {/* Magic Lines View */}
           <button
             id="btn-strategy-144"
             type="button"
@@ -649,11 +649,11 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-amber-500/40 text-slate-300 hover:text-amber-300'
             }`}
-            title="144 Strategy: Open clean chart view with saved 144 Strategy analysis"
+            title="Magic Lines: Open clean chart view with saved Magic Lines analysis"
           >
             <Grid3X3 className={`w-3.5 h-3.5 ${activeStrategy === '144' ? 'text-amber-300' : 'text-amber-400'}`} />
-            <span className="hidden sm:inline">144 Strategy</span>
-            <span className="sm:hidden">144</span>
+            <span className="hidden sm:inline">Magic Lines</span>
+            <span className="sm:hidden">Magic Lines</span>
             {activeStrategy === '144' && (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             )}

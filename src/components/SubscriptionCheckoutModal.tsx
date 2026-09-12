@@ -38,6 +38,13 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
   const [telegramHandle, setTelegramHandle] = useState('');
   const [email, setEmail] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [referralCode, setReferralCode] = useState(() => {
+    try {
+      return localStorage.getItem('smtrading_ref') || '';
+    } catch {
+      return '';
+    }
+  });
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -79,6 +86,7 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
           email: email.trim(),
           telegramUsername: telegramHandle.trim(),
           txHash: txHash.trim(),
+          referralCode: referralCode.trim().toUpperCase(),
           notes: notes.trim()
         })
       });
@@ -425,6 +433,27 @@ export const SubscriptionCheckoutModal: React.FC<SubscriptionCheckoutModalProps>
                         onChange={(e) => setTxHash(e.target.value)}
                         placeholder="e.g. TRC20 Transaction Hash (or Pending with Support)"
                         className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-slate-300">
+                          Referral / Affiliate Code (Optional)
+                        </label>
+                        {referralCode && (
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Applied
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        placeholder="e.g. SMATTAR123"
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-amber-300 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all font-mono uppercase"
                       />
                     </div>
 

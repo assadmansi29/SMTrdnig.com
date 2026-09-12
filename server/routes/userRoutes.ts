@@ -470,7 +470,9 @@ router.get('/referrals', async (req: AuthRequest, res: Response): Promise<void> 
   res.json({
     success: true,
     referralCode: user.referralCode,
-    commissionRate: user.commissionRate,
+    commissionRate: user.commissionRate || 20,
+    subscriptionCommissionRate: user.commissionRate || 20,
+    purchaseCommissionRate: user.purchaseCommissionRate || 10,
     balance: user.balance,
     pendingBalance: user.pendingBalance,
     totalEarned: user.totalEarned,
@@ -534,7 +536,15 @@ router.post('/activate-subscription', async (req: AuthRequest, res: Response): P
   }
 
   const monthsNum = Math.max(1, Math.min(36, parseInt(String(durationMonths), 10) || 1));
-  const planCost = monthsNum === 12 ? 990 : monthsNum === 3 ? 290 : 120;
+  const planCost = monthsNum === 1
+    ? 80
+    : monthsNum === 3
+    ? 290
+    : monthsNum === 6
+    ? 400
+    : String(planName).includes('999') || String(planName).toLowerCase().includes('all-inclusive')
+    ? 999
+    : 650;
 
   // Option A: Pay with Commission Balance
   const { payWithBalance } = req.body;
@@ -625,10 +635,15 @@ router.post('/activate-subscription', async (req: AuthRequest, res: Response): P
 
   // Process referral commission ONLY if verified payment exists or explicitly authorized by admin
   if (hasVerifiedPayment || (isStaffAdmin && processCommission === true)) {
+    const paymentRef = hasVerifiedPayment && paymentVerification?.transactionId
+      ? paymentVerification.transactionId
+      : `sub_${user.id}_${Date.now()}`;
     await Database.processReferralCommission(
       user.id,
       planCost,
-      `Commission on verified ${monthsNum}-month plan for @${user.username}`
+      `Commission on verified ${monthsNum}-month plan for @${user.username}`,
+      'subscription',
+      paymentRef
     );
   }
 
@@ -939,6 +954,129 @@ router.get('/content', requireActiveSubscription, async (req: AuthRequest, res: 
       }
     ]
   });
+});
+
+// POST /api/user/checkout-purchase
+// Processes purchase of courses, packages, strategies, and future products.
+// Atomically credits 10% lifetime referral commission to referrer on EVERY purchase.
+router.post('/checkout-purchase', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const {
+      cartItems = [],
+      totalAmount,
+      referralCode,
+      notes,
+    } = req.body;
+
+    const numericAmount = Number(totalAmount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      res.status(400).json({ error: 'Valid total purchase amount is required.' });
+      return;
+    }
+
+    // Determine customer/buyer
+    let buyer = req.user ? await Database.findUserById(req.user.id) : null;
+
+    if (!buyer && req.body.email) {
+      buyer = await Database.findUserByEmail(req.body.email);
+    }
+
+    if (!buyer) {
+      // Create guest customer record if not logged in
+      const guestEmail = req.body.email ? String(req.body.email).trim().toLowerCase() : `guest_${Date.now()}@smtrading.pro`;
+      const guestUsername = req.body.username ? String(req.body.username).trim().toLowerCase() : `customer_${Date.now().toString().slice(-6)}`;
+      const userRefCode = `SM${guestUsername.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6)}${Math.floor(100 + Math.random() * 900)}`;
+
+      // Validate referral code if provided
+      let cleanReferredBy: string | undefined = undefined;
+      if (referralCode && typeof referralCode === 'string' && referralCode.trim().length > 0) {
+        const cleanRefInput = referralCode.trim();
+        const referrerUser = await Database.findUserByReferralCode(cleanRefInput) || await Database.findUserByUsername(cleanRefInput);
+        if (referrerUser) {
+          cleanReferredBy = referrerUser.referralCode;
+        }
+      }
+
+      const dummyHash = '$2b$10$EPnrw2e95aV5QZzE4p72.O72c7Xb/u73bB5Z240Q9lq3ZgP5H21O2'; // Guest placeholder
+      buyer = await Database.createUser({
+        username: guestUsername,
+        email: guestEmail,
+        passwordHash: dummyHash,
+        fullName: req.body.fullName || guestUsername,
+        role: 'client',
+        subscriptionStatus: 'inactive',
+        subscriptionPlan: 'None (Product Purchaser)',
+        subscriptionExpiresAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+        referralCode: userRefCode,
+        referredBy: cleanReferredBy,
+        commissionRate: 20,
+        purchaseCommissionRate: 10,
+        balance: 0.0,
+        pendingBalance: 0.0,
+        totalEarned: 0.0,
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(guestUsername)}`,
+        notes: `Product purchaser created during checkout`,
+      });
+    } else if (!buyer.referredBy && referralCode && typeof referralCode === 'string' && referralCode.trim().length > 0) {
+      // First-time linking of referrer for existing buyer if not previously referred
+      const cleanRefInput = referralCode.trim();
+      const referrerUser = await Database.findUserByReferralCode(cleanRefInput) || await Database.findUserByUsername(cleanRefInput);
+      if (referrerUser && referrerUser.id !== buyer.id && referrerUser.username.toLowerCase() !== buyer.username.toLowerCase()) {
+        await Database.updateUser(buyer.id, { referredBy: referrerUser.referralCode });
+        buyer.referredBy = referrerUser.referralCode;
+      }
+    }
+
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const itemsDescription = Array.isArray(cartItems) && cartItems.length > 0
+      ? cartItems.map((item: any) => `${item.name || item.title || 'Product'} (x${item.quantity || 1})`).join(', ')
+      : 'Institutional Training / Strategy Purchase';
+
+    // Record purchase transaction in the buyer's ledger
+    const purchaseTx = await Database.addTransaction({
+      userId: buyer.id,
+      username: buyer.username,
+      type: 'product_purchase',
+      amount: numericAmount,
+      description: `Product Purchase: ${itemsDescription} [#${orderId}]`,
+      status: 'completed',
+      metadata: {
+        orderId,
+        cartItems,
+        totalAmount: numericAmount,
+        notes: notes || '',
+        purchasedAt: new Date().toISOString(),
+      }
+    });
+
+    // Process 10% Permanent Lifetime Referral Commission if customer was referred
+    let commissionResult = null;
+    if (buyer.referredBy) {
+      commissionResult = await Database.processReferralCommission(
+        buyer.id,
+        numericAmount,
+        `10% Referral Commission on purchase: ${itemsDescription}`,
+        'purchase',
+        orderId
+      );
+    }
+
+    res.json({
+      success: true,
+      orderId,
+      transactionId: purchaseTx.id,
+      amount: numericAmount,
+      commissionAwarded: commissionResult ? {
+        rate: commissionResult.commissionRate, // 10%
+        amount: commissionResult.commissionAmount,
+        referrer: commissionResult.referrerUsername,
+      } : null,
+      message: 'Purchase successfully completed and verified!'
+    });
+  } catch (err: any) {
+    console.error('Error during product purchase checkout:', err);
+    res.status(500).json({ error: 'Failed to complete checkout.', details: err?.message });
+  }
 });
 
 export default router;

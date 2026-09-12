@@ -149,7 +149,7 @@ router.post('/logout', (req: AuthRequest, res: Response): void => {
 // POST /api/auth/submit-payment-order (Public checkout submission for USDT TRC20 subscriptions)
 router.post('/submit-payment-order', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { planId, planName, price, email, telegramUsername, txHash, notes } = req.body;
+    const { planId, planName, price, email, telegramUsername, txHash, referralCode, notes } = req.body;
     if (!planId || !planName || !price) {
       res.status(400).json({ error: 'Missing package details.' });
       return;
@@ -157,10 +157,12 @@ router.post('/submit-payment-order', async (req: AuthRequest, res: Response): Pr
     const cleanEmail = email ? String(email).trim().toLowerCase() : 'Not provided';
     const cleanTelegram = telegramUsername ? String(telegramUsername).trim().replace(/^@/, '') : 'Not provided';
     const cleanTx = txHash ? String(txHash).trim() : 'Pending confirmation';
+    const cleanRef = referralCode ? String(referralCode).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') : '';
     const cleanNotes = notes ? String(notes).trim() : '';
 
+    const refTag = cleanRef ? ` [Ref: ${cleanRef}]` : '';
     const opItem = await Database.addOperationalItem({
-      title: `USDT TRC20 Payment Verification: [${planName} - ${price}] from @${cleanTelegram}`,
+      title: `USDT TRC20 Payment Verification: [${planName} - ${price}] from @${cleanTelegram}${refTag}`,
       type: 'payment_verification' as any,
       priority: 'high',
       status: 'pending',
@@ -171,6 +173,7 @@ router.post('/submit-payment-order', async (req: AuthRequest, res: Response): Pr
         planId,
         planName,
         price,
+        referralCode: cleanRef || undefined,
         paymentMethod: 'USDT (TRC20)',
         txHash: cleanTx,
         notes: cleanNotes,

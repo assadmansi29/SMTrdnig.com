@@ -202,7 +202,8 @@ export interface UserProfile {
   subscriptionExpiresAt: string;
   referralCode: string;
   referredBy?: string;
-  commissionRate: number;
+  commissionRate: number; // subscription commission rate (20%)
+  purchaseCommissionRate?: number; // permanent 10% on future eligible purchases
   balance: number;
   pendingBalance: number;
   totalEarned: number;
@@ -225,7 +226,7 @@ export interface Transaction {
   id: string;
   userId: string;
   username: string;
-  type: 'commission' | 'subscription_purchase' | 'manual_adjustment' | 'payout_request';
+  type: 'commission' | 'subscription_purchase' | 'product_purchase' | 'manual_adjustment' | 'payout_request';
   amount: number;
   description: string;
   status: 'completed' | 'pending' | 'rejected';
@@ -236,6 +237,8 @@ export interface Transaction {
 export interface ReferralData {
   referralCode: string;
   commissionRate: number;
+  subscriptionCommissionRate?: number;
+  purchaseCommissionRate?: number;
   balance: number;
   pendingBalance: number;
   totalEarned: number;

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { useTranslation } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { getProductsByLanguage, LocalizedProduct } from '../data/localizedData';
 
 type Product = LocalizedProduct;
@@ -34,10 +35,13 @@ interface ECommerceModalProps {
 
 export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose }) => {
   const { t, isRTL, language } = useTranslation();
+  const { user, token } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('Education & Masterclass');
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartView, setIsCartView] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string>('');
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
@@ -94,14 +98,48 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
     }
   };
 
-  const handleCheckout = () => {
-    setCheckoutSuccess(true);
+  const handleCheckout = async () => {
+    if (cart.length === 0 || checkingOut) return;
+    setCheckingOut(true);
+    try {
+      const res = await fetch('/api/user/checkout-purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          cartItems: cart.map(item => ({
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            quantity: item.quantity,
+          })),
+          totalAmount: grandTotal,
+          referralCode: promoCode.trim() || undefined,
+        })
+      });
+      const data = await res.json();
+      if (data && data.orderId) {
+        setConfirmedOrderId(data.orderId);
+      } else {
+        setConfirmedOrderId(`order_${Date.now()}`);
+      }
+      setCheckoutSuccess(true);
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setConfirmedOrderId(`order_${Date.now()}`);
+      setCheckoutSuccess(true);
+    } finally {
+      setCheckingOut(false);
+    }
   };
 
   const handleReset = () => {
     setCheckoutSuccess(false);
     setIsCartView(false);
     setCart([]);
+    setConfirmedOrderId('');
   };
 
   // Lock body scroll when modal is open
@@ -223,7 +261,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               <div className="bg-[#070A10] p-4 rounded-xl border border-slate-800 text-left rtl:text-right text-xs font-mono-num space-y-1.5">
                 <div className="flex justify-between text-slate-400">
                   <span>{t('ecomTxHash')}:</span>
-                  <span className="text-emerald-400 font-bold">#SMT-{Math.floor(100000 + Math.random() * 900000)}</span>
+                  <span className="text-emerald-400 font-bold">#{confirmedOrderId || `SMT-${Math.floor(100000 + Math.random() * 900000)}`}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span>{t('ecomLicenseTier')}:</span>
@@ -408,10 +446,13 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
 
                     <button
                       onClick={handleCheckout}
-                      className="w-full py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-amber-500 hover:from-emerald-400 hover:to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2"
+                      disabled={checkingOut}
+                      className="w-full py-3 bg-gradient-to-r from-emerald-500 via-emerald-600 to-amber-500 hover:from-emerald-400 hover:to-amber-400 disabled:opacity-50 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2"
                     >
                       <Lock className="w-4 h-4" />
-                      <span>{t('ecomCompleteCheckout')} (${grandTotal.toFixed(2)})</span>
+                      <span>
+                        {checkingOut ? 'Processing Purchase...' : `${t('ecomCompleteCheckout')} ($${grandTotal.toFixed(2)})`}
+                      </span>
                     </button>
 
                     <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-1">

@@ -1312,55 +1312,71 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-xs font-bold text-white">{t('pricingPlanMonthly')}</div>
-                      <div className="text-xl font-black text-amber-400 mt-1 font-mono-num">$120 <span className="text-xs text-slate-400 font-normal">/ 30 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">{t('profileSingleMonthExt')}</p>
+                      <div className="text-xs font-bold text-white">Monthly SMC Pass</div>
+                      <div className="text-xl font-black text-amber-400 mt-1 font-mono-num">80$ <span className="text-xs text-slate-400 font-normal">/ 30 days</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">Single month extension with real-time indicators.</p>
                     </div>
                     <button
                       type="button"
                       disabled={renewing}
-                      onClick={() => handleRenewSubscription(1, 'Pro Monthly SMC Pass')}
+                      onClick={() => handleRenewSubscription(1, 'Site Subscription — Monthly ($80)')}
                       className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
-                      {renewing ? 'Updating...' : `${t('profileExtendBtn')} 1 Month`}
+                      {renewing ? 'Updating...' : 'Extend 1 Month'}
+                    </button>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="text-xs font-bold text-cyan-300">6 Months SMC Pass</div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$400 <span className="text-xs text-slate-400 font-normal">/ 180 days</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">Half-year institutional trading access ($66/mo).</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={renewing}
+                      onClick={() => handleRenewSubscription(6, 'Site Subscription — 6 Months ($400)')}
+                      className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
+                    >
+                      {renewing ? 'Updating...' : 'Extend 6 Months ($400)'}
                     </button>
                   </div>
 
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-400/60 flex flex-col justify-between space-y-3 relative">
                     <span className="absolute -top-2 right-3 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
-                      {t('profileBestValue')}
+                      Best Value
                     </span>
                     <div>
-                      <div className="text-xs font-bold text-amber-300">{t('pricingPlanQuarterly')}</div>
-                      <div className="text-xl font-black text-white mt-1 font-mono-num">$290 <span className="text-xs text-slate-400 font-normal">/ 90 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">{t('profileQuarterlyDesc')}</p>
+                      <div className="text-xs font-bold text-amber-300">1 Year SMC Pass</div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$650 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">Full year complete market access ($54/mo).</p>
                     </div>
                     <button
                       type="button"
                       disabled={renewing}
-                      onClick={() => handleRenewSubscription(3, 'Pro Quarterly VIP Pass')}
+                      onClick={() => handleRenewSubscription(12, 'Site Subscription — 1 Year ($650)')}
                       className="w-full min-h-[44px] py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shadow-amber-500/20 active:scale-98"
                     >
-                      {renewing ? 'Updating...' : `${t('profileExtendBtn')} 3 Months ($290)`}
+                      {renewing ? 'Updating...' : 'Extend 1 Year ($650)'}
                     </button>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-xs font-bold text-emerald-300">{t('pricingPlanAnnual')}</div>
-                      <div className="text-xl font-black text-white mt-1 font-mono-num">$990 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">{t('profileAnnualDesc')}</p>
+                      <div className="text-xs font-bold text-emerald-300">All-Inclusive VIP</div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$999 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">1 Year + SMC & 144 Strategy Academy Courses.</p>
                     </div>
                     <button
                       type="button"
                       disabled={renewing}
-                      onClick={() => handleRenewSubscription(12, 'Annual Institutional Elite')}
-                      className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
+                      onClick={() => handleRenewSubscription(12, 'All-Inclusive Package ($999/Year)')}
+                      className="w-full min-h-[44px] py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
-                      {renewing ? 'Updating...' : `${t('profileExtendBtn')} 1 Year ($990)`}
+                      {renewing ? 'Updating...' : 'Extend VIP ($999)'}
                     </button>
                   </div>
                 </div>

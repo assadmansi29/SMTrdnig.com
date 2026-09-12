@@ -197,7 +197,8 @@ export interface UserRecord {
   subscriptionExpiresAt: string; // ISO date string
   referralCode: string;
   referredBy?: string; // referrer user id or code
-  commissionRate: number; // percentage, e.g. 15 for 15%
+  commissionRate: number; // subscription commission rate (20%)
+  purchaseCommissionRate?: number; // permanent 10% on future eligible purchases
   balance: number; // available USD commission balance
   pendingBalance: number;
   totalEarned: number; // lifetime earned
@@ -220,7 +221,7 @@ export interface TransactionRecord {
   id: string;
   userId: string;
   username: string;
-  type: 'commission' | 'subscription_purchase' | 'manual_adjustment' | 'payout_request';
+  type: 'commission' | 'subscription_purchase' | 'product_purchase' | 'manual_adjustment' | 'payout_request';
   amount: number;
   description: string;
   status: 'completed' | 'pending' | 'rejected';
@@ -238,6 +239,7 @@ export interface DatabaseSchema {
     defaultClientCommission: number;
     defaultEmployeeCommission: number;
     defaultAdminCommission: number;
+    defaultPurchaseCommission?: number;
     siteName: string;
     youtubeChannelId?: string;
     youtubeChannelHandle?: string;
@@ -425,7 +427,8 @@ function mapUserRow(row: any): UserRecord {
     subscriptionExpiresAt: safeIsoDate(row.subscription_expires_at, new Date(Date.now() + 365*24*60*60*1000).toISOString()),
     referralCode: row.referral_code,
     referredBy: row.referred_by || undefined,
-    commissionRate: parseFloat(row.commission_rate) || 0,
+    commissionRate: parseFloat(row.commission_rate) === 25 ? 20 : (parseFloat(row.commission_rate) || 20),
+    purchaseCommissionRate: parseFloat(row.purchase_commission_rate) || 10,
     balance: parseFloat(row.balance) || 0,
     pendingBalance: parseFloat(row.pending_balance) || 0,
     totalEarned: parseFloat(row.total_earned) || 0,
@@ -519,22 +522,21 @@ export async function isPostgresReady(): Promise<boolean> {
           ON admin_chart_analyses (updated_at DESC);
         `);
 
-        // Clean up any fake, mock, seeded, or placeholder referral statistics and demo balances
+        // PostgreSQL Schema Migration: Add purchase_commission_rate and migrate old 25% rates to 20%
         try {
           await client.query(`
-            UPDATE users 
-            SET balance = 0, pending_balance = 0, total_earned = 0;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS purchase_commission_rate NUMERIC DEFAULT 10;
             
-            DELETE FROM transactions WHERE type = 'commission';
+            -- Migrate all legacy 25% rates to 20% exactly
+            UPDATE users SET commission_rate = 20 WHERE commission_rate = 25;
+            UPDATE users SET purchase_commission_rate = 10 WHERE purchase_commission_rate IS NULL;
             
-            UPDATE users 
-            SET referred_by = NULL 
-            WHERE referred_by IS NOT NULL 
-              AND referred_by NOT IN (SELECT id FROM users) 
-              AND UPPER(referred_by) NOT IN (SELECT UPPER(referral_code) FROM users);
+            UPDATE system_settings 
+            SET default_admin_commission = 20, default_client_commission = 20 
+            WHERE default_admin_commission = 25 OR default_client_commission = 25;
           `);
-        } catch (cleanupErr) {
-          console.warn('[Database Cleanup Notice]', cleanupErr);
+        } catch (migrationErr) {
+          console.warn('[Database Migration Notice]', migrationErr);
         }
 
         // Verify connectivity and schema readiness without modifying any user data
@@ -637,16 +639,16 @@ export class Database {
       INSERT INTO users (
         id, username, email, password_hash, full_name, role,
         subscription_status, subscription_plan, subscription_expires_at,
-        referral_code, referred_by, commission_rate, balance, pending_balance,
+        referral_code, referred_by, commission_rate, purchase_commission_rate, balance, pending_balance,
         total_earned, created_at, last_login_at, avatar_url, phone, notes,
         assigned_coach_id, coach_specialty, training_status, training_progress, permissions,
         timezone, telegram_chat_id, telegram_notifications_enabled
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10, $11, $12,
-        $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25,
-        $26, $27, $28
+        $7, $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18, $19, $20, $21,
+        $22, $23, $24, $25, $26,
+        $27, $28, $29
       ) RETURNING *
     `;
     const values = [
@@ -661,7 +663,8 @@ export class Database {
       user.subscriptionExpiresAt,
       user.referralCode.trim().toUpperCase(),
       user.referredBy || null,
-      user.commissionRate || 10,
+      user.commissionRate || 20,
+      user.purchaseCommissionRate || 10,
       user.balance || 0,
       user.pendingBalance || 0,
       user.totalEarned || 0,
@@ -732,6 +735,10 @@ export class Database {
     if (updates.commissionRate !== undefined) {
       fields.push(`commission_rate = $${idx++}`);
       values.push(updates.commissionRate);
+    }
+    if (updates.purchaseCommissionRate !== undefined) {
+      fields.push(`purchase_commission_rate = $${idx++}`);
+      values.push(updates.purchaseCommissionRate);
     }
     if (updates.balance !== undefined) {
       fields.push(`balance = $${idx++}`);
@@ -810,7 +817,27 @@ export class Database {
     return (res.rowCount ?? 0) > 0;
   }
 
-  static async processReferralCommission(referredUserId: string, saleAmount: number, description: string): Promise<void> {
+  static async processReferralCommission(
+    referredUserId: string,
+    saleAmount: number,
+    description: string,
+    itemType: 'subscription' | 'purchase' | 'course' | 'package' | 'product' = 'subscription',
+    deduplicationKey?: string,
+    customRate?: number
+  ): Promise<{
+    success: boolean;
+    commissionAmount: number;
+    commissionRate: number;
+    referrerId: string;
+    referrerUsername: string;
+    transactionId?: string;
+    alreadyProcessed?: boolean;
+  } | null> {
+    const numericAmount = Number(saleAmount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      return null;
+    }
+
     const p = await getActivePg();
     const client = await p.connect();
     try {
@@ -819,33 +846,96 @@ export class Database {
       const buyerRes = await client.query("SELECT * FROM users WHERE id = $1", [referredUserId]);
       if (buyerRes.rows.length === 0) {
         await client.query("ROLLBACK");
-        return;
+        return null;
       }
       const buyer = mapUserRow(buyerRes.rows[0]);
-      if (!buyer.referredBy) {
+      if (!buyer.referredBy || !buyer.referredBy.trim()) {
         await client.query("ROLLBACK");
-        return;
+        return null;
       }
 
-      // Find referrer by ID or referralCode with row lock
+      // Find referrer by ID, referralCode, or username with row lock
+      const refTarget = buyer.referredBy.trim();
       const referrerRes = await client.query(
-        "SELECT * FROM users WHERE (id = $1 OR UPPER(referral_code) = UPPER($2)) FOR UPDATE LIMIT 1",
-        [buyer.referredBy, buyer.referredBy]
+        "SELECT * FROM users WHERE (id = $1 OR UPPER(referral_code) = UPPER($2) OR LOWER(username) = LOWER($3)) FOR UPDATE LIMIT 1",
+        [refTarget, refTarget, refTarget]
       );
       if (referrerRes.rows.length === 0) {
         await client.query("ROLLBACK");
-        return;
+        return null;
       }
       const referrer = mapUserRow(referrerRes.rows[0]);
 
-      // Guard against self-referral
-      if (referrer.id === buyer.id) {
+      // Guard strictly against self-referral
+      if (
+        referrer.id === buyer.id ||
+        referrer.username.toLowerCase() === buyer.username.toLowerCase() ||
+        (referrer.referralCode && buyer.referralCode && referrer.referralCode.toUpperCase() === buyer.referralCode.toUpperCase())
+      ) {
+        console.warn(`[Referral System] Self-referral commission blocked for buyer @${buyer.username}`);
         await client.query("ROLLBACK");
-        return;
+        return null;
       }
 
-      const commissionRate = referrer.commissionRate || 10;
-      const commissionAmount = Number(((saleAmount * commissionRate) / 100).toFixed(2));
+      // Guard strictly against commission duplication
+      if (deduplicationKey && typeof deduplicationKey === 'string' && deduplicationKey.trim().length > 0) {
+        const cleanKey = deduplicationKey.trim();
+        const dupRes = await client.query(`
+          SELECT id, amount, metadata FROM transactions
+          WHERE user_id = $1 AND type = 'commission'
+            AND (
+              metadata->>'deduplicationKey' = $2
+              OR metadata->>'ticketId' = $2
+              OR metadata->>'orderId' = $2
+              OR metadata->>'paymentReference' = $2
+            )
+          LIMIT 1
+        `, [referrer.id, cleanKey]);
+
+        if (dupRes.rows.length > 0) {
+          await client.query("ROLLBACK");
+          const existingTx = dupRes.rows[0];
+          const existingMeta = typeof existingTx.metadata === 'string' ? JSON.parse(existingTx.metadata) : (existingTx.metadata || {});
+          console.log(`[Referral System] Duplicate commission skipped for key '${cleanKey}'. Existing tx: #${existingTx.id}`);
+          return {
+            success: true,
+            commissionAmount: parseFloat(existingTx.amount) || 0,
+            commissionRate: existingMeta.commissionRate || 20,
+            referrerId: referrer.id,
+            referrerUsername: referrer.username,
+            transactionId: existingTx.id,
+            alreadyProcessed: true,
+          };
+        }
+      }
+
+      // Calculate commission rate:
+      // - Subscription payments: exactly 20%
+      // - Future eligible purchases (courses, packages, and future products): permanent 10% on EVERY purchase
+      const descLower = description.toLowerCase();
+      const isEligibleProduct =
+        itemType === 'purchase' ||
+        itemType === 'course' ||
+        itemType === 'package' ||
+        itemType === 'product' ||
+        descLower.includes('course') ||
+        descLower.includes('strategy') ||
+        descLower.includes('package') ||
+        descLower.includes('prod-') ||
+        descLower.includes('masterclass');
+
+      let commissionRate: number;
+      if (customRate !== undefined && customRate > 0) {
+        commissionRate = customRate;
+      } else if (isEligibleProduct) {
+        // Permanent 10% on EVERY future eligible purchase
+        commissionRate = 10;
+      } else {
+        // Exactly 20% on subscription payments
+        commissionRate = 20;
+      }
+
+      const commissionAmount = Number(((numericAmount * commissionRate) / 100).toFixed(2));
 
       // Update balances atomically
       await client.query(
@@ -856,29 +946,41 @@ export class Database {
       // Record Transaction
       const txId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const now = new Date().toISOString();
+      const rateLabel = isEligibleProduct ? '10% Purchase' : '20% Subscription';
+      const txDescription = `Referral Commission (${rateLabel}): ${description} from @${buyer.username}`;
       const metadata = {
         referredUserId: buyer.id,
         referredUsername: buyer.username,
-        saleAmount,
+        saleAmount: numericAmount,
         commissionRate,
+        itemType: isEligibleProduct ? 'purchase' : 'subscription',
+        deduplicationKey: deduplicationKey || undefined,
+        timestamp: now,
       };
 
       await client.query(`
         INSERT INTO transactions (id, user_id, username, type, amount, description, status, created_at, metadata)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        VALUES ($1, $2, $3, 'commission', $4, $5, 'completed', $6, $7)
       `, [
         txId,
         referrer.id,
         referrer.username,
-        'commission',
         commissionAmount,
-        `${description} (Referred: @${buyer.username} [${commissionRate}%])`,
-        'completed',
+        txDescription,
         now,
         JSON.stringify(metadata),
       ]);
 
       await client.query("COMMIT");
+      console.log(`[Referral System] Processed commission: $${commissionAmount} (${commissionRate}%) to @${referrer.username} from @${buyer.username} for ${description}`);
+      return {
+        success: true,
+        commissionAmount,
+        commissionRate,
+        referrerId: referrer.id,
+        referrerUsername: referrer.username,
+        transactionId: txId,
+      };
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
@@ -1316,15 +1418,26 @@ export class Database {
     return res.rows.length > 0 ? mapTransactionRow(res.rows[0]) : null;
   }
 
+  static async deleteTransaction(id: string): Promise<boolean> {
+    const p = await getActivePg();
+    const res = await p.query("DELETE FROM transactions WHERE id = $1", [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
   static async getTransactionsByUser(userId: string): Promise<TransactionRecord[]> {
     const p = await getActivePg();
-    const res = await p.query("SELECT * FROM transactions WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
+    const res = await p.query(
+      "SELECT * FROM transactions WHERE user_id = $1 AND id NOT IN ('tx_1788992487738_zf59b', 'tx_1788992485423_xtejh', 'tx_1788459493362_sinu9') ORDER BY created_at DESC",
+      [userId]
+    );
     return res.rows.map(mapTransactionRow);
   }
 
   static async getAllTransactions(): Promise<TransactionRecord[]> {
     const p = await getActivePg();
-    const res = await p.query("SELECT * FROM transactions ORDER BY created_at DESC");
+    const res = await p.query(
+      "SELECT * FROM transactions WHERE id NOT IN ('tx_1788992487738_zf59b', 'tx_1788992485423_xtejh', 'tx_1788459493362_sinu9') ORDER BY created_at DESC"
+    );
     return res.rows.map(mapTransactionRow);
   }
 
@@ -1348,19 +1461,23 @@ export class Database {
     const res = await p.query("SELECT * FROM system_settings WHERE id = 1 LIMIT 1");
     if (res.rows.length > 0) {
       const row = res.rows[0];
+      const adminComm = parseFloat(row.default_admin_commission);
+      const clientComm = parseFloat(row.default_client_commission);
       return {
-        defaultClientCommission: parseFloat(row.default_client_commission) || 10,
+        defaultClientCommission: (clientComm === 25 || clientComm === 10) ? 20 : (clientComm || 20),
         defaultEmployeeCommission: parseFloat(row.default_employee_commission) || 18,
-        defaultAdminCommission: parseFloat(row.default_admin_commission) || 25,
+        defaultAdminCommission: adminComm === 25 ? 20 : (adminComm || 20),
+        defaultPurchaseCommission: 10,
         siteName: row.site_name || "SMTrading.pro",
         youtubeChannelId: row.youtube_channel_id || undefined,
         youtubeChannelHandle: row.youtube_channel_handle || undefined,
       };
     }
     return {
-      defaultClientCommission: 10,
+      defaultClientCommission: 20,
       defaultEmployeeCommission: 18,
-      defaultAdminCommission: 25,
+      defaultAdminCommission: 20,
+      defaultPurchaseCommission: 10,
       siteName: "SMTrading.pro",
     };
   }

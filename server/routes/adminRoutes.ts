@@ -100,6 +100,7 @@ router.post('/users', requirePermission('canCreateUsers'), async (req: AuthReque
       planName,
       coachSpecialty,
       assignedCoachId,
+      referredBy,
     } = req.body;
 
     if (!username || !email || !password) {
@@ -132,7 +133,16 @@ router.post('/users', requirePermission('canCreateUsers'), async (req: AuthReque
     const expDate = new Date();
     expDate.setFullYear(expDate.getFullYear() + 1);
 
-    const defaultCommRate = role === 'super_admin' ? 25 : role === 'admin' ? 20 : role === 'employee' ? 18 : role === 'coach' ? 18 : 10;
+    const defaultCommRate = 20;
+    const defaultPurchaseCommRate = 10;
+
+    // Validate referredBy if provided
+    let cleanReferredBy: string | undefined = undefined;
+    if (referredBy && typeof referredBy === 'string' && referredBy.trim().length > 0) {
+      const cleanRefInput = referredBy.trim();
+      const referrerUser = await Database.findUserByReferralCode(cleanRefInput) || await Database.findUserByUsername(cleanRefInput);
+      cleanReferredBy = referrerUser ? referrerUser.referralCode : cleanRefInput;
+    }
 
     const newUser = await Database.createUser({
       username: username.trim(),
@@ -144,7 +154,9 @@ router.post('/users', requirePermission('canCreateUsers'), async (req: AuthReque
       subscriptionPlan: planName || (role === 'client' ? 'Standard Pro SMC Enrollment' : 'Institutional Staff Access'),
       subscriptionExpiresAt: expDate.toISOString(),
       referralCode: userRefCode,
+      referredBy: cleanReferredBy,
       commissionRate: Number(commissionRate) || defaultCommRate,
+      purchaseCommissionRate: defaultPurchaseCommRate,
       balance: callerRole === 'super_admin' ? Number(balance) || 0.0 : 0.0,
       pendingBalance: 0.0,
       totalEarned: callerRole === 'super_admin' ? Number(balance) || 0.0 : 0.0,
@@ -347,13 +359,7 @@ router.patch('/users/:id/commission-rate', requirePermission('canSetCommissionRa
   }
 
   const { id } = req.params;
-  const { rate } = req.body;
-
-  const numRate = Number(rate);
-  if (isNaN(numRate) || numRate < 0 || numRate > 100) {
-    res.status(400).json({ error: 'Commission rate must be a percentage between 0 and 100.' });
-    return;
-  }
+  const { rate, purchaseRate } = req.body;
 
   const targetUser = await Database.findUserById(id);
   if (!targetUser) {
@@ -361,7 +367,31 @@ router.patch('/users/:id/commission-rate', requirePermission('canSetCommissionRa
     return;
   }
 
-  const updated = await Database.updateUser(id, { commissionRate: numRate });
+  const updateFields: any = {};
+  if (rate !== undefined) {
+    const numRate = Number(rate);
+    if (isNaN(numRate) || numRate < 0 || numRate > 100) {
+      res.status(400).json({ error: 'Subscription commission rate must be a percentage between 0 and 100.' });
+      return;
+    }
+    updateFields.commissionRate = numRate;
+  }
+
+  if (purchaseRate !== undefined) {
+    const numPurchaseRate = Number(purchaseRate);
+    if (isNaN(numPurchaseRate) || numPurchaseRate < 0 || numPurchaseRate > 100) {
+      res.status(400).json({ error: 'Purchase commission rate must be a percentage between 0 and 100.' });
+      return;
+    }
+    updateFields.purchaseCommissionRate = numPurchaseRate;
+  }
+
+  if (Object.keys(updateFields).length === 0) {
+    res.status(400).json({ error: 'No commission rates provided.' });
+    return;
+  }
+
+  const updated = await Database.updateUser(id, updateFields);
 
   // Record Audit Log
   await Database.addAuditLog({
@@ -371,11 +401,15 @@ router.patch('/users/:id/commission-rate', requirePermission('canSetCommissionRa
     action: 'COMMISSION_RATE_UPDATE',
     targetId: targetUser.id,
     targetUsername: targetUser.username,
-    details: `Changed commission rate for @${targetUser.username} from ${targetUser.commissionRate}% to ${numRate}%`,
-    metadata: { previousRate: targetUser.commissionRate, newRate: numRate },
+    details: `Updated commission rates for @${targetUser.username}: Sub=${updateFields.commissionRate ?? targetUser.commissionRate}%, Purchase=${updateFields.purchaseCommissionRate ?? targetUser.purchaseCommissionRate ?? 10}%`,
+    metadata: { previousRate: targetUser.commissionRate, ...updateFields },
   });
 
-  res.json({ success: true, message: `Referral commission rate set to ${numRate}%`, user: sanitizeUser(updated!, callerRole) });
+  res.json({
+    success: true,
+    message: `Commission rates updated: ${updateFields.commissionRate ?? targetUser.commissionRate}% subscriptions, ${updateFields.purchaseCommissionRate ?? targetUser.purchaseCommissionRate ?? 10}% purchases`,
+    user: sanitizeUser(updated!, callerRole)
+  });
 });
 
 // PATCH /api/admin/users/:id/reset-password (Super Admin & Admin)
@@ -536,6 +570,29 @@ router.patch('/transactions/:id/status', requirePermission('canViewTransactions'
     res.json({ success: true, transaction: updatedTx });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to update transaction status.' });
+  }
+});
+
+// DELETE /api/admin/transactions/:id
+router.delete('/transactions/:id', requirePermission('canViewTransactions'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const deleted = await Database.deleteTransaction(id);
+    if (!deleted) {
+      res.status(404).json({ error: 'Transaction not found or already removed.' });
+      return;
+    }
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'TRANSACTION_DELETE',
+      targetId: id,
+      details: `Permanently removed transaction #${id}`,
+    });
+    res.json({ success: true, message: `Transaction #${id} deleted.` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete transaction.' });
   }
 });
 
@@ -803,23 +860,28 @@ router.post('/payment-verifications/:id/approve', requirePermission('canManageCl
     // Determine exact subscription plan name and duration
     let assignedPlanName = 'All-Inclusive Package ($999/Year)';
     let durationDays = 365;
+    let planAmount = 999;
     let includedCourses: string[] = ['SMC Trading Course', '144 Strategy Course'];
 
-    if (effectivePlanId === 'monthly' || effectivePlanId.toLowerCase().includes('monthly')) {
+    if (effectivePlanId === 'monthly' || effectivePlanId.toLowerCase().includes('monthly') || effectivePlanId.toLowerCase().includes('80')) {
       assignedPlanName = 'Site Subscription — Monthly ($80)';
       durationDays = 30; // 1 month
+      planAmount = 80;
       includedCourses = [];
-    } else if (effectivePlanId === '6months' || effectivePlanId.toLowerCase().includes('6 month')) {
+    } else if (effectivePlanId === '6months' || effectivePlanId.toLowerCase().includes('6 month') || effectivePlanId.toLowerCase().includes('400')) {
       assignedPlanName = 'Site Subscription — 6 Months ($400)';
       durationDays = 180; // 6 months
+      planAmount = 400;
       includedCourses = [];
     } else if (effectivePlanId === '1year' || effectivePlanId.toLowerCase().includes('1 year') || effectivePlanId.toLowerCase().includes('650')) {
       assignedPlanName = 'Site Subscription — 1 Year ($650)';
       durationDays = 365; // 12 months
+      planAmount = 650;
       includedCourses = [];
     } else {
       assignedPlanName = 'All-Inclusive Package ($999/Year)';
       durationDays = 365; // 12 months + SMC Course + 144 Strategy Course
+      planAmount = 999;
       includedCourses = ['SMC Trading Course', '144 Strategy Course'];
     }
 
@@ -845,16 +907,28 @@ router.post('/payment-verifications/:id/approve', requirePermission('canManageCl
       targetUser = await Database.findUserByUsername(cleanUsername);
     }
 
+    // Resolve referral code
+    const effectiveReferral = (parsedNotes.referralCode || parsedNotes.referredBy || '').trim();
+    let validReferrer: UserRecord | null = null;
+    if (effectiveReferral) {
+      validReferrer = (await Database.findUserByReferralCode(effectiveReferral)) || (await Database.findUserByUsername(effectiveReferral));
+    }
+    const cleanReferredBy = validReferrer ? validReferrer.referralCode : (effectiveReferral || undefined);
+
     let resultingUser: UserRecord;
 
     if (targetUser) {
       // Activate existing account
-      const updatedUser = await Database.updateUser(targetUser.id, {
+      const updatePayload: any = {
         subscriptionStatus: 'active',
         subscriptionPlan: assignedPlanName,
         subscriptionExpiresAt: expirationDate.toISOString(),
         notes: `USDT TRC20 verified & approved by @${req.user!.username} on ${new Date().toISOString()}. ${notes}`.trim()
-      });
+      };
+      if (cleanReferredBy && !targetUser.referredBy) {
+        updatePayload.referredBy = cleanReferredBy;
+      }
+      const updatedUser = await Database.updateUser(targetUser.id, updatePayload);
       resultingUser = updatedUser!;
     } else {
       // Create new client account
@@ -869,7 +943,9 @@ router.post('/payment-verifications/:id/approve', requirePermission('canManageCl
         subscriptionPlan: assignedPlanName,
         subscriptionExpiresAt: expirationDate.toISOString(),
         referralCode: userRefCode,
-        commissionRate: 10,
+        referredBy: cleanReferredBy,
+        commissionRate: 20,
+        purchaseCommissionRate: 10,
         balance: 0.0,
         pendingBalance: 0.0,
         totalEarned: 0.0,
@@ -877,6 +953,57 @@ router.post('/payment-verifications/:id/approve', requirePermission('canManageCl
         notes: `Created via USDT TRC20 payment approval by @${req.user!.username}. Plan: ${assignedPlanName}. ${notes}`.trim(),
       });
       resultingUser = newUser;
+    }
+
+    // Record Real Transaction in Account Ledger
+    try {
+      await Database.addTransaction({
+        userId: resultingUser.id,
+        username: resultingUser.username,
+        type: 'subscription_purchase',
+        amount: planAmount,
+        description: `Subscription activated: ${assignedPlanName} (USDT TRC20 Verification #${id.substring(0, 8)})`,
+        status: 'completed',
+        metadata: {
+          ticketId: id,
+          planId: effectivePlanId,
+          planName: assignedPlanName,
+          amount: planAmount,
+          currency: 'USD',
+          paymentMethod: 'USDT (TRC20)',
+          txHash: parsedNotes.txHash || 'Pending confirmation',
+          approvedBy: req.user!.username,
+          expiresAt: expirationDate.toISOString(),
+        }
+      });
+    } catch (txErr) {
+      console.error('Error logging subscription transaction on approval:', txErr);
+    }
+
+    // Process Referral Commission atomically if user is referred
+    if (resultingUser.referredBy) {
+      try {
+        const isProductOrder =
+          parsedNotes.itemType === 'purchase' ||
+          parsedNotes.itemType === 'course' ||
+          parsedNotes.itemType === 'package' ||
+          parsedNotes.itemType === 'product' ||
+          assignedPlanName.toLowerCase().includes('course') ||
+          assignedPlanName.toLowerCase().includes('package') ||
+          assignedPlanName.toLowerCase().includes('strategy') ||
+          assignedPlanName.toLowerCase().includes('bundle') ||
+          assignedPlanName.toLowerCase().includes('masterclass');
+
+        await Database.processReferralCommission(
+          resultingUser.id,
+          planAmount,
+          `${isProductOrder ? 'Product purchase' : 'Subscription'} commission on ${assignedPlanName}`,
+          isProductOrder ? 'purchase' : 'subscription',
+          id // Operational item ID as deduplication key
+        );
+      } catch (commErr) {
+        console.error('Failed to process referral commission on approval:', commErr);
+      }
     }
 
     // Update operational item status to 'resolved' (Approved)

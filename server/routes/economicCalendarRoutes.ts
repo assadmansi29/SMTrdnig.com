@@ -430,12 +430,43 @@ router.get(['/economic-calendar/debug-pipeline', '/admin/debug-calendar-pipeline
       }))
     };
 
-    // Step 4: Verification Diagnosis
+    // Step 4: Ledger Transactions Check
+    const txCheck = await pool.query('SELECT * FROM transactions ORDER BY created_at DESC');
+    const staleTxTargeted = txCheck.rows.filter(t => 
+      ['tx_1788992487738_zf59b', 'tx_1788992485423_xtejh', 'tx_1788459493362_sinu9'].includes(t.id)
+    );
+
+    // If any of the 3 requested fake transactions are still found, immediately delete them
+    if (staleTxTargeted.length > 0) {
+      await pool.query(`
+        DELETE FROM transactions 
+        WHERE id IN ('tx_1788992487738_zf59b', 'tx_1788992485423_xtejh', 'tx_1788459493362_sinu9')
+      `);
+    }
+
+    const refreshedTx = await pool.query('SELECT * FROM transactions ORDER BY created_at DESC');
+
+    pipeline.steps.step4_ledgerCheck = {
+      totalTransactionsRemaining: refreshedTx.rows.length,
+      purgedTargetedFakeTransactions: staleTxTargeted.map(t => ({ id: t.id, description: t.description })),
+      remainingTransactions: refreshedTx.rows.map(t => ({
+        id: t.id,
+        username: t.username,
+        type: t.type,
+        amount: t.amount,
+        description: t.description,
+        status: t.status,
+        createdAt: t.created_at
+      }))
+    };
+
+    // Step 5: Verification Diagnosis
     const hasStaleSept4 = parseInt(sept4Check.rows[0]?.count || '0', 10) > 0;
     const hasTodaySept11 = parseInt(sept11Check.rows[0]?.count || '0', 10) > 0;
     pipeline.diagnosis = {
       staleSept4Eliminated: !hasStaleSept4,
       liveTodayActive: hasTodaySept11,
+      targetFakeTransactionsPurged: true,
       overallStatus: (!hasStaleSept4 && hasTodaySept11) ? 'HEALTHY_AND_CURRENT' : 'ATTENTION_REQUIRED'
     };
 

@@ -93,6 +93,22 @@ export default function App() {
     setTimeout(() => setSupportEmailCopied(false), 2500);
   };
 
+  // Capture incoming referral link parameters (?ref=SM...) and persist to localStorage
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get('ref') || urlParams.get('referral');
+      if (refParam) {
+        const cleanRef = refParam.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        if (cleanRef) {
+          localStorage.setItem('smtrading_ref', cleanRef);
+        }
+      }
+    } catch {
+      // safe fallback
+    }
+  }, []);
+
   // Sync localized articles when language changes
   useEffect(() => {
     const localized = getArticlesByLanguage(language);

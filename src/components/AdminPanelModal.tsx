@@ -124,6 +124,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Commission Rate Submodal (Super Admin Only)
   const [selectedUserForRate, setSelectedUserForRate] = useState<UserProfile | null>(null);
   const [newCommissionRate, setNewCommissionRate] = useState('');
+  const [newPurchaseCommissionRate, setNewPurchaseCommissionRate] = useState('');
   const [rateStatus, setRateStatus] = useState<string | null>(null);
 
   // Password Reset Submodal
@@ -139,6 +140,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [newRole, setNewRole] = useState<UserRole>('client');
   const [newSubStatus, setNewSubStatus] = useState<SubscriptionStatus>('active');
   const [newPlanName, setNewPlanName] = useState('Site Subscription — Monthly ($80)');
+  const [newReferredBy, setNewReferredBy] = useState('');
   const [newInitialBalance, setNewInitialBalance] = useState('0');
   const [newRate, setNewRate] = useState('10');
   const [createStatus, setCreateStatus] = useState<string | null>(null);
@@ -418,7 +420,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     e.preventDefault();
     if (!selectedUserForRate || !newCommissionRate || !isSuperAdmin) return;
 
-    setRateStatus('Updating rate...');
+    setRateStatus('Updating rates...');
     try {
       const res = await fetch(`/api/admin/users/${selectedUserForRate.id}/commission-rate`, {
         method: 'PATCH',
@@ -426,10 +428,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ rate: Number(newCommissionRate) }),
+        body: JSON.stringify({
+          rate: Number(newCommissionRate),
+          purchaseRate: Number(newPurchaseCommissionRate || '10'),
+        }),
       });
       if (res.ok) {
-        setRateStatus('Commission rate updated!');
+        setRateStatus('Commission rates successfully updated!');
         fetchAdminData();
         setTimeout(() => {
           setSelectedUserForRate(null);
@@ -518,6 +523,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           role: isSuperAdmin ? newRole : 'client',
           subscriptionStatus: newSubStatus,
           planName: newPlanName,
+          referredBy: newReferredBy.trim() || undefined,
           commissionRate: isSuperAdmin ? Number(newRate) : 10,
           balance: isSuperAdmin ? Number(newInitialBalance) : 0,
         }),
@@ -531,6 +537,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         setNewEmail('');
         setNewFullName('');
         setNewPass('');
+        setNewReferredBy('');
         setTimeout(() => {
           setActiveTab('users');
           setCreateStatus(null);
@@ -1236,20 +1243,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                         </button>
                                       )}
                                     </div>
-                                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                                      <span>Rate: {u.commissionRate || 10}%</span>
-                                      {isSuperAdmin && (
-                                        <button
-                                          onClick={() => {
-                                            setSelectedUserForRate(u);
-                                            setNewCommissionRate(String(u.commissionRate || 10));
-                                          }}
-                                          className="text-slate-400 hover:text-white p-0.5"
-                                          title="Update Commission Rate"
-                                        >
-                                          <Edit className="w-2.5 h-2.5" />
-                                        </button>
-                                      )}
+                                    <div className="text-[10px] text-slate-400 flex flex-col gap-0.5">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-emerald-400 font-mono">Sub: {u.commissionRate ?? 20}%</span>
+                                        <span>•</span>
+                                        <span className="text-amber-400 font-mono">Buy: {u.purchaseCommissionRate ?? 10}%</span>
+                                        {isSuperAdmin && (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedUserForRate(u);
+                                              setNewCommissionRate(String(u.commissionRate ?? 20));
+                                              setNewPurchaseCommissionRate(String(u.purchaseCommissionRate ?? 10));
+                                            }}
+                                            className="text-slate-400 hover:text-white p-0.5 ml-1 cursor-pointer"
+                                            title="Update Referral Commission Rates"
+                                          >
+                                            <Edit className="w-2.5 h-2.5" />
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
@@ -1663,6 +1675,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     {meta.txHash ? `${meta.txHash.substring(0, 16)}...` : 'Pending Telegram submission'}
                                   </span>
                                 </div>
+                                {meta.referralCode && (
+                                  <div className="sm:col-span-3 text-[11px] bg-amber-500/10 border border-amber-500/30 rounded p-1.5 flex items-center gap-2">
+                                    <span className="text-amber-400 font-bold font-mono">Affiliate / Referral Code:</span>
+                                    <span className="text-white font-mono font-bold">{meta.referralCode}</span>
+                                    <span className="text-slate-400 text-[10px]">(Will automatically receive commission upon approval)</span>
+                                  </div>
+                                )}
                               </div>
 
                               {meta.credentials && (
@@ -1993,11 +2012,22 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       onChange={(e) => setNewPlanName(e.target.value)}
                       className="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-2 text-xs text-white font-medium focus:outline-none focus:border-amber-400"
                     >
-                      <option value="Site Subscription — Monthly (€80)">Monthly — €80 (Site Subscription)</option>
-                      <option value="Site Subscription — 6 Months (€410)">6 Months — €410 (Site Subscription)</option>
+                      <option value="Site Subscription — Monthly ($80)">Monthly — $80 (Site Subscription)</option>
+                      <option value="Site Subscription — 6 Months ($400)">6 Months — $400 (Site Subscription)</option>
                       <option value="Site Subscription — 1 Year ($650)">1 Year — $650 (Site Subscription)</option>
-                      <option value="$999 All-Inclusive (1 Year + SMC Course + 144 Strategy Course)">$999 All-Inclusive (1 Year + SMC Course + 144 Strategy Course)</option>
+                      <option value="All-Inclusive Package ($999/Year)">All-Inclusive Package ($999/Year — SMC + 144 Courses)</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Referred By (Optional Code or Username)</label>
+                    <input
+                      type="text"
+                      value={newReferredBy}
+                      onChange={(e) => setNewReferredBy(e.target.value.toUpperCase())}
+                      placeholder="e.g. SMATTAR123 or username"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                    />
                   </div>
 
                   {isSuperAdmin && (
@@ -2255,7 +2285,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               <form onSubmit={handleRateSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">New Commission Rate (%)</label>
+                  <label className="block text-xs text-slate-400 mb-1">
+                    Subscription Commission Rate (%)
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -2263,8 +2295,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     required
                     value={newCommissionRate}
                     onChange={(e) => setNewCommissionRate(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                    placeholder="20"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">Standard rate for recurring subscriptions (Default: 20%)</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">
+                    Lifetime Purchase Commission Rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    required
+                    value={newPurchaseCommissionRate}
+                    onChange={(e) => setNewPurchaseCommissionRate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                    placeholder="10"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Permanent rate on EVERY future course, strategy package, and product purchase (Default: 10%)</p>
                 </div>
 
                 {rateStatus && (
@@ -2279,7 +2330,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   type="submit"
                   className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
                 >
-                  Save Commission Rate
+                  Save Commission Rates
                 </button>
               </form>
             </div>
