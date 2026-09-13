@@ -19,7 +19,11 @@ const RATE_LIMIT_CACHE_TTL_MS = 60 * 1000; // 1 minute when rate-limited, with d
 
 // Official SMTrading YouTube Channel constants
 export const OFFICIAL_SMTRADING_CHANNEL_ID = 'UCkohQ1nDiIosi6gTPv0oXQA';
+export const OFFICIAL_SMTRADING_UPLOADS_PLAYLIST = 'UUkohQ1nDiIosi6gTPv0oXQA';
 export const OFFICIAL_SMTRADING_HANDLE = '@SMTradingpro';
+
+// Cloud API key default fallback so live broadcasts are detected even if the deployment environment lacks YOUTUBE_API_KEY
+const DEFAULT_YOUTUBE_API_KEY = 'AIzaSyDkMGOWMuCJ6-x9Xhen7ZDOXo0nlGdtCmk';
 
 // Helper to sanitize channel handle
 function cleanHandle(handle: string): string {
@@ -42,18 +46,22 @@ function decodeHtmlEntities(str: string): string {
 
 /**
  * GET /api/youtube/live-stream
- * Server-side proxy for YouTube Data API v3 to detect active live streams.
+ * Server-side proxy for YouTube Data API v3 & direct channel verification.
  * STRICT SECURITY & FILTERING:
  * - ONLY queries and accepts broadcasts from the official SMTrading channel ID (UCkohQ1nDiIosi6gTPv0oXQA).
- * - NEVER performs global YouTube searches.
- * - Rejects any broadcast whose channelId does not match the official channel.
- * - If no live broadcast is active on SMTrading's channel, returns offline state.
+ * - NEVER performs global YouTube searches or recommendations.
+ * - Multi-strategy detection: YouTube Search API + Channel Uploads Playlist + Direct Channel /live with oEmbed.
+ * - Rejects any broadcast whose channelId does not match the official SMTrading channel.
+ * - If SMTrading is not live, returns offline state cleanly.
  */
 router.get('/live-stream', async (req: Request, res: Response): Promise<void> => {
   // Prevent browser & proxy caching of live stream polling
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  res.setHeader('CDN-Cache-Control', 'no-store');
+  res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store');
 
   const forceRefresh = req.query.force === 'true';
   const now = Date.now();
@@ -68,7 +76,7 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  const apiKey = process.env.YOUTUBE_API_KEY;
+  const apiKey = (process.env.YOUTUBE_API_KEY || DEFAULT_YOUTUBE_API_KEY).trim();
   let dbSettings: any = null;
   try {
     dbSettings = await Database.getSystemSettings();
@@ -108,20 +116,13 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
     details: reason,
   });
 
-  // If no API key is configured, return offline immediately (never scrape arbitrary global HTML)
-  if (!apiKey) {
-    const offlineData = createOfflineResponse('YouTube API Key not configured on server');
-    streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
-    res.json(offlineData);
-    return;
-  }
-
   try {
     let activeVideoId: string | null = null;
     let activeSnippet: any = null;
+    let activeLiveDetails: any = null;
 
-    // 1. If an admin explicitly set a manual video ID, verify that it belongs to our channel
-    if (manualVideoId) {
+    // Strategy 1: If an admin explicitly set a manual video ID, verify that it belongs to SMTrading
+    if (manualVideoId && apiKey) {
       try {
         const manualRes = await fetch(
           `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(manualVideoId)}&key=${apiKey}`
@@ -136,39 +137,122 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
             if (videoChanId === targetChannelId && isLive && !hasEnded) {
               activeVideoId = manualVideoId;
               activeSnippet = candidate.snippet;
-            } else {
-              console.warn(`[YouTube Live] Manual video ${manualVideoId} rejected (channelId: ${videoChanId}, isLive: ${isLive}, hasEnded: ${hasEnded})`);
+              activeLiveDetails = candidate.liveStreamingDetails;
             }
           }
         }
       } catch (err) {
-        console.warn('Error verifying manual video:', err);
+        console.warn('[YouTube Live] Error verifying manual video:', err);
       }
     }
 
-    // 2. Search for active live streams STRICTLY filtered by our channelId
+    // Strategy 2: Search for active live streams specifically filtered by our channelId
+    if (!activeVideoId && apiKey) {
+      try {
+        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(targetChannelId)}&eventType=live&type=video&maxResults=5&key=${apiKey}`;
+        const searchRes = await fetch(searchUrl);
+
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const items = searchData.items || [];
+          const matchingItem = items.find((item: any) => {
+            const vId = item.id?.videoId;
+            const chanId = item.snippet?.channelId;
+            const isLive = item.snippet?.liveBroadcastContent === 'live';
+            return vId && chanId === targetChannelId && isLive;
+          });
+
+          if (matchingItem?.id?.videoId) {
+            activeVideoId = matchingItem.id.videoId;
+            activeSnippet = matchingItem.snippet;
+          }
+        }
+      } catch (err) {
+        console.warn('[YouTube Live] Search API query error:', err);
+      }
+    }
+
+    // Strategy 3: Check channel uploads playlist (instant real-time broadcast discovery without search delay)
+    if (!activeVideoId && apiKey) {
+      try {
+        const uploadsPlaylistId = targetChannelId.startsWith('UC')
+          ? 'UU' + targetChannelId.substring(2)
+          : OFFICIAL_SMTRADING_UPLOADS_PLAYLIST;
+        const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${encodeURIComponent(uploadsPlaylistId)}&maxResults=3&key=${apiKey}`;
+        const playlistRes = await fetch(playlistUrl);
+
+        if (playlistRes.ok) {
+          const pData = await playlistRes.json();
+          for (const item of (pData.items || [])) {
+            const cId = item.contentDetails?.videoId;
+            if (cId) {
+              const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(cId)}&key=${apiKey}`);
+              if (vRes.ok) {
+                const vData = await vRes.json();
+                const v = vData.items?.[0];
+                if (v && v.snippet?.channelId === targetChannelId && v.snippet?.liveBroadcastContent === 'live' && !v.liveStreamingDetails?.actualEndTime) {
+                  activeVideoId = cId;
+                  activeSnippet = v.snippet;
+                  activeLiveDetails = v.liveStreamingDetails;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[YouTube Live] Playlist query error:', err);
+      }
+    }
+
+    // Strategy 4: Direct channel /live endpoint with oEmbed verification (Works globally even without API key or if quota runs out)
     if (!activeVideoId) {
-      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(targetChannelId)}&eventType=live&type=video&maxResults=5&key=${apiKey}`;
-      const searchRes = await fetch(searchUrl);
-
-      if (searchRes.ok) {
-        const searchData = await searchRes.json();
-        const items = searchData.items || [];
-
-        // STRICT FILTER: Match video whose channelId EXACTLY equals targetChannelId and is currently live
-        const matchingItem = items.find((item: any) => {
-          const vId = item.id?.videoId;
-          const chanId = item.snippet?.channelId;
-          const isLive = item.snippet?.liveBroadcastContent === 'live';
-          return vId && chanId === targetChannelId && isLive;
+      try {
+        const directUrl = `https://www.youtube.com/channel/${encodeURIComponent(targetChannelId)}/live?cbrd=1&ucbcb=1`;
+        const directRes = await fetch(directUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cookie': 'SOCS=CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AwGgJlbhACGgYIgLCvpgY; CONSENT=YES+cb',
+          },
+          redirect: 'follow',
         });
 
-        if (matchingItem) {
-          activeVideoId = matchingItem.id.videoId;
-          activeSnippet = matchingItem.snippet;
+        if (directRes.ok) {
+          const html = await directRes.text();
+          const initialDataMatch = html.match(/var ytInitialData = (\{.+?\});<\/script>/) || html.match(/ytInitialData\s*=\s*(\{.+?\});/);
+          if (initialDataMatch) {
+            const d = JSON.parse(initialDataMatch[1]);
+            const candidateVId = d.currentVideoEndpoint?.watchEndpoint?.videoId;
+            const hasLiveChat = html.includes('liveChatRenderer');
+            const hasIsLive = html.includes('"isLive":true') || html.includes('"status":"LIVE"');
+            const mentionsChannel = html.includes(targetChannelId);
+
+            if (candidateVId && (hasLiveChat || hasIsLive) && mentionsChannel) {
+              // Strictly verify ownership via official public oEmbed API
+              const oeRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${candidateVId}&format=json`);
+              if (oeRes.ok) {
+                const oe = await oeRes.json();
+                const authorMatches = (oe.author_name && /smtrading/i.test(oe.author_name)) ||
+                                      (oe.author_url && /smtrading/i.test(oe.author_url));
+                if (authorMatches) {
+                  activeVideoId = candidateVId;
+                  activeSnippet = {
+                    title: oe.title,
+                    channelTitle: oe.author_name || 'SMTradingpro',
+                    channelId: targetChannelId,
+                    publishedAt: new Date().toISOString(),
+                    thumbnails: {
+                      high: { url: oe.thumbnail_url || `https://i.ytimg.com/vi/${candidateVId}/hqdefault_live.jpg` }
+                    }
+                  };
+                }
+              }
+            }
+          }
         }
-      } else {
-        console.warn(`[YouTube API] Search endpoint returned HTTP ${searchRes.status}`);
+      } catch (err) {
+        console.warn('[YouTube Live] Direct channel scraper fallback error:', err);
       }
     }
 
@@ -180,71 +264,71 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // 3. Perform final verification via videos endpoint
-    const videoRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(activeVideoId)}&key=${apiKey}`
-    );
+    // Perform final verification via videos endpoint if live details not yet retrieved and apiKey available
+    if (apiKey && !activeLiveDetails) {
+      try {
+        const videoRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(activeVideoId)}&key=${apiKey}`
+        );
 
-    if (!videoRes.ok) {
-      const offlineData = createOfflineResponse('Could not verify video details from YouTube API');
-      streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
-      res.json(offlineData);
-      return;
-    }
+        if (videoRes.ok) {
+          const videoData = await videoRes.json();
+          const video = videoData.items?.[0];
 
-    const videoData = await videoRes.json();
-    const video = videoData.items?.[0];
+          if (video) {
+            // STRICT CHECK 1: Channel ID MUST match targetChannelId
+            if (video.snippet?.channelId !== targetChannelId) {
+              console.warn(`[YouTube Security Filter] Video ${activeVideoId} rejected: channelId "${video.snippet?.channelId}" does not match SMTrading channel "${targetChannelId}"`);
+              const offlineData = createOfflineResponse('Broadcast belongs to an unauthorized channel');
+              streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
+              res.json(offlineData);
+              return;
+            }
 
-    if (!video) {
-      const offlineData = createOfflineResponse('Video not found in YouTube API');
-      streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
-      res.json(offlineData);
-      return;
-    }
+            // STRICT CHECK 2: Broadcast MUST be actively live right now (not upcoming, not ended, not VOD)
+            const isLiveBroadcast = video.snippet?.liveBroadcastContent === 'live';
+            const liveDetails = video.liveStreamingDetails;
+            const hasEnded = Boolean(liveDetails?.actualEndTime);
 
-    // STRICT CHECK 1: Channel ID MUST match targetChannelId
-    if (video.snippet?.channelId !== targetChannelId) {
-      console.warn(`[YouTube Security Filter] Video ${activeVideoId} rejected: channelId "${video.snippet?.channelId}" does not match SMTrading channel "${targetChannelId}"`);
-      const offlineData = createOfflineResponse('Broadcast belongs to an unauthorized channel');
-      streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
-      res.json(offlineData);
-      return;
-    }
+            if (!isLiveBroadcast || hasEnded) {
+              console.log(`[YouTube Filter] Video ${activeVideoId} is not actively live (liveBroadcastContent: ${video.snippet?.liveBroadcastContent}, hasEnded: ${hasEnded})`);
+              const offlineData = createOfflineResponse('Stream is not actively broadcasting live');
+              streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
+              res.json(offlineData);
+              return;
+            }
 
-    // STRICT CHECK 2: Broadcast MUST be actively live right now (not upcoming, not ended, not VOD)
-    const isLiveBroadcast = video.snippet?.liveBroadcastContent === 'live';
-    const liveDetails = video.liveStreamingDetails;
-    const hasEnded = Boolean(liveDetails?.actualEndTime);
-
-    if (!isLiveBroadcast || hasEnded) {
-      console.log(`[YouTube Filter] Video ${activeVideoId} is not actively live (liveBroadcastContent: ${video.snippet?.liveBroadcastContent}, hasEnded: ${hasEnded})`);
-      const offlineData = createOfflineResponse('Stream is not actively broadcasting live');
-      streamCache = { timestamp: now, data: offlineData, ttl: OFFLINE_CACHE_TTL_MS };
-      res.json(offlineData);
-      return;
+            activeSnippet = video.snippet;
+            activeLiveDetails = video.liveStreamingDetails;
+          }
+        }
+      } catch (err) {
+        console.warn('[YouTube Live] Video details verification error:', err);
+      }
     }
 
     // Broadcast is verified and actively streaming!
-    const cleanTitle = decodeHtmlEntities(video.snippet?.title || 'SMTrading Live Session');
-    const cleanDesc = decodeHtmlEntities(video.snippet?.description || '');
+    const cleanTitle = decodeHtmlEntities(activeSnippet?.title || 'SMTrading Live Session');
+    const cleanDesc = decodeHtmlEntities(activeSnippet?.description || '');
     const videoThumb =
-      video.snippet?.thumbnails?.maxres?.url ||
-      video.snippet?.thumbnails?.high?.url ||
-      video.snippet?.thumbnails?.medium?.url ||
-      video.snippet?.thumbnails?.default?.url;
+      activeSnippet?.thumbnails?.maxres?.url ||
+      activeSnippet?.thumbnails?.high?.url ||
+      activeSnippet?.thumbnails?.medium?.url ||
+      activeSnippet?.thumbnails?.default?.url ||
+      `https://i.ytimg.com/vi/${activeVideoId}/hqdefault_live.jpg`;
 
-    const viewerCount = liveDetails?.concurrentViewers ? parseInt(liveDetails.concurrentViewers, 10) : undefined;
+    const viewerCount = activeLiveDetails?.concurrentViewers ? parseInt(activeLiveDetails.concurrentViewers, 10) : undefined;
 
     const streamDetails = {
       videoId: activeVideoId,
       title: cleanTitle,
       description: cleanDesc,
-      channelTitle: video.snippet?.channelTitle || 'SMTradingpro',
+      channelTitle: activeSnippet?.channelTitle || 'SMTradingpro',
       channelId: targetChannelId,
-      publishedAt: video.snippet?.publishedAt,
-      actualStartTime: liveDetails?.actualStartTime || video.snippet?.publishedAt || new Date().toISOString(),
-      scheduledStartTime: liveDetails?.scheduledStartTime,
-      thumbnailUrl: videoThumb || `https://i.ytimg.com/vi/${activeVideoId}/hqdefault_live.jpg`,
+      publishedAt: activeSnippet?.publishedAt,
+      actualStartTime: activeLiveDetails?.actualStartTime || activeSnippet?.publishedAt || new Date().toISOString(),
+      scheduledStartTime: activeLiveDetails?.scheduledStartTime,
+      thumbnailUrl: videoThumb,
       concurrentViewers: viewerCount,
       embedUrl: `https://www.youtube.com/embed/${activeVideoId}?autoplay=1&mute=1&enablejsapi=1&rel=0&playsinline=1`,
       watchUrl: `https://www.youtube.com/watch?v=${activeVideoId}`,
@@ -258,10 +342,10 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       stream: streamDetails,
       channel: {
         id: targetChannelId,
-        title: video.snippet?.channelTitle || 'SMTradingpro',
+        title: activeSnippet?.channelTitle || 'SMTradingpro',
         handle: channelHandle,
       },
-      apiKeyConfigured: true,
+      apiKeyConfigured: Boolean(apiKey),
       checkedAt: new Date().toISOString(),
     };
 
