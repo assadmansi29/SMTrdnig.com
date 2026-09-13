@@ -24,6 +24,7 @@ import {
   EyeOff,
   Activity,
 } from 'lucide-react';
+import { useTranslation } from '../../context/LanguageContext';
 import { DRAWING_TOOLS, COLOR_PALETTE, LINE_WIDTHS } from './toolsConfig';
 import { DrawingToolItem } from './types';
 
@@ -80,6 +81,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   allVisible = true,
   onToggleAllVisibility,
 }) => {
+  const { t } = useTranslation();
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number } | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
@@ -122,7 +124,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   };
 
   const categories = [
-    ...(isAdmin ? [{ id: 'reaction-zone', label: 'Reaction Zones', icon: Activity }] : []),
+    ...(isAdmin ? [{ id: 'reaction-zone', label: t('reactionZones'), icon: Activity }] : []),
     { id: 'line', label: 'Lines & Rays', icon: TrendingUp },
     { id: 'channel', label: 'Channels & Pitchforks', icon: GitFork },
     { id: 'fibonacci', label: 'Fibonacci Tools', icon: Divide },
@@ -411,10 +413,20 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
                     {isReactionWeak && (
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(34,197,94,0.8)] shrink-0" />
                     )}
-                    <span className="truncate">{tool.name}</span>
+                    <span className="truncate">
+                      {isReactionStrong
+                        ? t('reactionZoneStrong')
+                        : isReactionWeak
+                        ? t('reactionZoneWeak')
+                        : tool.name}
+                    </span>
                   </span>
                   <span className="text-[9px] text-slate-500 font-mono shrink-0 ml-1">
-                    {isReactionStrong ? 'Red' : isReactionWeak ? 'Green' : `${tool.requiredAnchors} pt${tool.requiredAnchors > 1 ? 's' : ''}`}
+                    {isReactionStrong
+                      ? t('reactionZoneRed')
+                      : isReactionWeak
+                      ? t('reactionZoneGreen')
+                      : `${tool.requiredAnchors} pt${tool.requiredAnchors > 1 ? 's' : ''}`}
                   </span>
                 </button>
               );

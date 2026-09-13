@@ -9,6 +9,7 @@ import {
   Point,
 } from 'lightweight-charts-drawing';
 import { IPrimitivePaneView, IPrimitivePaneRenderer } from 'lightweight-charts';
+import { getTranslation, LanguageCode } from '../../locales';
 
 export type ReactionZoneType = 'strong' | 'weak';
 
@@ -20,6 +21,33 @@ export interface ReactionZoneOptions extends DrawingOptions {
   labelText?: string;
   price?: number;
   locked?: boolean;
+}
+
+/**
+ * Retrieves the user's currently selected language dynamically from document/localStorage.
+ */
+export function getActiveLanguage(): LanguageCode {
+  if (typeof document !== 'undefined') {
+    const htmlLang = document.documentElement.getAttribute('lang') as LanguageCode;
+    if (htmlLang === 'ar' || htmlLang === 'ru' || htmlLang === 'uk' || htmlLang === 'en') {
+      return htmlLang;
+    }
+    try {
+      const stored = localStorage.getItem('smtrading_language') as LanguageCode;
+      if (stored === 'ar' || stored === 'ru' || stored === 'uk' || stored === 'en') {
+        return stored;
+      }
+    } catch {}
+  }
+  return 'en';
+}
+
+/**
+ * Returns the localized text for the reaction zone line according to active platform language.
+ */
+export function getLocalizedReactionZoneName(isStrong: boolean): string {
+  const lang = getActiveLanguage();
+  return getTranslation(lang, isStrong ? 'reactionZoneStrong' : 'reactionZoneWeak');
 }
 
 /**
@@ -103,40 +131,60 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
       ? priceNum.toFixed(2)
       : priceNum.toFixed(5);
 
-    // 3. Left Badge: "🔴 Strong Reaction Zone" or "🟢 Weaker Reaction Zone"
-    const zoneName = isStrong ? 'Strong Reaction Zone' : 'Weaker Reaction Zone';
-    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    const nameMetrics = ctx.measureText(zoneName);
-    const leftPillW = nameMetrics.width + 26;
-    const leftPillH = 20;
-    const leftPillX = 14;
-    const leftPillY = y - (leftPillH / 2);
+    // 3. Small, elegant label directly ON the horizontal line:
+    // "Strong Reaction Zone" for Red line, "Weak Reaction Zone" for Green line.
+    // Text is rendered directly on the line, moves with the line, and updates dynamically with platform language.
+    const activeLang = getActiveLanguage();
+    const isArabic = activeLang === 'ar';
+    const zoneName = getLocalizedReactionZoneName(isStrong);
 
-    // Pill background
-    ctx.fillStyle = 'rgba(10, 15, 29, 0.94)';
+    ctx.font = isArabic
+      ? 'bold 11px "Cairo", "Segoe UI", -apple-system, sans-serif'
+      : '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+    const nameMetrics = ctx.measureText(zoneName);
+    const pillPadding = 9;
+    const dotRadius = 3;
+    const dotSpacing = 7;
+    const pillW = nameMetrics.width + (pillPadding * 2) + (dotRadius * 2) + dotSpacing;
+    const pillH = 20;
+
+    // Position label directly ON the line, cleanly positioned past the left sidebars
+    const pillX = 54;
+    const pillY = y - (pillH / 2);
+
+    // Integrated pill backdrop - directly sits on the line with deep background
+    ctx.fillStyle = 'rgba(9, 14, 26, 0.96)';
     ctx.beginPath();
     if (typeof (ctx as any).roundRect === 'function') {
-      (ctx as any).roundRect(leftPillX, leftPillY, leftPillW, leftPillH, 4);
+      (ctx as any).roundRect(pillX, pillY, pillW, pillH, 4);
     } else {
-      ctx.rect(leftPillX, leftPillY, leftPillW, leftPillH);
+      ctx.rect(pillX, pillY, pillW, pillH);
     }
     ctx.fill();
 
+    // 1px border matching the line color, visually integrating the label into the line
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Colored indicator dot
+    // Small indicator dot directly inside the pill
+    const dotX = isArabic ? (pillX + pillW - pillPadding - dotRadius) : (pillX + pillPadding + dotRadius);
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(leftPillX + 9, y, 3.5, 0, Math.PI * 2);
+    ctx.arc(dotX, y, dotRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Text label
-    ctx.fillStyle = '#F8FAFC';
-    ctx.textAlign = 'left';
+    // Localized label text
+    ctx.fillStyle = '#FFFFFF';
     ctx.textBaseline = 'middle';
-    ctx.fillText(zoneName, leftPillX + 18, y);
+    if (isArabic) {
+      ctx.textAlign = 'right';
+      ctx.fillText(zoneName, pillX + pillW - pillPadding - (dotRadius * 2) - dotSpacing, y);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.fillText(zoneName, pillX + pillPadding + (dotRadius * 2) + dotSpacing, y);
+    }
 
     // 4. Right Price Badge: High-contrast exact price label at chart price axis
     const priceText = formattedPrice;
@@ -145,7 +193,7 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
     const pricePillW = priceMetrics.width + 16;
     const pricePillH = 20;
     // Align badge to the right margin before the native price axis
-    const pricePillX = Math.max(leftPillX + leftPillW + 10, mediaWidth - pricePillW - 8);
+    const pricePillX = Math.max(pillX + pillW + 10, mediaWidth - pricePillW - 8);
     const pricePillY = y - (pricePillH / 2);
 
     // Pill background matching zone color
@@ -168,7 +216,7 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
     const state = this._drawing.state;
     if (state === 'selected' || state === 'editing') {
       const handles = [
-        { x: leftPillX + leftPillW + 16, y },
+        { x: pillX + pillW + 16, y },
         { x: mediaWidth / 2, y },
         { x: pricePillX - 16, y },
       ];
@@ -211,7 +259,7 @@ class ReactionZonePaneView implements IPrimitivePaneView {
  * ReactionZoneDrawing - Custom Drawing Class for Reaction Zones.
  * Supports:
  * - Red Strong Reaction Zone (Institutional heavy order flow)
- * - Green Weaker Reaction Zone (Secondary liquidity swing)
+ * - Green Weak Reaction Zone (Secondary liquidity swing)
  * - Exact price display and live draggability
  */
 export class ReactionZoneDrawing extends HorizontalLine {
@@ -233,7 +281,7 @@ export class ReactionZoneDrawing extends HorizontalLine {
     const zType: ReactionZoneType = isStrong ? 'strong' : 'weak';
     const defaultColor = isStrong ? '#EF4444' : '#22C55E';
     const defaultWidth = isStrong ? 2.5 : 2;
-    const defaultLabel = isStrong ? 'Strong Reaction Zone' : 'Weaker Reaction Zone';
+    const defaultLabel = isStrong ? 'Strong Reaction Zone' : 'Weak Reaction Zone';
 
     const mergedStyle: Partial<DrawingStyle> = {
       lineColor: style?.lineColor || defaultColor,
@@ -346,10 +394,10 @@ export function registerReactionZoneTools(): void {
       },
     });
 
-    // 2. Weaker Reaction Zone (Green)
+    // 2. Weak Reaction Zone (Green)
     registry.register({
       type: 'reaction-zone-weak',
-      name: 'Weaker Reaction Zone',
+      name: 'Weak Reaction Zone',
       category: 'reaction-zone' as any,
       requiredAnchors: 1,
       factory: (id, anchors, style, options) => {
@@ -362,7 +410,7 @@ export function registerReactionZoneTools(): void {
         }, {
           showPrice: true,
           showLabel: true,
-          labelText: 'Weaker Reaction Zone',
+          labelText: 'Weak Reaction Zone',
           zoneType: 'weak',
           ...(options || {}),
         });

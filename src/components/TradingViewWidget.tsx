@@ -27,6 +27,7 @@ import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawing
 import { registerReactionZoneTools } from './chart/reactionZoneManager';
 import { ReactionZonesLegend } from './chart/ReactionZonesLegend';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from '../context/LanguageContext';
 import { MarketStreamClient } from '../services/marketStreamClient';
 import { SmcLuxAlgoSeriesPrimitive } from './chart/smcLuxAlgoPrimitive';
 import { SmcLuxAlgoSettings, DEFAULT_SMC_SETTINGS, SmcAnalysisResult } from './chart/smcLuxAlgoTypes';
@@ -258,7 +259,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const candlesRef = useRef<CandleData[]>([]);
 
   // State
+  const { language } = useTranslation();
   const [isLoadingCandles, setIsLoadingCandles] = useState<boolean>(true);
+
+  // When user switches platform language, refresh all drawings to update on-line text dynamically
+  useEffect(() => {
+    if (drawingManagerRef.current) {
+      try {
+        drawingManagerRef.current.getAllDrawings().forEach((d: any) => d.requestUpdate?.());
+      } catch (err) {
+        // Safe catch
+      }
+    }
+  }, [language]);
 
   // Safety watchdog: clear loading spinner after 3.5 seconds under all conditions
   useEffect(() => {

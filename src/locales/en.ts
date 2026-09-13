@@ -876,7 +876,23 @@ export const en = {
 
   planAllInclusiveName: 'All-Inclusive Package',
   planAllInclusiveBilling: 'per year',
-  planAllInclusiveBadge: 'BEST OFFER / BEST PACKAGE'
+  planAllInclusiveBadge: 'BEST OFFER / BEST PACKAGE',
+
+  // Reaction Zones Tool & Legend
+  reactionZones: 'Reaction Zones',
+  reactionZoneStrong: 'Strong Reaction Zone',
+  reactionZoneWeak: 'Weak Reaction Zone',
+  reactionZoneRed: 'Red',
+  reactionZoneGreen: 'Green',
+  reactionZoneStrongDesc: '= Strong Reaction Zone',
+  reactionZoneWeakDesc: '= Weak Reaction Zone',
+  reactionZoneAdmin: 'Admin',
+  reactionZoneReadOnly: 'Read-Only',
+  reactionZoneAdminHint: 'Click & drag lines to reposition',
+  reactionZoneUserHint: 'Live institutional price levels',
+  reactionZoneHide: 'Hide',
+  reactionZoneExpand: 'Expand Reaction Zones Legend',
+  reactionZoneCollapse: 'Collapse Legend'
 };
 
 export type TranslationKey = keyof typeof en;

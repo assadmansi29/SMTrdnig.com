@@ -878,5 +878,21 @@ export const ar: Record<TranslationKey, string> = {
 
   planAllInclusiveName: 'الباقة الشاملة',
   planAllInclusiveBilling: 'سنوياً',
-  planAllInclusiveBadge: 'أفضل عرض / أفضل باقة'
+  planAllInclusiveBadge: 'أفضل عرض / أفضل باقة',
+
+  // Reaction Zones Tool & Legend
+  reactionZones: 'مناطق رد الفعل',
+  reactionZoneStrong: 'منطقة رد فعل قوية',
+  reactionZoneWeak: 'منطقة رد فعل ضعيفة',
+  reactionZoneRed: 'أحمر',
+  reactionZoneGreen: 'أخضر',
+  reactionZoneStrongDesc: '= منطقة رد فعل قوية',
+  reactionZoneWeakDesc: '= منطقة رد فعل ضعيفة',
+  reactionZoneAdmin: 'مسؤول',
+  reactionZoneReadOnly: 'للقراءة فقط',
+  reactionZoneAdminHint: 'انقر واسحب الخطوط لتعديل موضعها',
+  reactionZoneUserHint: 'مستويات أسعار مؤسسية حية',
+  reactionZoneHide: 'إخفاء',
+  reactionZoneExpand: 'توسيع دليل مناطق رد الفعل',
+  reactionZoneCollapse: 'طي الدليل'
 };

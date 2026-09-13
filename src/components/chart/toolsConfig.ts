@@ -49,7 +49,7 @@ export const DRAWING_TOOLS: DrawingToolItem[] = [
 
   // Reaction Zones (Admin-Only Institutional Analysis Tool)
   { id: 'reaction-zone-strong', name: 'Strong Reaction Zone', category: 'reaction-zone', requiredAnchors: 1, description: 'Strong institutional reaction price zone (Red line with exact price)' },
-  { id: 'reaction-zone-weak', name: 'Weaker Reaction Zone', category: 'reaction-zone', requiredAnchors: 1, description: 'Weaker secondary reaction price zone (Green line with exact price)' },
+  { id: 'reaction-zone-weak', name: 'Weak Reaction Zone', category: 'reaction-zone', requiredAnchors: 1, description: 'Weak secondary reaction price zone (Green line with exact price)' },
 ];
 
 export const COLOR_PALETTE = [

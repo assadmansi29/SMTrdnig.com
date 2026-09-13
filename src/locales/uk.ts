@@ -878,5 +878,21 @@ export const uk: Record<TranslationKey, string> = {
 
   planAllInclusiveName: 'Пакет All-Inclusive',
   planAllInclusiveBilling: 'на рік',
-  planAllInclusiveBadge: 'КРАЩА ПРОПОЗИЦІЯ / ТОП ПАКЕТ'
+  planAllInclusiveBadge: 'КРАЩА ПРОПОЗИЦІЯ / ТОП ПАКЕТ',
+
+  // Reaction Zones Tool & Legend
+  reactionZones: 'Зони реакції',
+  reactionZoneStrong: 'Сильна зона реакції',
+  reactionZoneWeak: 'Слабка зона реакції',
+  reactionZoneRed: 'Червоний',
+  reactionZoneGreen: 'Зелений',
+  reactionZoneStrongDesc: '= Сильна зона реакції',
+  reactionZoneWeakDesc: '= Слабка зона реакції',
+  reactionZoneAdmin: 'Адмін',
+  reactionZoneReadOnly: 'Тільки читання',
+  reactionZoneAdminHint: 'Натисніть і перетягніть лінії для зміни положення',
+  reactionZoneUserHint: 'Інституційні рівні цін онлайн',
+  reactionZoneHide: 'Сховати',
+  reactionZoneExpand: 'Розгорнути легенду зон реакції',
+  reactionZoneCollapse: 'Згорнути легенду'
 };
