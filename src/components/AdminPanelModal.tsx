@@ -2113,7 +2113,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span className={`w-2 h-2 rounded-full ${ytApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span>API Key Status: {ytApiKeyConfigured ? 'Configured on Server' : 'Public HTML Mode Fallback'}</span>
+                  <span>API Key Status: {ytApiKeyConfigured ? 'Configured on Server (Strict Channel Filtering)' : 'API Key Missing'}</span>
+                </div>
+
+                {/* RTMP Broadcasting Settings Reference */}
+                <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-1.5 text-xs">
+                  <div className="font-bold text-slate-300 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    <span>OBS / Encoder Ingestion Settings</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 space-y-1 font-mono">
+                    <div>Stream URL: <span className="text-amber-300 select-all">rtmp://a.rtmp.youtube.com/live2</span></div>
+                    <div className="text-[10px] text-slate-500 font-sans">
+                      Stream Key: Obtain your stream key from YouTube Studio Live Dashboard. The scanner strictly accepts only broadcasts belonging to SMTrading (UCkohQ1nDiIosi6gTPv0oXQA).
+                    </div>
+                  </div>
                 </div>
 
                 {ytSaveStatus && (

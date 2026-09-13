@@ -195,9 +195,9 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
 
           <div className="space-y-1">
             <div className="flex items-center justify-center sm:justify-start rtl:sm:justify-start gap-2">
-              {/* EXACT REQUIRED TEXT */}
+              {/* EXACT REQUIRED TEXT: SMTrading is currently offline */}
               <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                No Live Stream Currently
+                {t('noLiveStream')}
               </h3>
               <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono-num border border-slate-700">
                 OFFLINE
