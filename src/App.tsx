@@ -38,6 +38,7 @@ import { AdminPanelModal, AdminPanelTabType } from './components/AdminPanelModal
 import { Footer } from './components/Footer';
 import { useTranslation } from './context/LanguageContext';
 import { useAuth } from './context/AuthContext';
+import { useYouTubeLive } from './hooks/useYouTubeLive';
 import { getArticlesByLanguage } from './data/localizedData';
 import { getLocalizedCategory } from './locales';
 import { copyToClipboard } from './utils/clipboard';
@@ -58,6 +59,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
 
   const { user } = useAuth();
+  const { isLive, stream } = useYouTubeLive();
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [calculatorSetup, setCalculatorSetup] = useState<TradeSetup | null>(null);
@@ -216,8 +218,86 @@ export default function App() {
         onOpenAdmin={(tab) => handleOpenAdmin(tab || 'users')}
       />
 
+      {/* Dynamic Global Live Broadcast Bar when YouTube live stream is active */}
+      {isLive && stream && (
+        <div className="bg-gradient-to-r from-rose-950 via-[#180B15] to-[#0A0E1A] border-b border-rose-500/40 px-4 py-2.5 shadow-lg relative z-20">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm shadow-rose-600/50 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                LIVE NOW
+              </span>
+              <span className="text-white font-bold truncate max-w-xl">
+                {stream.title?.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')}
+              </span>
+              {stream.concurrentViewers !== undefined && stream.concurrentViewers > 0 && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-rose-300 font-mono-num text-[11px]">
+                  • {stream.concurrentViewers} {t('liveStreamWatching')}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  setActiveCategory('LIVE Trade');
+                  document.getElementById('live-tradingview-terminal')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>{t('liveStreamTab')}</span>
+              </button>
+              <a
+                href={stream.watchUrl || `https://www.youtube.com/watch?v=${stream.videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-semibold rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <span>YouTube</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. Main Body Container */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 w-full">
+        {/* If live stream is active, show Live Stream Terminal at the top for immediate viewer visibility */}
+        {isLive && (
+          <LiveTradingSection 
+            activeCategory={activeCategory}
+            onOpenChartModal={(symbol) => {
+              if (symbol) {
+                if (symbol.includes(':')) {
+                  setChartDefaultSymbol(symbol);
+                } else {
+                  const symUpper = symbol.toUpperCase().replace(/US3O/g, 'US30');
+                  let canonicalSymbol = symbol;
+                  if (symUpper.includes('NAS100') || symUpper.includes('NQ') || symUpper.includes('NASDAQ')) {
+                    canonicalSymbol = 'BLACKBULL:NAS100';
+                  } else if (symUpper.includes('US30') || symUpper.includes('DOW')) {
+                    canonicalSymbol = 'BLACKBULL:US30';
+                  } else if (symUpper.includes('GER40') || symUpper.includes('DAX') || symUpper.includes('DE30')) {
+                    canonicalSymbol = 'BLACKBULL:GER40';
+                  } else if (symUpper.includes('XAU') || symUpper.includes('GOLD')) {
+                    canonicalSymbol = 'BLACKBULL:XAUUSD';
+                  }
+                  setChartDefaultSymbol(canonicalSymbol);
+                }
+              }
+              setIsChartOpen(true);
+            }} 
+            onOpenCalendar={() => setIsCalendarOpen(true)}
+            onOpenCalculator={() => {
+              setCalculatorSetup(null);
+              setIsCalculatorOpen(true);
+            }}
+            onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
+          />
+        )}
+
         {/* Featured Articles Section (Prominently displays lead research desk spotlight article) */}
         {activeCategory === 'All' && (
           <FeaturedArticlesSection
@@ -229,37 +309,39 @@ export default function App() {
           />
         )}
 
-        {/* Live Market TradingView Terminal Section */}
-        <LiveTradingSection 
-          activeCategory={activeCategory}
-          onOpenChartModal={(symbol) => {
-            if (symbol) {
-              if (symbol.includes(':')) {
-                setChartDefaultSymbol(symbol);
-              } else {
-                const symUpper = symbol.toUpperCase().replace(/US3O/g, 'US30');
-                let canonicalSymbol = symbol;
-                if (symUpper.includes('NAS100') || symUpper.includes('NQ') || symUpper.includes('NASDAQ')) {
-                  canonicalSymbol = 'BLACKBULL:NAS100';
-                } else if (symUpper.includes('US30') || symUpper.includes('DOW')) {
-                  canonicalSymbol = 'BLACKBULL:US30';
-                } else if (symUpper.includes('GER40') || symUpper.includes('DAX') || symUpper.includes('DE30')) {
-                  canonicalSymbol = 'BLACKBULL:GER40';
-                } else if (symUpper.includes('XAU') || symUpper.includes('GOLD')) {
-                  canonicalSymbol = 'BLACKBULL:XAUUSD';
+        {/* Live Market TradingView Terminal Section (when not live) */}
+        {!isLive && (
+          <LiveTradingSection 
+            activeCategory={activeCategory}
+            onOpenChartModal={(symbol) => {
+              if (symbol) {
+                if (symbol.includes(':')) {
+                  setChartDefaultSymbol(symbol);
+                } else {
+                  const symUpper = symbol.toUpperCase().replace(/US3O/g, 'US30');
+                  let canonicalSymbol = symbol;
+                  if (symUpper.includes('NAS100') || symUpper.includes('NQ') || symUpper.includes('NASDAQ')) {
+                    canonicalSymbol = 'BLACKBULL:NAS100';
+                  } else if (symUpper.includes('US30') || symUpper.includes('DOW')) {
+                    canonicalSymbol = 'BLACKBULL:US30';
+                  } else if (symUpper.includes('GER40') || symUpper.includes('DAX') || symUpper.includes('DE30')) {
+                    canonicalSymbol = 'BLACKBULL:GER40';
+                  } else if (symUpper.includes('XAU') || symUpper.includes('GOLD')) {
+                    canonicalSymbol = 'BLACKBULL:XAUUSD';
+                  }
+                  setChartDefaultSymbol(canonicalSymbol);
                 }
-                setChartDefaultSymbol(canonicalSymbol);
               }
-            }
-            setIsChartOpen(true);
-          }} 
-          onOpenCalendar={() => setIsCalendarOpen(true)}
-          onOpenCalculator={() => {
-            setCalculatorSetup(null);
-            setIsCalculatorOpen(true);
-          }}
-          onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
-        />
+              setIsChartOpen(true);
+            }} 
+            onOpenCalendar={() => setIsCalendarOpen(true)}
+            onOpenCalculator={() => {
+              setCalculatorSetup(null);
+              setIsCalculatorOpen(true);
+            }}
+            onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
+          />
+        )}
 
         {/* Professional Educational Academy Section (Positioned directly under TradingView chart) */}
         {activeCategory === 'All' && (
@@ -395,7 +477,7 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              activeCategory !== 'VIP Signals' && activeCategory !== 'Support' && (
+              activeCategory !== 'VIP Signals' && activeCategory !== 'Support' && activeCategory !== 'LIVE Trade' && (
                 <div className="bg-[#0D1322] border border-slate-800 rounded-2xl p-12 text-center space-y-3">
                   <p className="text-slate-400 text-sm">{t('filterNoResults')}</p>
                   <button

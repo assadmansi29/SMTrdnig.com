@@ -13,13 +13,67 @@ interface CachedStreamData {
 }
 
 let streamCache: CachedStreamData | null = null;
-const DEFAULT_CACHE_TTL_MS = 120 * 1000; // 2 minutes standard
-const RATE_LIMIT_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes when rate-limited/429
+const OFFLINE_CACHE_TTL_MS = 20 * 1000; // 20 seconds when offline so live stream is detected fast
+const LIVE_CACHE_TTL_MS = 45 * 1000;    // 45 seconds when live
+const RATE_LIMIT_CACHE_TTL_MS = 60 * 1000; // 1 minute when rate-limited, with direct channel scraper fallback
 
 // Helper to sanitize channel handle
 function cleanHandle(handle: string): string {
   const trimmed = handle.trim();
   return trimmed.startsWith('@') ? trimmed.substring(1) : trimmed;
+}
+
+// Cleanly decode HTML entities from YouTube titles & descriptions
+function decodeHtmlEntities(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ');
+}
+
+// Direct channel live stream scraper fallback (bypasses YouTube API quota limits)
+async function detectChannelDirectLive(channelId: string): Promise<{ isLive: boolean; videoId?: string; title?: string } | null> {
+  if (!channelId) return null;
+  try {
+    const directUrl = `https://www.youtube.com/channel/${encodeURIComponent(channelId)}/live`;
+    const res = await fetch(directUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'ar,en-US,en;q=0.9',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const isLive = html.includes('"isLive":true') || html.includes('"status":"LIVE"') || html.includes('"liveStreamability"');
+    if (!isLive) return { isLive: false };
+
+    // Extract videoId
+    const videoIdMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+    const videoId = videoIdMatch ? videoIdMatch[1] : undefined;
+
+    // Extract title
+    let title: string | undefined;
+    const titleRuns = html.match(/"title":{"runs":\[{"text":"([^"]+)"/);
+    if (titleRuns && titleRuns[1]) {
+      title = decodeHtmlEntities(titleRuns[1]);
+    } else {
+      const titleTag = html.match(/<title>([^<]*)<\/title>/);
+      if (titleTag && titleTag[1]) {
+        title = decodeHtmlEntities(titleTag[1].replace(/\s*-\s*YouTube\s*$/i, '').trim());
+      }
+    }
+
+    return { isLive: true, videoId, title };
+  } catch (err) {
+    console.warn('[YouTube Direct Detector] Direct check error:', err);
+    return null;
+  }
 }
 
 /**
@@ -28,6 +82,11 @@ function cleanHandle(handle: string): string {
  * Protects the YOUTUBE_API_KEY from exposure to the frontend.
  */
 router.get('/live-stream', async (req: Request, res: Response): Promise<void> => {
+  // Prevent browser & proxy caching of live stream polling
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   const forceRefresh = req.query.force === 'true';
   const queryChannelId = req.query.channelId as string | undefined;
   const queryHandle = req.query.handle as string | undefined;
@@ -51,11 +110,41 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
   } catch {
     // Database initializing or busy; gracefully fall back to environment settings
   }
-  const channelId = queryChannelId || process.env.YOUTUBE_CHANNEL_ID || dbSettings?.youtubeSettings?.channelId || '';
-  const channelHandle = queryHandle || process.env.YOUTUBE_CHANNEL_HANDLE || dbSettings?.youtubeSettings?.channelHandle || '';
+  const channelId = queryChannelId || process.env.YOUTUBE_CHANNEL_ID || dbSettings?.youtubeSettings?.channelId || 'UCkohQ1nDiIosi6gTPv0oXQA';
+  const channelHandle = queryHandle || process.env.YOUTUBE_CHANNEL_HANDLE || dbSettings?.youtubeSettings?.channelHandle || '@SMTradingpro';
+  const manualVideoId = dbSettings?.youtubeSettings?.manualVideoId?.trim() || '';
 
-  // If no API key is provided, return graceful offline response
+  // If no API key is provided, try direct HTML detection
   if (!apiKey) {
+    const directResult = await detectChannelDirectLive(channelId);
+    if (directResult?.isLive && directResult.videoId) {
+      const directLiveResponse = {
+        success: true,
+        isLive: true,
+        message: 'Active live stream detected via direct feed',
+        status: 'live',
+        stream: {
+          videoId: directResult.videoId,
+          title: directResult.title || 'Live Trading Session',
+          description: '',
+          channelTitle: 'SMTradingpro',
+          channelId: channelId,
+          embedUrl: `https://www.youtube.com/embed/${directResult.videoId}?autoplay=1&mute=1&enablejsapi=1&rel=0&playsinline=1`,
+          watchUrl: `https://www.youtube.com/watch?v=${directResult.videoId}`,
+        },
+        channel: {
+          id: channelId,
+          handle: channelHandle,
+          title: 'SMTradingpro',
+        },
+        apiKeyConfigured: false,
+        checkedAt: new Date().toISOString(),
+      };
+      streamCache = { timestamp: now, data: directLiveResponse, ttl: LIVE_CACHE_TTL_MS };
+      res.json(directLiveResponse);
+      return;
+    }
+
     const fallbackResponse = {
       success: true,
       isLive: false,
@@ -72,7 +161,7 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       notice: 'YouTube API Key not configured. Defaulting to offline state.',
     };
 
-    streamCache = { timestamp: now, data: fallbackResponse, ttl: DEFAULT_CACHE_TTL_MS };
+    streamCache = { timestamp: now, data: fallbackResponse, ttl: OFFLINE_CACHE_TTL_MS };
     res.json(fallbackResponse);
     return;
   }
@@ -126,52 +215,45 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       }
     }
 
-    // 3. Search for active live streams on the channel
-    let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&eventType=live&type=video&maxResults=1&key=${apiKey}`;
-    if (resolvedChannelId) {
-      searchUrl += `&channelId=${encodeURIComponent(resolvedChannelId)}`;
-    } else {
-      searchUrl += `&q=SMTrading%20Live`;
-    }
+    // Check if manual override video is active
+    let activeVideoId: string | null = manualVideoId || null;
+    let activeSnippet: any = null;
 
-    const searchRes = await fetch(searchUrl);
-    
-    if (!searchRes.ok) {
-      const isRateLimited = searchRes.status === 429 || searchRes.status === 403;
-      if (isRateLimited) {
-        console.warn(`[YouTube API] Rate limit or quota notice (HTTP ${searchRes.status}). Operating in graceful offline standby.`);
+    // 3. Search for active live streams on the channel
+    if (!activeVideoId) {
+      let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&eventType=live&type=video&maxResults=1&key=${apiKey}`;
+      if (resolvedChannelId) {
+        searchUrl += `&channelId=${encodeURIComponent(resolvedChannelId)}`;
       } else {
-        console.warn(`[YouTube API] Live scanner response HTTP ${searchRes.status}`);
+        searchUrl += `&q=SMTrading%20Live`;
       }
 
-      const safeOfflineResponse = {
-        success: true,
-        isLive: false,
-        message: 'No Live Stream Currently',
-        status: 'offline',
-        stream: null,
-        channel: channelInfo || { id: resolvedChannelId || null, title: 'SM Trading Desk' },
-        apiKeyConfigured: true,
-        notice: isRateLimited 
-          ? 'Live stream scan paused due to YouTube API rate limit. Next scan in 10 minutes.' 
-          : `YouTube API returned status ${searchRes.status}`,
-        checkedAt: new Date().toISOString(),
-      };
-
-      // Cache for longer period when rate limited to prevent quota hammering
-      streamCache = { 
-        timestamp: now, 
-        data: safeOfflineResponse, 
-        ttl: isRateLimited ? RATE_LIMIT_CACHE_TTL_MS : DEFAULT_CACHE_TTL_MS 
-      };
-      res.json(safeOfflineResponse);
-      return;
+      let searchRes = await fetch(searchUrl);
+      
+      if (!searchRes.ok) {
+        console.warn(`[YouTube API] Live scanner response HTTP ${searchRes.status}. Engaging direct channel detector fallback...`);
+        // Fallback: direct channel detector
+        const directLive = await detectChannelDirectLive(resolvedChannelId);
+        if (directLive?.isLive && directLive.videoId) {
+          activeVideoId = directLive.videoId;
+        }
+      } else {
+        const searchData = await searchRes.json();
+        const liveItems = searchData.items || [];
+        if (liveItems.length > 0) {
+          activeVideoId = liveItems[0].id?.videoId;
+          activeSnippet = liveItems[0].snippet;
+        } else {
+          // Double-check direct channel detector if search indexing is lagging
+          const directLive = await detectChannelDirectLive(resolvedChannelId);
+          if (directLive?.isLive && directLive.videoId) {
+            activeVideoId = directLive.videoId;
+          }
+        }
+      }
     }
 
-    const searchData = await searchRes.json();
-    const liveItems = searchData.items || [];
-
-    if (liveItems.length === 0) {
+    if (!activeVideoId) {
       // No active stream found
       const responseData = {
         success: true,
@@ -184,18 +266,22 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
         checkedAt: new Date().toISOString(),
       };
 
-      streamCache = { timestamp: now, data: responseData, ttl: DEFAULT_CACHE_TTL_MS };
+      streamCache = { timestamp: now, data: responseData, ttl: OFFLINE_CACHE_TTL_MS };
       res.json(responseData);
       return;
     }
 
     // 4. Live Stream is ACTIVE! Fetch full video and live streaming details
-    const activeItem = liveItems[0];
-    const videoId = activeItem.id?.videoId;
-
+    const videoId = activeVideoId;
     let viewerCount: number | undefined;
     let scheduledStartTime: string | undefined;
     let actualStartTime: string | undefined;
+    let videoTitle = activeSnippet?.title || 'Live Trading Session';
+    let videoDesc = activeSnippet?.description || '';
+    let videoThumb = activeSnippet?.thumbnails?.maxres?.url ||
+      activeSnippet?.thumbnails?.high?.url ||
+      activeSnippet?.thumbnails?.medium?.url ||
+      activeSnippet?.thumbnails?.default?.url;
 
     if (videoId) {
       try {
@@ -207,6 +293,16 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
           if (videoData.items && videoData.items.length > 0) {
             const v = videoData.items[0];
             const liveDetails = v.liveStreamingDetails;
+            if (v.snippet) {
+              videoTitle = v.snippet.title || videoTitle;
+              videoDesc = v.snippet.description || videoDesc;
+              videoThumb = 
+                v.snippet.thumbnails?.maxres?.url ||
+                v.snippet.thumbnails?.high?.url ||
+                v.snippet.thumbnails?.medium?.url ||
+                v.snippet.thumbnails?.default?.url ||
+                videoThumb;
+            }
             if (liveDetails) {
               if (liveDetails.concurrentViewers) {
                 viewerCount = parseInt(liveDetails.concurrentViewers, 10);
@@ -221,22 +317,21 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       }
     }
 
+    const cleanTitle = decodeHtmlEntities(videoTitle);
+    const cleanDesc = decodeHtmlEntities(videoDesc);
+
     const streamDetails = {
       videoId,
-      title: activeItem.snippet?.title || 'Live Trading Session',
-      description: activeItem.snippet?.description || '',
-      channelTitle: activeItem.snippet?.channelTitle || channelInfo?.title || 'SM Trading',
-      channelId: activeItem.snippet?.channelId || resolvedChannelId,
-      publishedAt: activeItem.snippet?.publishedAt,
-      actualStartTime: actualStartTime || activeItem.snippet?.publishedAt,
+      title: cleanTitle,
+      description: cleanDesc,
+      channelTitle: channelInfo?.title || activeSnippet?.channelTitle || 'SM Trading',
+      channelId: resolvedChannelId || activeSnippet?.channelId,
+      publishedAt: activeSnippet?.publishedAt,
+      actualStartTime: actualStartTime || activeSnippet?.publishedAt || new Date().toISOString(),
       scheduledStartTime,
-      thumbnailUrl: 
-        activeItem.snippet?.thumbnails?.maxres?.url ||
-        activeItem.snippet?.thumbnails?.high?.url ||
-        activeItem.snippet?.thumbnails?.medium?.url ||
-        activeItem.snippet?.thumbnails?.default?.url,
+      thumbnailUrl: videoThumb || `https://i.ytimg.com/vi/${videoId}/hqdefault_live.jpg`,
       concurrentViewers: viewerCount,
-      embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&rel=0&playsinline=1&modestbranding=1`,
+      embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&enablejsapi=1&rel=0&playsinline=1`,
       watchUrl: `https://www.youtube.com/watch?v=${videoId}`,
     };
 
@@ -247,14 +342,14 @@ router.get('/live-stream', async (req: Request, res: Response): Promise<void> =>
       status: 'live',
       stream: streamDetails,
       channel: channelInfo || {
-        id: activeItem.snippet?.channelId || resolvedChannelId,
-        title: activeItem.snippet?.channelTitle || 'SM Trading',
+        id: resolvedChannelId,
+        title: channelInfo?.title || 'SMTradingpro',
       },
       apiKeyConfigured: true,
       checkedAt: new Date().toISOString(),
     };
 
-    streamCache = { timestamp: now, data: liveResponse, ttl: DEFAULT_CACHE_TTL_MS };
+    streamCache = { timestamp: now, data: liveResponse, ttl: LIVE_CACHE_TTL_MS };
     res.json(liveResponse);
   } catch (error: any) {
     console.error('Error querying YouTube Data API:', error);
@@ -302,11 +397,13 @@ router.get('/settings', authenticateToken, async (req: AuthRequest, res: Respons
     const apiKey = process.env.YOUTUBE_API_KEY;
     const channelId = currentSettings?.youtubeSettings?.channelId || process.env.YOUTUBE_CHANNEL_ID || '';
     const channelHandle = currentSettings?.youtubeSettings?.channelHandle || process.env.YOUTUBE_CHANNEL_HANDLE || '';
+    const manualVideoId = currentSettings?.youtubeSettings?.manualVideoId || '';
 
     res.json({
       configured: Boolean(apiKey),
       channelId,
       channelHandle,
+      manualVideoId,
     });
   } catch (err: any) {
     res.status(500).json({ configured: false, error: err.message });
@@ -319,8 +416,7 @@ router.get('/settings', authenticateToken, async (req: AuthRequest, res: Respons
  * Protected by dynamic RBAC canManageLiveStream permission.
  */
 router.post('/settings', authenticateToken, requirePermission('canManageLiveStream'), requireDatabaseReady, async (req: AuthRequest, res: Response): Promise<void> => {
-
-  const { channelId, channelHandle } = req.body;
+  const { channelId, channelHandle, manualVideoId } = req.body;
   const currentSettings = (await Database.getSystemSettings()) as any;
 
   const updatedSettings = {
@@ -328,6 +424,7 @@ router.post('/settings', authenticateToken, requirePermission('canManageLiveStre
     youtubeSettings: {
       channelId: channelId !== undefined ? channelId : currentSettings.youtubeSettings?.channelId,
       channelHandle: channelHandle !== undefined ? channelHandle : currentSettings.youtubeSettings?.channelHandle,
+      manualVideoId: manualVideoId !== undefined ? manualVideoId : currentSettings.youtubeSettings?.manualVideoId,
       updatedAt: new Date().toISOString(),
       updatedBy: req.user.username,
     }

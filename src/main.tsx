@@ -6,6 +6,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { MarketStatusProvider } from './context/MarketStatusContext';
 import { EconomicCalendarProvider } from './context/EconomicCalendarContext';
+import { YouTubeLiveProvider } from './context/YouTubeLiveContext';
 import './index.css';
 
 // Guard against third-party cross-origin script errors (e.g., TradingView iframe scripts)
@@ -58,7 +59,9 @@ createRoot(document.getElementById('root')!).render(
           <AvatarProvider>
             <MarketStatusProvider>
               <EconomicCalendarProvider>
-                <App />
+                <YouTubeLiveProvider>
+                  <App />
+                </YouTubeLiveProvider>
               </EconomicCalendarProvider>
             </MarketStatusProvider>
           </AvatarProvider>

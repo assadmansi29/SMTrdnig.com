@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserAvatar } from './UserAvatar';
 import { MarketStatusIndicator } from './chart/MarketStatusIndicator';
 import { AdminPanelTabType } from './AdminPanelModal';
+import { useYouTubeLive } from '../hooks/useYouTubeLive';
 
 interface HeaderProps {
   activeCategory: ArticleCategory;
@@ -73,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isLive: isLiveStreamActive } = useYouTubeLive();
 
   return (
     <header className="relative bg-[#0B0F17] border-b border-slate-800">
@@ -366,6 +368,7 @@ export const Header: React.FC<HeaderProps> = ({
             {CATEGORIES.map((cat) => {
               const isActive = activeCategory === cat;
               const label = t(CATEGORY_KEYS[cat]);
+              const isLiveTab = cat === 'LIVE Trade';
               return (
                 <button
                   key={cat}
@@ -376,13 +379,28 @@ export const Header: React.FC<HeaderProps> = ({
                       onSelectCategory(cat);
                     }
                   }}
-                  className={`px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    isActive
+                  className={`relative px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+                    isActive && isLiveTab && isLiveStreamActive
+                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold scale-[1.02]'
+                      : isActive
                       ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 font-bold scale-[1.02]'
+                      : isLiveTab && isLiveStreamActive
+                      ? 'bg-rose-950/70 border border-rose-500/60 text-rose-300 hover:bg-rose-900 hover:text-white shadow-sm shadow-rose-900/30'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
-                  {label}
+                  {isLiveTab && isLiveStreamActive && (
+                    <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+                    </span>
+                  )}
+                  <span>{label}</span>
+                  {isLiveTab && isLiveStreamActive && (
+                    <span className="text-[9px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded font-mono tracking-wider shadow-sm">
+                      LIVE
+                    </span>
+                  )}
                 </button>
               );
             })}

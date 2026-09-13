@@ -10,11 +10,25 @@ import {
   ShieldCheck,
   VideoOff,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  MessageSquare,
+  Volume2
 } from 'lucide-react';
 import { YouTubeLiveStream } from '../types';
 import { useTranslation } from '../context/LanguageContext';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+
+function decodeTitle(str?: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ');
+}
 
 interface YouTubeLivePlayerProps {
   isLive: boolean;
@@ -58,20 +72,25 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
 
   // ACTIVE LIVE STREAM VIEW
   if (isLive && stream) {
+    const cleanTitle = decodeTitle(stream.title);
+    const cleanEmbedUrl = stream.embedUrl?.includes('youtube.com/embed')
+      ? stream.embedUrl
+      : `https://www.youtube.com/embed/${stream.videoId}?autoplay=1&mute=1&enablejsapi=1&rel=0&playsinline=1`;
+
     return (
-      <div className="bg-[#090D17] border border-rose-500/30 rounded-2xl overflow-hidden shadow-2xl space-y-0">
+      <div className="bg-[#090D17] border border-rose-500/40 rounded-2xl overflow-hidden shadow-2xl shadow-rose-950/20 space-y-0">
         {/* Live Stream Top Bar */}
-        <div className="bg-gradient-to-r from-rose-950/80 via-[#101424] to-[#0A0E1A] p-3 sm:p-4 border-b border-rose-500/20 flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-gradient-to-r from-rose-950/90 via-[#121626] to-[#0A0E1A] p-3 sm:p-4 border-b border-rose-500/30 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {/* Pulsing Live Badge */}
-            <div className="flex items-center gap-1.5 bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold font-mono-num tracking-wide shadow-md shadow-rose-600/30 animate-pulse shrink-0">
+            <div className="flex items-center gap-1.5 bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold font-mono-num tracking-wide shadow-md shadow-rose-600/40 animate-pulse shrink-0">
               <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
               <span>{t('liveStreamActiveBadge')}</span>
             </div>
 
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-bold text-white truncate flex items-center gap-2">
-                <span className="truncate">{stream.title}</span>
+                <span className="truncate">{cleanTitle}</span>
               </h3>
               <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
                 <span className="text-amber-400 font-semibold flex items-center gap-1">
@@ -93,7 +112,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
           </div>
 
           {/* Right Action Badges */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {stream.concurrentViewers !== undefined && stream.concurrentViewers > 0 && (
               <div className="flex items-center gap-1.5 bg-slate-900/90 border border-rose-500/30 text-rose-300 px-2.5 py-1 rounded-lg text-xs font-mono-num font-semibold">
                 <Users className="w-3.5 h-3.5 text-rose-400" />
@@ -111,10 +130,21 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
             </button>
 
             <a
+              href={`https://www.youtube.com/live_chat?is_popout=1&v=${stream.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition-all cursor-pointer"
+              title="Open YouTube Live Chat"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+              <span>Live Chat</span>
+            </a>
+
+            <a
               href={stream.watchUrl || `https://www.youtube.com/watch?v=${stream.videoId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm shadow-rose-600/20 cursor-pointer"
+              className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm shadow-rose-600/30 cursor-pointer"
             >
               <span>{t('liveStreamOpenYouTube')}</span>
               <ExternalLink className="w-3 h-3" />
@@ -125,19 +155,24 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
         {/* Embedded YouTube Stream Player */}
         <div className="relative w-full aspect-video bg-black max-w-[800px] mx-auto">
           <iframe
-            src={stream.embedUrl}
-            title={stream.title}
+            src={cleanEmbedUrl}
+            title={cleanTitle}
             className="w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
           />
         </div>
 
-        {/* Real-Time Stream Footer Note */}
+        {/* Real-Time Stream Footer Note & Browser Audio Tip */}
         <div className="bg-[#070B14] px-4 py-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="text-slate-300 font-medium">{t('liveStreamAutoUpdate')}</span>
+            <span className="hidden md:inline-flex items-center gap-1 text-amber-300/80 pl-2">
+              <Volume2 className="w-3 h-3 text-amber-400" />
+              <span>Click speaker icon on video to unmute</span>
+            </span>
           </div>
           <span className="text-slate-500 font-mono-num">
             Live Stream Feed • {formattedTime ? `Synced at ${formattedTime}` : 'Real-time sync'}
