@@ -24,6 +24,8 @@ import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
 import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw, ZoomIn, ZoomOut, Zap, Radio } from 'lucide-react';
 import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawingDirectionEnhancer';
+import { registerReactionZoneTools } from './chart/reactionZoneManager';
+import { ReactionZonesLegend } from './chart/ReactionZonesLegend';
 import { useAuth } from '../context/AuthContext';
 import { MarketStreamClient } from '../services/marketStreamClient';
 import { SmcLuxAlgoSeriesPrimitive } from './chart/smcLuxAlgoPrimitive';
@@ -31,9 +33,10 @@ import { SmcLuxAlgoSettings, DEFAULT_SMC_SETTINGS, SmcAnalysisResult } from './c
 import { calculateSmcLuxAlgo } from './chart/smcLuxAlgoCalculator';
 import { SmcLuxAlgoOverlay } from './chart/SmcLuxAlgoOverlay';
 
-// Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers
+// Install TradingView-style Gann Box & Directional (Ray, Gann Fan, Gann Angle) enhancers and Reaction Zone tools
 installGannBoxEnhancer();
 installDirectionalEnhancers();
+registerReactionZoneTools();
 
 // Permanently disable autoscaleInfo on Drawing and all subclasses so drawings NEVER cause the chart to zoom in or out
 if (Drawing && Drawing.prototype) {
@@ -1006,7 +1009,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               else if (actualType === 'gann-angle') actualType = 'trend-angle';
             }
 
-            const isLocked = isReadOnlyView || !enableDrawingToolsRef.current;
+            const isReactionZone = actualType === 'reaction-zone-strong' || actualType === 'reaction-zone-weak' || (d.options as any)?.zoneType;
+            const isLocked = isReactionZone ? !isOwnerOrAdminRef.current : (isReadOnlyView || !enableDrawingToolsRef.current);
             const restored = registry.createDrawing(
               actualType,
               d.id,
@@ -1729,21 +1733,57 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
         const requiredAnchors = toolDef.requiredAnchors || 2;
 
-        // Subcase 1: Single-click tools (Horizontal Line, Vertical Line, Horizontal Ray, Text)
+        // Subcase 1: Single-click tools (Horizontal Line, Vertical Line, Horizontal Ray, Text, Reaction Zones)
         if (requiredAnchors === 1) {
+          const isReactionStrong = actualToolType === 'reaction-zone-strong';
+          const isReactionWeak = actualToolType === 'reaction-zone-weak';
+          const isReactionZone = isReactionStrong || isReactionWeak;
+
+          // Strict security check: non-admins can NEVER create reaction zones
+          if (isReactionZone && !isOwnerOrAdminRef.current) {
+            console.warn('[Reaction Zones] Unauthorized attempt to create reaction zone by non-admin');
+            unlockCameraAfterInteraction(currentChart, false);
+            currentContainer.style.cursor = '';
+            setActiveTool(null);
+            activeToolRef.current = null;
+            setPendingAnchors([]);
+            drawingCreationRef.current = null;
+            return;
+          }
+
           try {
+            const lineColor = isReactionStrong
+              ? '#EF4444'
+              : isReactionWeak
+              ? '#22C55E'
+              : currentColorRef.current;
+            const lineWidth = isReactionStrong ? 2.5 : isReactionWeak ? 2.0 : currentWidthRef.current;
+            const lineDash = isReactionWeak ? [6, 4] : [];
+
             const drawing = registry.createDrawing(
               actualToolType,
               drawingId,
               [coords],
               {
-                lineColor: currentColorRef.current,
-                lineWidth: currentWidthRef.current,
-                fillColor: `${currentColorRef.current}1a`,
+                lineColor,
+                lineWidth,
+                lineDash,
+                fillColor: `${lineColor}1a`,
                 fillOpacity: 0.15,
                 showLabels: true,
               },
-              { visible: true, locked: false }
+              {
+                visible: true,
+                locked: false,
+                showPrice: true,
+                showLabel: true,
+                labelText: isReactionStrong
+                  ? 'Strong Reaction Zone'
+                  : isReactionWeak
+                  ? 'Weaker Reaction Zone'
+                  : undefined,
+                zoneType: isReactionStrong ? 'strong' : isReactionWeak ? 'weak' : undefined,
+              } as any
             );
 
             if (drawing) {
@@ -1884,15 +1924,24 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const selected = currentManager.getSelectedDrawing();
       const viewport = (currentManager as any).getViewport?.();
 
+      // Strict security: Non-admins can NEVER interact with, select, drag, or modify reaction zones
+      const isReactionZone = (d: any) => Boolean(d && (d.type?.startsWith('reaction-zone') || d.options?.zoneType));
+
       // Priority 0: Double-click detector on drawings or handles to open Properties Dialog
-      const hitDrawing = currentManager.hitTest(point);
+      let hitDrawing = currentManager.hitTest(point);
+      if (hitDrawing && isReactionZone(hitDrawing) && !isOwnerOrAdminRef.current) {
+        hitDrawing = null;
+      }
+
       let hitAnchorIdx: number | null = null;
       let targetDrawingForAnchor: IDrawing | null = null;
 
       if (selected && !selected.options.locked) {
-        hitAnchorIdx = getHitAnchor(selected, point);
-        if (hitAnchorIdx !== null) {
-          targetDrawingForAnchor = selected;
+        if (!isReactionZone(selected) || isOwnerOrAdminRef.current) {
+          hitAnchorIdx = getHitAnchor(selected, point);
+          if (hitAnchorIdx !== null) {
+            targetDrawingForAnchor = selected;
+          }
         }
       }
 
@@ -1900,6 +1949,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         const allDrawings = currentManager.getAllDrawings();
         for (const d of allDrawings) {
           if (!d.options.locked) {
+            if (isReactionZone(d) && !isOwnerOrAdminRef.current) continue;
             const idx = getHitAnchor(d, point);
             if (idx !== null) {
               hitAnchorIdx = idx;
@@ -2935,6 +2985,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       {/* 3. Sleek Left Drawing Toolbar (Visible ONLY when user has edit permissions) */}
       {effectiveDrawingTools && !effectiveHideSideToolbar && (
         <DrawingToolbar
+          isAdmin={isOwnerOrAdmin}
           activeTool={activeTool}
           onSelectTool={(toolId) => {
             setActiveTool(toolId);
@@ -3061,6 +3112,16 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             className={enableDrawingTools ? 'left-14 top-11' : 'left-3 top-11'}
           />
         )}
+
+        {/* Reaction Zones Legend - shows price zones context clearly for all users */}
+        <ReactionZonesLegend
+          isAdmin={isOwnerOrAdmin}
+          activeCount={{
+            strong: drawingsList.filter((d) => d.type === 'reaction-zone-strong' || (d as any).zoneType === 'strong').length,
+            weak: drawingsList.filter((d) => d.type === 'reaction-zone-weak' || (d as any).zoneType === 'weak').length,
+          }}
+          className={`absolute bottom-6 ${effectiveDrawingTools && !effectiveHideSideToolbar ? 'left-14' : 'left-3'} z-20`}
+        />
 
         {/* Loading Spinner - only shown on first cold load when no candles exist yet */}
         {isLoadingCandles && candlesRef.current.length === 0 && (

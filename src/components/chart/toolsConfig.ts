@@ -46,6 +46,10 @@ export const DRAWING_TOOLS: DrawingToolItem[] = [
   { id: 'short-position', name: 'Short Position', category: 'forecast', requiredAnchors: 3, description: 'Risk/Reward ratio calculator for short setups' },
   { id: 'price-range', name: 'Price Range', category: 'measurement', requiredAnchors: 2, description: 'Price vertical distance and pip change' },
   { id: 'date-range', name: 'Date Range', category: 'measurement', requiredAnchors: 2, description: 'Time bar count and duration measurement' },
+
+  // Reaction Zones (Admin-Only Institutional Analysis Tool)
+  { id: 'reaction-zone-strong', name: 'Strong Reaction Zone', category: 'reaction-zone', requiredAnchors: 1, description: 'Strong institutional reaction price zone (Red line with exact price)' },
+  { id: 'reaction-zone-weak', name: 'Weaker Reaction Zone', category: 'reaction-zone', requiredAnchors: 1, description: 'Weaker secondary reaction price zone (Green line with exact price)' },
 ];
 
 export const COLOR_PALETTE = [

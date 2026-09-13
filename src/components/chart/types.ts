@@ -32,7 +32,7 @@ export interface SerializedDrawingPayload {
 export interface DrawingToolItem {
   id: string;
   name: string;
-  category: 'line' | 'channel' | 'fibonacci' | 'gann' | 'pitchfork' | 'shape' | 'annotation' | 'forecast' | 'measurement';
+  category: 'line' | 'channel' | 'fibonacci' | 'gann' | 'pitchfork' | 'shape' | 'annotation' | 'forecast' | 'measurement' | 'reaction-zone';
   requiredAnchors: number;
   description: string;
 }

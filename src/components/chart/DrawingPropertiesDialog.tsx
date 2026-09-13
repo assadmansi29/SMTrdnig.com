@@ -529,7 +529,18 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
   ].includes(type);
 
   const isTextTool = ['text-annotation', 'callout'].includes(type);
-  const isLineTool = ['trend-line', 'ray', 'extended-line', 'horizontal-line', 'horizontal-ray', 'arrow', 'trend-angle', 'gann-angle'].includes(type);
+  const isLineTool = [
+    'trend-line',
+    'ray',
+    'extended-line',
+    'horizontal-line',
+    'horizontal-ray',
+    'arrow',
+    'trend-angle',
+    'gann-angle',
+    'reaction-zone-strong',
+    'reaction-zone-weak',
+  ].includes(type);
   const isFibTool = ['fib-retracement', 'fib-extension', 'fib-channel', 'fib-speed-fan'].includes(type);
   const isGannTool = ['gann-box', 'gann-fan', 'gann-square', 'gann-angle'].includes(type);
   const isPitchforkTool = ['andrews-pitchfork', 'schiff-pitchfork'].includes(type);
@@ -917,8 +928,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                   </div>
                 )}
 
-                {/* Horizontal Line specific */}
-                {type === 'horizontal-line' && (
+                {/* Horizontal Line & Reaction Zones specific */}
+                {(type === 'horizontal-line' || type === 'reaction-zone-strong' || type === 'reaction-zone-weak') && (
                   <div className="space-y-2 pt-1 border-t border-slate-700/40">
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input

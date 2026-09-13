@@ -22,11 +22,13 @@ import {
   Unlock,
   Eye,
   EyeOff,
+  Activity,
 } from 'lucide-react';
 import { DRAWING_TOOLS, COLOR_PALETTE, LINE_WIDTHS } from './toolsConfig';
 import { DrawingToolItem } from './types';
 
 interface DrawingToolbarProps {
+  isAdmin?: boolean;
   activeTool: string | null;
   onSelectTool: (toolId: string | null) => void;
   selectedDrawingId: string | null;
@@ -53,6 +55,7 @@ interface DrawingToolbarProps {
 }
 
 export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
+  isAdmin = false,
   activeTool,
   onSelectTool,
   selectedDrawingId,
@@ -106,6 +109,9 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   }, []);
 
   const getToolsByCategory = (category: string) => {
+    if (category === 'reaction-zone') {
+      return DRAWING_TOOLS.filter((t) => t.category === 'reaction-zone');
+    }
     if (category === 'channel') {
       return DRAWING_TOOLS.filter((t) => t.category === 'channel' || t.category === 'pitchfork');
     }
@@ -116,6 +122,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   };
 
   const categories = [
+    ...(isAdmin ? [{ id: 'reaction-zone', label: 'Reaction Zones', icon: Activity }] : []),
     { id: 'line', label: 'Lines & Rays', icon: TrendingUp },
     { id: 'channel', label: 'Channels & Pitchforks', icon: GitFork },
     { id: 'fibonacci', label: 'Fibonacci Tools', icon: Divide },
@@ -379,6 +386,9 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           <div className="flex flex-col gap-0.5 max-h-72 overflow-y-auto">
             {getToolsByCategory(openCategory).map((tool) => {
               const isSelected = activeTool === tool.id;
+              const isReactionStrong = tool.id === 'reaction-zone-strong';
+              const isReactionWeak = tool.id === 'reaction-zone-weak';
+
               return (
                 <button
                   key={tool.id}
@@ -386,13 +396,25 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
                   onClick={() => handleToolClick(tool)}
                   className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
                     isSelected
-                      ? 'bg-amber-500/20 text-amber-300 font-medium border border-amber-500/30'
+                      ? isReactionStrong
+                        ? 'bg-red-500/20 text-red-300 font-medium border border-red-500/40'
+                        : isReactionWeak
+                        ? 'bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 font-medium border border-amber-500/30'
                       : 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'
                   }`}
                 >
-                  <span className="truncate">{tool.name}</span>
+                  <span className="flex items-center gap-2 truncate">
+                    {isReactionStrong && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] shrink-0" />
+                    )}
+                    {isReactionWeak && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(34,197,94,0.8)] shrink-0" />
+                    )}
+                    <span className="truncate">{tool.name}</span>
+                  </span>
                   <span className="text-[9px] text-slate-500 font-mono shrink-0 ml-1">
-                    {tool.requiredAnchors} pt{tool.requiredAnchors > 1 ? 's' : ''}
+                    {isReactionStrong ? 'Red' : isReactionWeak ? 'Green' : `${tool.requiredAnchors} pt${tool.requiredAnchors > 1 ? 's' : ''}`}
                   </span>
                 </button>
               );
