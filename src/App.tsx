@@ -7,20 +7,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Article, 
   ArticleCategory, 
-  MarketTickerItem, 
   TradeSetup 
 } from './types';
 import { 
   INITIAL_ARTICLES, 
-  INITIAL_MARKET_TICKERS, 
   AUTHORS 
 } from './data/blogData';
-import { MarketTicker } from './components/MarketTicker';
 import { Header } from './components/Header';
 import { FeaturedArticlesSection } from './components/FeaturedArticlesSection';
 import { EducationalSection } from './components/EducationalSection';
 import { LiveTradingSection } from './components/LiveTradingSection';
-import { ArticleCard } from './components/ArticleCard';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { BlueVerifiedBadge } from './components/BlueVerifiedBadge';
 import { useAbuAsadAvatar } from './context/AvatarContext';
@@ -171,42 +167,13 @@ export default function App() {
     setIsCalculatorOpen(true);
   };
 
-  const handleSelectTicker = (ticker: MarketTickerItem) => {
-    const symbolMap: Record<string, string> = {
-      'BTC/USD': 'BINANCE:BTCUSDT',
-      'ETH/USD': 'BINANCE:ETHUSDT',
-      'ES (S&P 500)': 'CME_MINI:ES1!',
-      'NQ (Nasdaq)': 'OANDA:NAS100USD',
-      'US30 (Dow)': 'OANDA:US30USD',
-      'GER40 (DAX)': 'OANDA:DE30EUR',
-      'XAU/USD': 'OANDA:XAUUSD',
-      'EUR/USD': 'OANDA:EURUSD',
-      'US10Y': 'TVC:US10Y',
-      'VIX': 'TVC:VIX'
-    };
-    const targetSymbol = symbolMap[ticker.symbol] || 'OANDA:XAUUSD';
-    setChartDefaultSymbol(targetSymbol);
-    setIsChartOpen(true);
-  };
-
-  // Category-specific articles when a category is selected
-  const categoryArticles = activeCategory === 'All'
-    ? []
-    : articles.filter(art => art.category === activeCategory);
-
   const savedArticles = articles.filter(a => savedArticleIds.includes(a.id));
 
   return (
     <AuthGate>
       <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col selection:bg-amber-400/20 selection:text-amber-300">
-        {/* 1. Live Market Ticker Strip */}
-        <MarketTicker
-          tickers={INITIAL_MARKET_TICKERS}
-          onSelectTicker={handleSelectTicker}
-        />
-
-      {/* 2. Top Navigation & Brand Header */}
-      <Header
+        {/* Top Navigation & Brand Header */}
+        <Header
         activeCategory={activeCategory}
         onSelectCategory={setActiveCategory}
         savedArticlesCount={savedArticleIds.length}
@@ -520,33 +487,6 @@ export default function App() {
             )}
             </div>
 
-            {/* Category Articles Grid */}
-            {categoryArticles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
-                {categoryArticles.map(article => (
-                  <ArticleCard
-                    key={article.id}
-                    article={article}
-                    onSelectArticle={(art) => setSelectedArticle(art)}
-                    isBookmarked={savedArticleIds.includes(article.id)}
-                    onToggleBookmark={handleToggleBookmark}
-                    onShare={() => setSelectedArticle(article)}
-                  />
-                ))}
-              </div>
-            ) : (
-              activeCategory !== 'VIP Signals' && activeCategory !== 'Support' && activeCategory !== 'LIVE Trade' && (
-                <div className="bg-[#0D1322] border border-slate-800 rounded-2xl p-12 text-center space-y-3">
-                  <p className="text-slate-400 text-sm">{t('filterNoResults')}</p>
-                  <button
-                    onClick={() => setActiveCategory('All')}
-                    className="px-4 py-2 bg-amber-500 text-slate-950 font-bold text-xs rounded-lg cursor-pointer"
-                  >
-                    {t('filterClearAll')}
-                  </button>
-                </div>
-              )
-            )}
           </div>
         )}
       </main>

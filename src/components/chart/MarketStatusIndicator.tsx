@@ -302,7 +302,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                 {worldSessions.map((session) => (
                   <div
                     key={session.id}
-                    className={`p-2 rounded-xl border transition-all ${
+                    className={`p-2 rounded-xl border select-none pointer-events-none ${
                       session.isOpen
                         ? 'bg-emerald-950/30 border-emerald-500/30'
                         : 'bg-[#0E1524] border-slate-800/80'
@@ -334,7 +334,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
               </div>
             </div>
 
-            {/* Market Benchmark Selector */}
+            {/* Market Benchmark Schedule (Display-Only) */}
             <div className="mb-2">
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                 Active Benchmark Schedule:
@@ -343,19 +343,17 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                 {BENCHMARK_OPTIONS.map((item) => {
                   const isSelected = activeMarketId === item.id;
                   return (
-                    <button
+                    <div
                       key={item.id}
-                      type="button"
-                      onClick={() => setActiveMarketId(item.id)}
-                      className={`p-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                      className={`p-1.5 rounded-lg text-left select-none pointer-events-none ${
                         isSelected
                           ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold shadow-sm'
-                          : 'bg-[#0E1524] hover:bg-[#151F33] text-slate-300 border border-slate-800'
+                          : 'bg-[#0E1524] text-slate-300 border border-slate-800'
                       }`}
                     >
                       <div className="text-[10px] font-mono truncate">{item.label}</div>
                       <div className="text-[8px] text-slate-400 truncate">{item.sub}</div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
