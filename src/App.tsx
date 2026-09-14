@@ -421,12 +421,12 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
+                <div className="flex flex-col items-stretch gap-2.5 w-full md:w-auto md:min-w-[270px] shrink-0">
                   <a
                     href="https://t.me/SMTrading_support"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-[#24A1DE] to-[#1a8fc7] hover:from-[#29a8e8] hover:to-[#1d9ad6] text-white font-black text-xs sm:text-sm shadow-md shadow-[#24A1DE]/25 hover:shadow-[#24A1DE]/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+                    className="inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-[#24A1DE] to-[#1a8fc7] hover:from-[#29a8e8] hover:to-[#1d9ad6] text-white font-black text-xs sm:text-sm shadow-md shadow-[#24A1DE]/25 hover:shadow-[#24A1DE]/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap w-full"
                   >
                     <Send className="w-4 h-4 text-white shrink-0" />
                     <span>Telegram @SMTrading_support</span>
@@ -435,7 +435,7 @@ export default function App() {
 
                   <button
                     onClick={handleCopySupportTelegram}
-                    className="group relative inline-flex items-center justify-center gap-2 h-11 px-3.5 sm:px-4 rounded-xl bg-[#0B1220]/90 hover:bg-[#0F1A30] border border-sky-500/30 hover:border-sky-400/60 text-slate-200 hover:text-white text-xs font-semibold shadow-sm hover:shadow-[0_0_16px_rgba(36,161,222,0.18)] transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
+                    className="group relative inline-flex items-center justify-center gap-2 h-11 px-3.5 sm:px-4 rounded-xl bg-[#0B1220]/90 hover:bg-[#0F1A30] border border-sky-500/30 hover:border-sky-400/60 text-slate-200 hover:text-white text-xs font-semibold shadow-sm hover:shadow-[0_0_16px_rgba(36,161,222,0.18)] transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap w-full"
                     title="Copy Telegram Username: @SMTrading_support"
                   >
                     {supportTelegramCopied ? (
@@ -456,7 +456,7 @@ export default function App() {
 
                   <button
                     onClick={handleCopySupportEmail}
-                    className="group relative inline-flex items-center justify-center gap-2 h-11 px-3.5 sm:px-4 rounded-xl bg-[#0B1220]/90 hover:bg-[#1C160B] border border-amber-500/30 hover:border-amber-400/60 text-slate-200 hover:text-white text-xs font-semibold shadow-sm hover:shadow-[0_0_16px_rgba(245,158,11,0.18)] transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
+                    className="group relative inline-flex items-center justify-center gap-2 h-11 px-3.5 sm:px-4 rounded-xl bg-[#0B1220]/90 hover:bg-[#1C160B] border border-amber-500/30 hover:border-amber-400/60 text-slate-200 hover:text-white text-xs font-semibold shadow-sm hover:shadow-[0_0_16px_rgba(245,158,11,0.18)] transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap w-full"
                     title="Copy Support Email: smtradingsupprt@gmail.com"
                   >
                     {supportEmailCopied ? (
@@ -477,7 +477,7 @@ export default function App() {
 
                   <a
                     href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"
-                    className="inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+                    className="inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap w-full"
                   >
                     <Mail className="w-4 h-4 text-slate-950 shrink-0" />
                     <span>{t('supportEmailBtn')}</span>
