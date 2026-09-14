@@ -47,29 +47,34 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
   const trimmed = (symbol || 'OANDA:XAUUSD').trim();
   const upper = trimmed.toUpperCase();
 
-  // 1. Explicit broker-prefixed symbols - preserve the user's exact requested broker!
-  if (upper === 'BLACKBULL:XAUUSD') return 'BLACKBULL:XAUUSD';
-  if (upper === 'OANDA:XAUUSD') return 'OANDA:XAUUSD';
-  if (upper === 'FOREXCOM:XAUUSD') return 'FOREXCOM:XAUUSD';
-  if (upper === 'SAXO:XAUUSD') return 'SAXO:XAUUSD';
+  // 1. Explicit broker-prefixed symbols - BlackBull completely removed
+  if (upper === 'BLACKBULL:XAUUSD' || upper === 'OANDA:XAUUSD' || upper === 'FOREXCOM:XAUUSD' || upper === 'SAXO:XAUUSD') {
+    return 'OANDA:XAUUSD';
+  }
 
-  if (upper === 'BLACKBULL:NAS100') return 'BLACKBULL:NAS100';
-  if (upper === 'OANDA:NAS100USD') return 'OANDA:NAS100USD';
+  if (upper === 'BLACKBULL:NAS100' || upper === 'OANDA:NAS100USD') {
+    return 'OANDA:NAS100USD';
+  }
 
-  if (upper === 'BLACKBULL:US30' || upper === 'BLACKBULL:US3O') return 'BLACKBULL:US30';
-  if (upper === 'OANDA:US30USD') return 'OANDA:US30USD';
+  if (upper === 'BLACKBULL:US30' || upper === 'BLACKBULL:US3O' || upper === 'OANDA:US30USD') {
+    return 'OANDA:US30USD';
+  }
 
-  if (upper === 'BLACKBULL:GER40' || upper === 'BLACKBULL:DAX') return 'BLACKBULL:GER40';
-  if (upper === 'OANDA:DE30EUR') return 'OANDA:DE30EUR';
+  if (upper === 'BLACKBULL:GER40' || upper === 'BLACKBULL:DAX' || upper === 'OANDA:DE30EUR') {
+    return 'OANDA:DE30EUR';
+  }
 
-  if (upper === 'BLACKBULL:EURUSD') return 'BLACKBULL:EURUSD';
-  if (upper === 'OANDA:EURUSD' || upper === 'FX:EURUSD') return 'OANDA:EURUSD';
+  if (upper === 'BLACKBULL:EURUSD' || upper === 'OANDA:EURUSD' || upper === 'FX:EURUSD') {
+    return 'OANDA:EURUSD';
+  }
 
-  if (upper === 'BLACKBULL:GBPUSD') return 'BLACKBULL:GBPUSD';
-  if (upper === 'OANDA:GBPUSD' || upper === 'FX:GBPUSD') return 'OANDA:GBPUSD';
+  if (upper === 'BLACKBULL:GBPUSD' || upper === 'OANDA:GBPUSD' || upper === 'FX:GBPUSD') {
+    return 'OANDA:GBPUSD';
+  }
 
-  if (upper === 'BINANCE:BTCUSDT') return 'BINANCE:BTCUSDT';
-  if (upper === 'BLACKBULL:BTCUSD') return 'BLACKBULL:BTCUSD';
+  if (upper === 'BINANCE:BTCUSDT' || upper === 'BLACKBULL:BTCUSD') {
+    return 'BINANCE:BTCUSDT';
+  }
 
   // Futures
   if (upper.includes('ES1!')) return 'CME_MINI:ES1!';
@@ -81,7 +86,7 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
 
   // 2. Generic un-prefixed symbol fallbacks (route cleanly to primary real-time broker feed)
   if (upper === 'XAUUSD' || upper === 'GOLD' || upper === 'XAU/USD') {
-    return 'BLACKBULL:XAUUSD';
+    return 'OANDA:XAUUSD';
   }
   if (
     upper === 'NAS100' ||
@@ -92,7 +97,7 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
     upper === 'NASDAQ 100' ||
     upper === 'NASDAQ100'
   ) {
-    return 'BLACKBULL:NAS100';
+    return 'OANDA:NAS100USD';
   }
   if (
     upper === 'US30' ||
@@ -104,7 +109,7 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
     upper === 'DOW JONES' ||
     upper === 'DJ30'
   ) {
-    return 'BLACKBULL:US30';
+    return 'OANDA:US30USD';
   }
   if (
     upper === 'GER40' ||
@@ -115,13 +120,13 @@ export function resolveRealtimeTvSymbol(symbol: string): string {
     upper === 'DE40' ||
     upper === 'GERMANY40'
   ) {
-    return 'BLACKBULL:GER40';
+    return 'OANDA:DE30EUR';
   }
   if (upper === 'EURUSD' || upper === 'EUR/USD') {
-    return 'BLACKBULL:EURUSD';
+    return 'OANDA:EURUSD';
   }
   if (upper === 'GBPUSD' || upper === 'GBP/USD') {
-    return 'BLACKBULL:GBPUSD';
+    return 'OANDA:GBPUSD';
   }
   if (upper === 'BTCUSD' || upper === 'BTCUSDT' || upper === 'BTC/USD' || upper === 'BITCOIN') {
     return 'BINANCE:BTCUSDT';

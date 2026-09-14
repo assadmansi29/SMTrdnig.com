@@ -297,7 +297,7 @@ export function getMarketMetadata(symbolOrBenchmark: string): MarketMetadata {
     return {
       type: 'index_cfd',
       categoryName: 'US Index Futures & CFDs',
-      exchangeName: 'CME Globex / BlackBull Markets',
+      exchangeName: 'CME Globex / OANDA',
       timeZone: 'America/New_York',
       timeZoneLabel: 'New York (EDT/EST)',
       regularHoursSummary: 'Sun 18:00 – Fri 17:00 NY',

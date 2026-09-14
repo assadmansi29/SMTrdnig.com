@@ -21,7 +21,7 @@ import { DrawingPropertiesDialog } from './chart/DrawingPropertiesDialog';
 import { ObjectTreePanel, ObjectTreeItem } from './chart/ObjectTreePanel';
 import { DRAWING_TOOLS } from './chart/toolsConfig';
 import { ChartAnchor, SerializedDrawingPayload } from './chart/types';
-import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw, ZoomIn, ZoomOut, Zap, Radio } from 'lucide-react';
+import { Check, Loader2, X, Database, RefreshCw, Save, RotateCcw, ZoomIn, ZoomOut, Zap, Radio, AlertTriangle } from 'lucide-react';
 import { installGannBoxEnhancer } from './chart/gannBoxEnhancer';
 import { installDirectionalEnhancers, timeToLogicalIndex } from './chart/drawingDirectionEnhancer';
 import { registerReactionZoneTools } from './chart/reactionZoneManager';
@@ -126,7 +126,8 @@ const sanitizeDrawingsList = (drawings: any[]): any[] => {
 const saveStrategyDrawingsLocal = (
   sym: string,
   arg2: string | null | undefined | any[],
-  arg3?: any[]
+  arg3?: any[],
+  allowEmpty: boolean = false
 ) => {
   try {
     let strategy: string | null | undefined = 'default';
@@ -139,8 +140,21 @@ const saveStrategyDrawingsLocal = (
       drawings = arg3 || [];
     }
     const cleanDrawings = sanitizeDrawingsList(drawings);
+
+    // Safety guard: do not wipe local storage with an empty array unless allowEmpty is true
+    if (cleanDrawings.length === 0 && !allowEmpty) {
+      return;
+    }
+
     const key = getStrategyStorageKey(sym, strategy);
     localStorage.setItem(key, JSON.stringify(cleanDrawings));
+
+    // Also persist under base ticker key for cross-broker resilience (e.g. OANDA:XAUUSD and XAUUSD)
+    if (sym.includes(':')) {
+      const baseTicker = sym.split(':')[1];
+      const baseKey = getStrategyStorageKey(baseTicker, strategy);
+      localStorage.setItem(baseKey, JSON.stringify(cleanDrawings));
+    }
   } catch (err) {
     console.warn('[Financial Chart] Local storage save failed:', err);
   }
@@ -152,13 +166,49 @@ const loadStrategyDrawingsLocal = (sym: string, strategy?: string | null): any[]
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return sanitizeDrawingsList(parsed);
+      const sanitized = sanitizeDrawingsList(parsed);
+      if (sanitized.length > 0) return sanitized;
     }
+
+    // Try base ticker key fallback (e.g. XAUUSD if sym was OANDA:XAUUSD)
+    if (sym.includes(':')) {
+      const baseTicker = sym.split(':')[1];
+      const baseKey = getStrategyStorageKey(baseTicker, strategy);
+      const baseRaw = localStorage.getItem(baseKey);
+      if (baseRaw) {
+        const parsed = JSON.parse(baseRaw);
+        const sanitized = sanitizeDrawingsList(parsed);
+        if (sanitized.length > 0) return sanitized;
+      }
+
+      // Try OANDA prefix fallback
+      const oandaKey = getStrategyStorageKey(`OANDA:${baseTicker}`, strategy);
+      const oandaRaw = localStorage.getItem(oandaKey);
+      if (oandaRaw) {
+        const parsed = JSON.parse(oandaRaw);
+        const sanitized = sanitizeDrawingsList(parsed);
+        if (sanitized.length > 0) return sanitized;
+      }
+    }
+
     // Legacy fallback for default view
     if (!strategy || strategy === 'default') {
       const cleanSym = (sym || 'XAUUSD').replace(/[^a-zA-Z0-9]/g, '_');
       const legacy = localStorage.getItem(`tv_drawings_${cleanSym}`);
-      return legacy ? sanitizeDrawingsList(JSON.parse(legacy)) : [];
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        const sanitized = sanitizeDrawingsList(parsed);
+        if (sanitized.length > 0) return sanitized;
+      }
+      if (sym.includes(':')) {
+        const base = sym.split(':')[1].replace(/[^a-zA-Z0-9]/g, '_');
+        const legacyBase = localStorage.getItem(`tv_drawings_${base}`);
+        if (legacyBase) {
+          const parsed = JSON.parse(legacyBase);
+          const sanitized = sanitizeDrawingsList(parsed);
+          if (sanitized.length > 0) return sanitized;
+        }
+      }
     }
     return [];
   } catch {
@@ -287,7 +337,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [currentColor, setCurrentColor] = useState<string>('#38bdf8');
   const [currentWidth, setCurrentWidth] = useState<number>(2);
-  const [saveStatus, setSaveStatus] = useState<'synced' | 'saving' | 'idle'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'synced' | 'saving' | 'unsaved' | 'error' | 'idle'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [lastBarInfo, setLastBarInfo] = useState<{ open: number; high: number; low: number; close: number } | null>(null);
   const [isRefreshingStrategy, setIsRefreshingStrategy] = useState<boolean>(false);
   const [refreshNotification, setRefreshNotification] = useState<string | null>(null);
@@ -486,7 +537,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     waitingForNextClick?: boolean;
   } | null>(null);
 
-  const batchSaveRef = useRef<() => void>(() => {});
+  // Guard to prevent saving in-memory drawings before the initial load from PostgreSQL / local storage completes
+  const isDrawingsLoadedRef = useRef<boolean>(false);
 
   // Camera state snapshot ref to lock chart position and zoom during drawing/editing
   const cameraSnapshotRef = useRef<{
@@ -676,7 +728,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       setCanUndo(undoStackRef.current.length > 0);
       setCanRedo(true);
       syncDrawingsList();
-      batchSaveRef.current?.();
+      setSaveStatus('unsaved');
     } catch (e: any) {
       console.warn('[Financial Chart] Undo error:', e.message);
     }
@@ -703,7 +755,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       setCanUndo(true);
       setCanRedo(redoStackRef.current.length > 0);
       syncDrawingsList();
-      batchSaveRef.current?.();
+      setSaveStatus('unsaved');
     } catch (e: any) {
       console.warn('[Financial Chart] Redo error:', e.message);
     }
@@ -812,7 +864,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         // Persist to local cache for offline/instant resilience
         try {
           const localKey = `smtrading_cached_candles_${sym}_${inv}`;
-          localStorage.setItem(localKey, JSON.stringify(incomingCandles.slice(-200)));
+          localStorage.setItem(localKey, JSON.stringify(incomingCandles.slice(-1000)));
         } catch {}
 
         // Update LuxAlgo Smart Money Concepts (SMC) Indicator
@@ -982,21 +1034,26 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
       // If not forcing a reload and we already have drawings loaded for this symbol & strategy, keep them
       if (!force && (manager.getAllDrawings() || []).length > 0) {
+        isDrawingsLoadedRef.current = true;
         return;
       }
 
       let rawDrawings: SerializedDrawingPayload[] = [];
+      let fetchSucceeded = false;
       try {
         const res = await fetch(`/api/chart-drawings?symbol=${encodeURIComponent(sym)}&interval=${encodeURIComponent(inv)}&strategy=${encodeURIComponent(stratKey)}`);
-        const data = await res.json();
-        if (data.status === 'ok' && Array.isArray(data.drawings)) {
-          rawDrawings = data.drawings;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'ok' && Array.isArray(data.drawings)) {
+            rawDrawings = data.drawings;
+            fetchSucceeded = true;
+          }
         }
       } catch (networkErr: any) {
         console.warn('[Financial Chart] Network fetch drawings notice:', networkErr.message);
       }
 
-      // Fallback to local storage if PostgreSQL returns empty
+      // Fallback to local storage if PostgreSQL returns empty or network fails
       if (rawDrawings.length === 0) {
         const localList = loadStrategyDrawingsLocal(sym, targetStrategy);
         if (Array.isArray(localList) && localList.length > 0) {
@@ -1004,7 +1061,15 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         }
       }
 
-      // Clear previous drawings to render a clean, isolated strategy view
+      // If we have drawings to mount OR if force was requested for this view:
+      // SAFETY: If rawDrawings is empty and network failed, DO NOT wipe existing in-memory drawings!
+      if (rawDrawings.length === 0 && !fetchSucceeded && (manager.getAllDrawings() || []).length > 0) {
+        console.warn('[Financial Chart] Preserving in-memory drawings during transient fetch failure');
+        isDrawingsLoadedRef.current = true;
+        return;
+      }
+
+      // Validate-then-swap: only clear canvas once we know the new dataset
       manager.clearAll();
 
       if (rawDrawings.length > 0) {
@@ -1072,76 +1137,42 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             console.warn('[Financial Chart] Failed to restore drawing:', d.id, restoreErr.message);
           }
         });
+
+        // Trigger requestUpdate so all coordinates map cleanly
+        requestAnimationFrame(() => {
+          const all = manager.getAllDrawings() || [];
+          all.forEach((d: any) => d.requestUpdate?.());
+        });
       }
 
+      isDrawingsLoadedRef.current = true;
       setSaveStatus('synced');
       syncDrawingsList();
     } catch (err: any) {
       console.error('[Financial Chart] Error loading drawings:', err.message);
+      isDrawingsLoadedRef.current = true;
     }
   }, [syncDrawingsList]);
 
-  // 4. Save Single Drawing (Local Storage & PostgreSQL) partitioned by Strategy View
-  const saveDrawingToPostgres = useCallback(async (drawingPayload: any) => {
-    const manager = drawingManagerRef.current;
-    const currentStrat = activeStrategyRef.current;
-    if (manager) {
-      saveStrategyDrawingsLocal(symbol, currentStrat, manager.exportDrawings());
-    }
-
+  // 4. Manual Save Strategy (Authoritative single action for persisting chart drawings to PostgreSQL)
+  const handleManualSaveStrategy = useCallback(async () => {
+    if (saveStatus === 'saving') return;
     if (!isOwnerOrAdminRef.current) return;
 
     const token = getAuthToken();
-    if (!token) return;
-
-    try {
-      setSaveStatus('saving');
-      let finalPayload = drawingPayload;
-      if (manager && drawingPayload?.id) {
-        const live = manager.getDrawing(drawingPayload.id);
-        if (live && (live as any).gannOptions) {
-          finalPayload = {
-            ...drawingPayload,
-            options: {
-              ...(drawingPayload.options || {}),
-              ...(live as any).gannOptions,
-            },
-            gannOptions: (live as any).gannOptions,
-          };
-        }
-      }
-
-      const res = await fetch('/api/chart-drawings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          symbol,
-          interval,
-          strategy: (currentStrat || 'default').toLowerCase(),
-          drawing: finalPayload,
-        }),
-      });
-
-      if (res.ok) {
-        setSaveStatus('synced');
-      } else {
-        setSaveStatus('synced');
-      }
-    } catch (err: any) {
-      // Gracefully fallback to local storage state
-      setSaveStatus('synced');
+    if (!token) {
+      setSaveStatus('error');
+      setSaveError('Authentication required to save strategy.');
+      setTimeout(() => setSaveError(null), 4000);
+      return;
     }
-  }, [symbol, interval, getAuthToken]);
 
-  // 5. Batch Save Drawings (Local Storage & PostgreSQL) partitioned by Strategy View
-  const batchSaveToPostgres = useCallback(async () => {
     const manager = drawingManagerRef.current;
     if (!manager) return;
 
-    const currentStrat = activeStrategyRef.current;
+    const currentStrat = activeStrategyRef.current || 'default';
+    const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
+
     const allDrawings = manager.exportDrawings().map((d: any) => {
       const live = manager.getDrawing(d.id);
       if (live && (live as any).gannOptions) {
@@ -1157,21 +1188,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       return d;
     });
 
-    saveStrategyDrawingsLocal(symbol, currentStrat, allDrawings);
-
-    if (!isOwnerOrAdminRef.current) {
-      setSaveStatus('synced');
-      return;
-    }
-
-    const token = getAuthToken();
-    if (!token) {
-      setSaveStatus('synced');
+    // Guard: An empty drawings array must NEVER be interpreted as an automatic delete operation!
+    // Empty payloads are rejected to protect saved strategies from accidental wiping.
+    if (allDrawings.length === 0) {
+      setSaveStatus('unsaved');
+      setSaveError('No drawings on the chart to save. To permanently delete this strategy from the database, click Clear All (trash icon) with confirmation.');
+      setTimeout(() => setSaveError(null), 6000);
       return;
     }
 
     try {
       setSaveStatus('saving');
+      setSaveError(null);
+
       const res = await fetch('/api/chart-drawings/batch', {
         method: 'POST',
         headers: {
@@ -1181,46 +1210,56 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         body: JSON.stringify({
           symbol,
           interval,
-          strategy: (currentStrat || 'default').toLowerCase(),
+          strategy: currentStrat.toLowerCase(),
           drawings: allDrawings,
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.status === 'ok') {
+        // Atomic save succeeded! Update local storage cache as backup
+        saveStrategyDrawingsLocal(symbol, currentStrat, allDrawings);
         setSaveStatus('synced');
+        setRefreshNotification(`${stratLabel} Saved Successfully (${data.count} drawings)`);
+        setTimeout(() => setRefreshNotification(null), 3500);
       } else {
-        setSaveStatus('synced');
+        // Save failed: preserve existing database version and clearly report failure
+        setSaveStatus('error');
+        const failureMsg = data.error || 'Failed to save strategy to database. Previous saved version preserved.';
+        setSaveError(failureMsg);
+        setTimeout(() => setSaveError(null), 6000);
       }
     } catch (err: any) {
-      setSaveStatus('synced');
+      // Network or runtime exception: preserve database version, clearly report failure
+      setSaveStatus('error');
+      const failureMsg = `Network error while saving strategy: ${err.message || 'Connection lost'}. Previous saved version preserved.`;
+      setSaveError(failureMsg);
+      setTimeout(() => setSaveError(null), 6000);
     }
-  }, [symbol, interval, getAuthToken]);
-  batchSaveRef.current = batchSaveToPostgres;
+  }, [saveStatus, symbol, interval, getAuthToken]);
 
-  // 5.1 Manual Refresh Strategy (fetches & applies latest saved strategy without reloading page, preserving symbol & interval)
+  // 5.1 Manual Refresh Strategy (fetches & applies latest saved strategy from PostgreSQL, discarding uncommitted in-memory edits)
   const handleManualRefreshStrategy = useCallback(async () => {
     if (isRefreshingStrategy) return;
     setIsRefreshingStrategy(true);
     setRefreshNotification(null);
+    setSaveError(null);
     try {
       await loadPostgresDrawings(symbol, interval, true, activeStrategy);
       const stratLabel = activeStrategy === '144' ? '144 Strategy' : activeStrategy === 'smc' ? 'SMC Strategy' : activeStrategy === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
-      setRefreshNotification(`${stratLabel} Refreshed`);
+      setSaveStatus('synced');
+      setRefreshNotification(`${stratLabel} Refreshed from Database`);
       setTimeout(() => {
         setRefreshNotification(null);
       }, 2500);
     } catch (err: any) {
       console.error('[Financial Chart] Strategy refresh error:', err?.message || err);
+      setSaveError(`Failed to refresh strategy: ${err?.message || err}`);
+      setTimeout(() => setSaveError(null), 4000);
     } finally {
       setIsRefreshingStrategy(false);
     }
   }, [isRefreshingStrategy, loadPostgresDrawings, symbol, interval, activeStrategy]);
-
-  // 5.2 Manual Save Strategy (for Super Admin & Admin)
-  const handleManualSaveStrategy = useCallback(async () => {
-    if (saveStatus === 'saving') return;
-    await batchSaveToPostgres();
-  }, [saveStatus, batchSaveToPostgres]);
 
   // 5.3 Reset / Refresh Chart View (returns chart to standard initial view, zoom, and position without deleting drawings)
   const handleResetChartView = useCallback(() => {
@@ -1292,49 +1331,43 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, []);
 
-  // 6. Delete Selected Drawing
-  const handleDeleteSelected = useCallback(async () => {
+  // 6. Delete Selected Drawing (In-Memory Canvas Modification Only - Persisted ONLY on "Save Strategy")
+  const handleDeleteSelected = useCallback(() => {
     if (!selectedDrawingId) return;
     const manager = drawingManagerRef.current;
     if (manager) {
+      pushUndoSnapshot();
       manager.removeDrawing(selectedDrawingId);
-      saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, manager.exportDrawings());
+      setSelectedDrawingId(null);
+      syncDrawingsList();
+      setSaveStatus('unsaved');
     }
+  }, [selectedDrawingId, pushUndoSnapshot, syncDrawingsList]);
 
-    const token = getAuthToken();
-    if (token && isOwnerOrAdminRef.current) {
-      try {
-        setSaveStatus('saving');
-        await fetch(`/api/chart-drawings/${encodeURIComponent(selectedDrawingId)}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        setSaveStatus('synced');
-      } catch (err: any) {
-        console.error('[Financial Chart] Delete drawing error:', err.message);
-      }
-    }
-
-    setSelectedDrawingId(null);
-    syncDrawingsList();
-  }, [selectedDrawingId, getAuthToken, symbol, syncDrawingsList]);
-
-  // 7. Clear All Drawings
+  // 7. Clear All Drawings (MANUAL ONLY with Explicit User Confirmation)
   const handleClearAll = useCallback(async () => {
+    const currentStrat = activeStrategyRef.current || 'default';
+    const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently DELETE and CLEAR all saved drawings for ${stratLabel} on ${symbol} from the database?\n\nThis is a manual deletion action and cannot be undone.`
+    );
+    if (!confirmed) return;
+
     pushUndoSnapshot();
     const manager = drawingManagerRef.current;
     if (manager) {
       manager.clearAll();
-      saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, []);
     }
+    setSelectedDrawingId(null);
+    syncDrawingsList();
 
     const token = getAuthToken();
     if (token && isOwnerOrAdminRef.current) {
       try {
         setSaveStatus('saving');
-        await fetch('/api/chart-drawings/batch', {
+        setSaveError(null);
+        const res = await fetch('/api/chart-drawings/delete-strategy', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1342,22 +1375,32 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           },
           body: JSON.stringify({
             symbol,
-            interval,
-            strategy: (activeStrategyRef.current || 'default').toLowerCase(),
-            drawings: [],
+            strategy: currentStrat.toLowerCase(),
+            confirmManualDelete: true,
           }),
         });
-        setSaveStatus('synced');
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          saveStrategyDrawingsLocal(symbol, currentStrat, [], true);
+          setSaveStatus('synced');
+          setRefreshNotification(`${stratLabel} drawings permanently deleted from database`);
+          setTimeout(() => setRefreshNotification(null), 3500);
+        } else {
+          setSaveStatus('error');
+          setSaveError(data.error || 'Failed to delete strategy from database.');
+          setTimeout(() => setSaveError(null), 5000);
+        }
       } catch (err: any) {
-        console.error('[Financial Chart] Clear all error:', err.message);
+        setSaveStatus('error');
+        setSaveError(`Network error while deleting strategy: ${err.message}`);
+        setTimeout(() => setSaveError(null), 5000);
       }
+    } else {
+      setSaveStatus('synced');
     }
+  }, [symbol, getAuthToken, pushUndoSnapshot, syncDrawingsList]);
 
-    setSelectedDrawingId(null);
-    syncDrawingsList();
-  }, [symbol, interval, getAuthToken, pushUndoSnapshot, syncDrawingsList]);
-
-  // 7.1 Object Tree & Drawing Manager Actions
+  // 7.1 Object Tree & Drawing Manager Actions (In-Memory Canvas Operations)
   const handleToggleDrawingVisibility = useCallback((id: string) => {
     const manager = drawingManagerRef.current;
     if (!manager) return;
@@ -1366,7 +1409,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     d.options.visible = d.options.visible === false ? true : false;
     d.requestUpdate?.();
     syncDrawingsList();
-    batchSaveRef.current?.();
+    setSaveStatus('unsaved');
   }, [syncDrawingsList]);
 
   const handleToggleDrawingLock = useCallback((id: string) => {
@@ -1377,7 +1420,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     d.options.locked = !d.options.locked;
     d.requestUpdate?.();
     syncDrawingsList();
-    batchSaveRef.current?.();
+    setSaveStatus('unsaved');
   }, [syncDrawingsList]);
 
   const handleToggleAllVisibility = useCallback(() => {
@@ -1392,7 +1435,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       d.requestUpdate?.();
     });
     syncDrawingsList();
-    batchSaveRef.current?.();
+    setSaveStatus('unsaved');
   }, [syncDrawingsList]);
 
   const handleToggleAllLock = useCallback(() => {
@@ -1407,33 +1450,18 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       d.requestUpdate?.();
     });
     syncDrawingsList();
-    batchSaveRef.current?.();
+    setSaveStatus('unsaved');
   }, [syncDrawingsList]);
 
-  const handleDeleteIndividualDrawing = useCallback(async (id: string) => {
+  const handleDeleteIndividualDrawing = useCallback((id: string) => {
     const manager = drawingManagerRef.current;
     if (!manager) return;
     pushUndoSnapshot();
     manager.removeDrawing(id);
     if (selectedDrawingId === id) setSelectedDrawingId(null);
     syncDrawingsList();
-
-    const token = getAuthToken();
-    if (token) {
-      try {
-        setSaveStatus('saving');
-        await fetch(`/api/chart-drawings/${encodeURIComponent(id)}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        setSaveStatus('synced');
-      } catch (err: any) {
-        console.error('[Financial Chart] Delete drawing error:', err.message);
-      }
-    }
-  }, [selectedDrawingId, pushUndoSnapshot, syncDrawingsList, getAuthToken]);
+    setSaveStatus('unsaved');
+  }, [selectedDrawingId, pushUndoSnapshot, syncDrawingsList]);
 
   // 8. Initialize Lightweight Chart & Drawing Manager
   useEffect(() => {
@@ -1501,6 +1529,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     });
 
     seriesApiRef.current = series;
+    (window as any).__currentSeries = series;
 
     // Attach LuxAlgo Smart Money Concepts (SMC) Series Primitive (active strictly and exclusively for SMC Strategy)
     const smcPrimitive = new SmcLuxAlgoSeriesPrimitive(smcSettingsRef.current);
@@ -1713,8 +1742,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             creation.drawing.requestUpdate();
             currentManager.selectDrawing(creation.drawing.id);
             setSelectedDrawingId(creation.drawing.id);
-            saveDrawingToPostgres(creation.drawing.toJSON());
-            saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager.exportDrawings());
+            setSaveStatus('unsaved');
             unlockCameraAfterInteraction(currentChart, false);
             currentContainer.style.cursor = '';
             setActiveTool(null);
@@ -1806,8 +1834,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               drawing.requestUpdate();
               currentManager.selectDrawing(drawing.id);
               setSelectedDrawingId(drawing.id);
-              saveDrawingToPostgres(drawing.toJSON());
-              saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager.exportDrawings());
+              setSaveStatus('unsaved');
               pushUndoSnapshot();
               syncDrawingsList();
             }
@@ -1860,8 +1887,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               drawing.requestUpdate();
               currentManager.selectDrawing(drawing.id);
               setSelectedDrawingId(drawing.id);
-              saveDrawingToPostgres(drawing.toJSON());
-              saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager.exportDrawings());
+              setSaveStatus('unsaved');
               pushUndoSnapshot();
               syncDrawingsList();
             }
@@ -2263,8 +2289,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               creation.drawing.requestUpdate();
               currentManager?.selectDrawing(creation.drawing.id);
               setSelectedDrawingId(creation.drawing.id);
-              saveDrawingToPostgres(creation.drawing.toJSON());
-              saveStrategyDrawingsLocal(symbol, activeStrategyRef.current, currentManager?.exportDrawings());
+              setSaveStatus('unsaved');
               if (currentChart) unlockCameraAfterInteraction(currentChart, false);
               if (currentContainer) currentContainer.style.cursor = '';
               setActiveTool(null);
@@ -2300,7 +2325,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         }
 
         if (dragState.hasMoved) {
-          batchSaveRef.current();
+          setSaveStatus('unsaved');
         }
 
         dragStateRef.current = null;
@@ -2391,11 +2416,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     });
 
     manager.on('drawing:updated', () => {
-      // Sync to PostgreSQL - do NOT flood network or re-renders during active drag!
-      // The pointer up handler will perform batch save when the drag gesture completes.
-      if (!dragStateRef.current) {
-        batchSaveRef.current();
-      }
+      // In-memory update - mark unsaved, do NOT automatically save to PostgreSQL
+      setSaveStatus('unsaved');
     });
 
     // Crosshair move handler for OHLC header display (optimized to avoid re-renders when bar doesn't change)
@@ -2522,6 +2544,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       chart.remove();
       chartApiRef.current = null;
       seriesApiRef.current = null;
+      (window as any).__currentChart = null;
+      (window as any).__currentSeries = null;
       whitespaceSeriesApiRef.current = null;
       drawingManagerRef.current = null;
     };
@@ -2549,24 +2573,26 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     prevSymbolRef.current = symbol;
 
-    if (isInitialMount || isSymbolChange) {
-      // Symbol changed: persist drawings for previous symbol, clear canvas, load drawings for new symbol
-      batchSaveRef.current?.();
-      if (isSymbolChange) {
-        drawingManagerRef.current?.clearAll();
-        candlesRef.current = [];
-        setLastBarInfo(null);
-        seriesApiRef.current?.setData([]);
-        if (whitespaceSeriesApiRef.current) {
-          whitespaceSeriesApiRef.current.setData([]);
-        }
+    if (isSymbolChange) {
+      // Symbol changed: clear canvas for previous symbol and load new symbol
+      drawingManagerRef.current?.clearAll();
+      candlesRef.current = [];
+      setLastBarInfo(null);
+      seriesApiRef.current?.setData([]);
+      if (whitespaceSeriesApiRef.current) {
+        whitespaceSeriesApiRef.current.setData([]);
       }
-      fetchCandles(symbol, interval, false, false, isSymbolChange);
+      isDrawingsLoadedRef.current = false;
+      fetchCandles(symbol, interval, false, false, true);
+      loadPostgresDrawings(symbol, interval, true, activeStrategy);
+    } else if (isInitialMount) {
+      // Initial mount: load candles and drawings without destructive pre-saving!
+      isDrawingsLoadedRef.current = false;
+      fetchCandles(symbol, interval, false, false, false);
       loadPostgresDrawings(symbol, interval, true, activeStrategy);
     } else {
       // Only interval changed: drawings are shared across all timeframes for the same symbol & strategy!
-      // Persist any in-memory tweaks, fetch new candles, and reproject existing drawings onto the new timeframe
-      batchSaveRef.current?.();
+      // Reproject existing drawings onto the new timeframe without wiping or saving
       fetchCandles(symbol, interval, false, true, false);
       // Only fetch from database if the manager currently has no drawings loaded
       const manager = drawingManagerRef.current;
@@ -2616,7 +2642,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         return;
       }
 
-      // Check if incoming event belongs to current symbol (tolerant of broker prefixes e.g. BLACKBULL:NAS100 vs NAS100 vs OANDA:NAS100USD)
+      // Check if incoming event belongs to current symbol (tolerant of broker prefixes e.g. NAS100 vs OANDA:NAS100USD)
       const eventSymbol = data.symbol || data.tvSymbol;
       if (!eventSymbol) {
         return;
@@ -2741,7 +2767,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const drawing = manager.getDrawing(selectedDrawingId);
       if (drawing) {
         drawing.updateStyle({ lineColor: newColor, fillColor: `${newColor}1a` });
-        batchSaveToPostgres();
+        setSaveStatus('unsaved');
       }
     }
   };
@@ -2754,23 +2780,22 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const drawing = manager.getDrawing(selectedDrawingId);
       if (drawing) {
         drawing.updateStyle({ lineWidth: newWidth });
-        batchSaveToPostgres();
+        setSaveStatus('unsaved');
       }
     }
   };
 
   const activeToolDef = activeTool ? DRAWING_TOOLS.find((t) => t.id === activeTool) : null;
 
-  // Derive broker name and clean ticker symbol from composite symbol (e.g. BLACKBULL:XAUUSD -> BlackBull + XAUUSD)
+  // Derive broker name and clean ticker symbol from composite symbol (e.g. OANDA:XAUUSD -> OANDA + XAUUSD)
   const [rawBroker, rawTicker] = symbol.includes(':') ? symbol.split(':') : ['', symbol];
   const brokerName =
-    rawBroker === 'BLACKBULL' ? 'BlackBull' :
     rawBroker === 'OANDA' ? 'OANDA' :
     rawBroker === 'BINANCE' ? 'Binance' :
     rawBroker === 'CME_MINI' || rawBroker === 'CME' ? 'CME' :
     rawBroker === 'CAPITALCOM' ? 'Capital.com' :
     rawBroker === 'NASDAQ' ? 'NASDAQ' :
-    rawBroker || 'BlackBull';
+    rawBroker || 'OANDA';
   const displayTicker =
     rawTicker === 'NAS100USD' ? 'NAS100' :
     rawTicker === 'US30USD' ? 'US30' :
@@ -2841,28 +2866,42 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
         {/* Right Info: Strategy Save / Refresh & PostgreSQL Sync Status */}
         <div className="flex items-center gap-2">
+          {saveError && (
+            <span className="text-[11px] font-semibold text-rose-300 bg-rose-950/90 border border-rose-500/50 px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 max-w-sm truncate" title={saveError}>
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span className="truncate">{saveError}</span>
+              <button type="button" onClick={() => setSaveError(null)} className="text-rose-400 hover:text-white ml-1">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+
           {refreshNotification && (
             <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/80 border border-emerald-500/50 px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1">
               <Check className="w-3 h-3 text-emerald-400" /> {refreshNotification}
             </span>
           )}
 
-          {/* Admin / Super Admin Save Strategy Button */}
+          {/* Admin / Super Admin Save Strategy Button (Manual Only) */}
           {isOwnerOrAdmin && (
             <button
               id="btn-save-strategy"
               type="button"
               onClick={handleManualSaveStrategy}
               disabled={saveStatus === 'saving'}
-              title="Save all drawings to PostgreSQL strategy database"
-              className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/60 rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group"
+              title="Manually save all drawings to PostgreSQL strategy database"
+              className={`flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group ${
+                saveStatus === 'unsaved'
+                  ? 'text-amber-200 bg-amber-500/25 hover:bg-amber-500/35 border border-amber-400 shadow-amber-500/20 ring-1 ring-amber-400/40'
+                  : 'text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/60'
+              }`}
             >
               {saveStatus === 'saving' ? (
                 <Loader2 className="w-3 h-3 text-amber-300 animate-spin" />
               ) : (
                 <Save className="w-3 h-3 text-amber-400 group-hover:scale-105 transition-transform" />
               )}
-              <span className="tracking-tight">
+              <span className="tracking-tight flex items-center gap-1">
                 {saveStatus === 'saving' ? (
                   'Saving...'
                 ) : (
@@ -2877,6 +2916,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                         ? 'Save (Fib)'
                         : 'Save Strategy'}
                     </span>
+                    {saveStatus === 'unsaved' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block ml-0.5" title="Unsaved changes" />
+                    )}
                   </>
                 )}
               </span>
@@ -2917,7 +2959,15 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                   </span>
                 ) : saveStatus === 'synced' ? (
                   <span className="text-emerald-400 flex items-center gap-1">
-                    <Check className="w-2.5 h-2.5" /> Synced
+                    <Check className="w-2.5 h-2.5" /> Saved
+                  </span>
+                ) : saveStatus === 'unsaved' ? (
+                  <span className="text-amber-300 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> Unsaved
+                  </span>
+                ) : saveStatus === 'error' ? (
+                  <span className="text-rose-400 flex items-center gap-1">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Error
                   </span>
                 ) : (
                   <span>Ready</span>
@@ -3169,14 +3219,15 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             setPropertiesDrawing(null);
           }}
           onApply={() => {
-            batchSaveToPostgres();
+            setSaveStatus('unsaved');
           }}
           onDelete={(drawingId) => {
             const manager = drawingManagerRef.current;
             if (manager) {
               manager.removeDrawing(drawingId);
               setSelectedDrawingId(null);
-              batchSaveToPostgres();
+              syncDrawingsList();
+              setSaveStatus('unsaved');
             }
           }}
         />

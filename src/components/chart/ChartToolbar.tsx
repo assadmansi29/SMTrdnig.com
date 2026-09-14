@@ -31,26 +31,19 @@ export interface ChartInstrument {
 
 export const ALL_INSTRUMENTS: ChartInstrument[] = [
   // Spot Metals
-  { symbol: 'BLACKBULL:XAUUSD', name: 'Spot Gold (BlackBull)', ticker: 'XAUUSD', broker: 'BlackBull', category: 'Metals', description: 'Spot Gold / US Dollar (BlackBull Feed)' },
   { symbol: 'OANDA:XAUUSD', name: 'Spot Gold (OANDA)', ticker: 'XAUUSD', broker: 'OANDA', category: 'Metals', description: 'Spot Gold / US Dollar (OANDA Feed)' },
 
   // Indices
-  { symbol: 'BLACKBULL:NAS100', name: 'Nasdaq 100 (BlackBull)', ticker: 'NAS100', broker: 'BlackBull', category: 'Indices', description: 'Nasdaq 100 Tech Index (BlackBull Feed)' },
   { symbol: 'OANDA:NAS100USD', name: 'Nasdaq 100 (OANDA)', ticker: 'NAS100', broker: 'OANDA', category: 'Indices', description: 'US Wall St Tech 100 (OANDA Feed)' },
-  { symbol: 'BLACKBULL:US30', name: 'Dow Jones 30 (BlackBull)', ticker: 'US30', broker: 'BlackBull', category: 'Indices', description: 'Dow Jones Industrial Average (BlackBull Feed)' },
   { symbol: 'OANDA:US30USD', name: 'Dow Jones 30 (OANDA)', ticker: 'US30', broker: 'OANDA', category: 'Indices', description: 'US Wall St 30 / Dow (OANDA Feed)' },
-  { symbol: 'BLACKBULL:GER40', name: 'DAX 40 (BlackBull)', ticker: 'GER40', broker: 'BlackBull', category: 'Indices', description: 'German DAX 40 Index (BlackBull Feed)' },
   { symbol: 'OANDA:DE30EUR', name: 'DAX 40 (OANDA)', ticker: 'GER40', broker: 'OANDA', category: 'Indices', description: 'Germany 40 / DAX (OANDA Feed)' },
 
   // Forex
-  { symbol: 'BLACKBULL:EURUSD', name: 'EUR / USD (BlackBull)', ticker: 'EURUSD', broker: 'BlackBull', category: 'Forex', description: 'Euro / US Dollar (BlackBull Feed)' },
   { symbol: 'OANDA:EURUSD', name: 'EUR / USD (OANDA)', ticker: 'EURUSD', broker: 'OANDA', category: 'Forex', description: 'Euro / US Dollar (OANDA Feed)' },
-  { symbol: 'BLACKBULL:GBPUSD', name: 'GBP / USD (BlackBull)', ticker: 'GBPUSD', broker: 'BlackBull', category: 'Forex', description: 'British Pound / US Dollar (BlackBull Feed)' },
   { symbol: 'OANDA:GBPUSD', name: 'GBP / USD (OANDA)', ticker: 'GBPUSD', broker: 'OANDA', category: 'Forex', description: 'British Pound / US Dollar (OANDA Feed)' },
 
   // Crypto
   { symbol: 'BINANCE:BTCUSDT', name: 'Bitcoin (Binance)', ticker: 'BTCUSDT', broker: 'Binance', category: 'Crypto', description: 'Bitcoin / Tether (Binance Spot Feed)' },
-  { symbol: 'BLACKBULL:BTCUSD', name: 'Bitcoin (BlackBull)', ticker: 'BTCUSD', broker: 'BlackBull', category: 'Crypto', description: 'Bitcoin / US Dollar (BlackBull Feed)' },
 
   // Futures
   { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', ticker: 'ES1!', broker: 'CME', category: 'Futures', description: 'E-mini S&P 500 Futures (CME Globex)' },
@@ -200,7 +193,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
       symbol: currentSymbol,
       name: currentSymbol.includes(':') ? currentSymbol.split(':')[1] : currentSymbol,
       ticker: currentSymbol.includes(':') ? currentSymbol.split(':')[1] : currentSymbol,
-      broker: currentSymbol.includes(':') ? currentSymbol.split(':')[0] : 'BlackBull',
+      broker: currentSymbol.includes(':') ? currentSymbol.split(':')[0] : 'OANDA',
       category: 'Metals' as const,
       description: currentSymbol,
     };
@@ -215,7 +208,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
       group: 'Minutes' as const,
     };
 
-  const brokers = ['All', 'BlackBull', 'OANDA', 'Binance', 'CME'];
+  const brokers = ['All', 'OANDA', 'Binance', 'CME', 'NASDAQ', 'Capital.com'];
   const categories = ['All', 'Metals', 'Indices', 'Forex', 'Crypto', 'Futures', 'Equities', 'Macro'];
 
   // Filter instruments by search, category & broker
@@ -240,8 +233,6 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
     switch (broker) {
       case 'OANDA':
         return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
-      case 'BlackBull':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
       case 'Binance':
         return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
       case 'CME':
@@ -294,7 +285,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
   };
 
   const getTradingViewExternalUrl = (sym: string) => {
-    const raw = sym.replace('BLACKBULL:', '').replace('CME_MINI:', '').replace('NASDAQ:', '').replace('TVC:', '');
+    const raw = sym.replace('OANDA:', '').replace('BINANCE:', '').replace('CME_MINI:', '').replace('NASDAQ:', '').replace('TVC:', '');
     return `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(sym || raw)}`;
   };
 
@@ -382,7 +373,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                     type="text"
                     value={instrumentSearch}
                     onChange={(e) => setInstrumentSearch(e.target.value)}
-                    placeholder="Search instrument or broker (e.g. Gold, OANDA, US30, BlackBull)..."
+                    placeholder="Search instrument or broker (e.g. Gold, OANDA, US30, Binance)..."
                     className="w-full bg-[#11192E] border border-slate-700/90 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all font-mono"
                   />
                   {instrumentSearch && (

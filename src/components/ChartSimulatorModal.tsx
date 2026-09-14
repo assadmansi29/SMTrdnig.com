@@ -24,7 +24,7 @@ interface ChartSimulatorModalProps {
 export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({ 
   isOpen, 
   onClose,
-  defaultSymbol = 'BLACKBULL:XAUUSD',
+  defaultSymbol = 'OANDA:XAUUSD',
   onOpenAdminModal
 }) => {
   const { t } = useTranslation();

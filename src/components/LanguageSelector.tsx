@@ -124,16 +124,16 @@ export const LanguageSelector: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-label="Select language"
-        className="w-full h-full min-h-[36px] flex items-center justify-between gap-1 sm:gap-1.5 px-2 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap"
+        className="w-full flex items-center justify-between gap-1 sm:gap-1.5 h-[30px] sm:h-9 sm:min-h-[36px] px-1.5 sm:px-2 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold transition-all shadow-xs sm:shadow-sm cursor-pointer whitespace-nowrap active:scale-[0.97]"
       >
         <span className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-          <span className="text-xs sm:text-sm leading-none shrink-0">{currentLanguage.flag}</span>
+          <span className="text-[11px] sm:text-sm leading-none shrink-0">{currentLanguage.flag}</span>
           <span className="font-mono uppercase font-bold tracking-wider text-[10px] sm:text-[11px] truncate">
             {currentLanguage.code}
           </span>
         </span>
         <ChevronDown
-          className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+          className={`w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
             isOpen ? 'rotate-180 text-amber-400' : ''
           }`}
         />

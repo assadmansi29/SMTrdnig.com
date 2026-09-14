@@ -65,7 +65,7 @@ export default function App() {
   const [calculatorSetup, setCalculatorSetup] = useState<TradeSetup | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isChartOpen, setIsChartOpen] = useState(false);
-  const [chartDefaultSymbol, setChartDefaultSymbol] = useState('BLACKBULL:XAUUSD');
+  const [chartDefaultSymbol, setChartDefaultSymbol] = useState('OANDA:XAUUSD');
   const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNewsletterOpen, setIsNewsletterOpen] = useState(false);
@@ -88,11 +88,18 @@ export default function App() {
     setIsCoachingDeskOpen(true);
   };
   const [supportEmailCopied, setSupportEmailCopied] = useState(false);
+  const [supportTelegramCopied, setSupportTelegramCopied] = useState(false);
 
   const handleCopySupportEmail = async () => {
     await copyToClipboard('smtradingsupprt@gmail.com');
     setSupportEmailCopied(true);
     setTimeout(() => setSupportEmailCopied(false), 2500);
+  };
+
+  const handleCopySupportTelegram = async () => {
+    await copyToClipboard('@SMTrading_support');
+    setSupportTelegramCopied(true);
+    setTimeout(() => setSupportTelegramCopied(false), 2500);
   };
 
   // Capture incoming referral link parameters (?ref=SM...) and persist to localStorage
@@ -166,18 +173,18 @@ export default function App() {
 
   const handleSelectTicker = (ticker: MarketTickerItem) => {
     const symbolMap: Record<string, string> = {
-      'BTC/USD': 'BLACKBULL:BTCUSD',
+      'BTC/USD': 'BINANCE:BTCUSDT',
       'ETH/USD': 'BINANCE:ETHUSDT',
       'ES (S&P 500)': 'CME_MINI:ES1!',
-      'NQ (Nasdaq)': 'BLACKBULL:NAS100',
-      'US30 (Dow)': 'BLACKBULL:US30',
-      'GER40 (DAX)': 'BLACKBULL:GER40',
-      'XAU/USD': 'BLACKBULL:XAUUSD',
-      'EUR/USD': 'BLACKBULL:EURUSD',
+      'NQ (Nasdaq)': 'OANDA:NAS100USD',
+      'US30 (Dow)': 'OANDA:US30USD',
+      'GER40 (DAX)': 'OANDA:DE30EUR',
+      'XAU/USD': 'OANDA:XAUUSD',
+      'EUR/USD': 'OANDA:EURUSD',
       'US10Y': 'TVC:US10Y',
       'VIX': 'TVC:VIX'
     };
-    const targetSymbol = symbolMap[ticker.symbol] || 'BLACKBULL:XAUUSD';
+    const targetSymbol = symbolMap[ticker.symbol] || 'OANDA:XAUUSD';
     setChartDefaultSymbol(targetSymbol);
     setIsChartOpen(true);
   };
@@ -276,13 +283,13 @@ export default function App() {
                   const symUpper = symbol.toUpperCase().replace(/US3O/g, 'US30');
                   let canonicalSymbol = symbol;
                   if (symUpper.includes('NAS100') || symUpper.includes('NQ') || symUpper.includes('NASDAQ')) {
-                    canonicalSymbol = 'BLACKBULL:NAS100';
+                    canonicalSymbol = 'OANDA:NAS100USD';
                   } else if (symUpper.includes('US30') || symUpper.includes('DOW')) {
-                    canonicalSymbol = 'BLACKBULL:US30';
+                    canonicalSymbol = 'OANDA:US30USD';
                   } else if (symUpper.includes('GER40') || symUpper.includes('DAX') || symUpper.includes('DE30')) {
-                    canonicalSymbol = 'BLACKBULL:GER40';
+                    canonicalSymbol = 'OANDA:DE30EUR';
                   } else if (symUpper.includes('XAU') || symUpper.includes('GOLD')) {
-                    canonicalSymbol = 'BLACKBULL:XAUUSD';
+                    canonicalSymbol = 'OANDA:XAUUSD';
                   }
                   setChartDefaultSymbol(canonicalSymbol);
                 }
@@ -321,13 +328,13 @@ export default function App() {
                   const symUpper = symbol.toUpperCase().replace(/US3O/g, 'US30');
                   let canonicalSymbol = symbol;
                   if (symUpper.includes('NAS100') || symUpper.includes('NQ') || symUpper.includes('NASDAQ')) {
-                    canonicalSymbol = 'BLACKBULL:NAS100';
+                    canonicalSymbol = 'OANDA:NAS100USD';
                   } else if (symUpper.includes('US30') || symUpper.includes('DOW')) {
-                    canonicalSymbol = 'BLACKBULL:US30';
+                    canonicalSymbol = 'OANDA:US30USD';
                   } else if (symUpper.includes('GER40') || symUpper.includes('DAX') || symUpper.includes('DE30')) {
-                    canonicalSymbol = 'BLACKBULL:GER40';
+                    canonicalSymbol = 'OANDA:DE30EUR';
                   } else if (symUpper.includes('XAU') || symUpper.includes('GOLD')) {
-                    canonicalSymbol = 'BLACKBULL:XAUUSD';
+                    canonicalSymbol = 'OANDA:XAUUSD';
                   }
                   setChartDefaultSymbol(canonicalSymbol);
                 }
@@ -424,37 +431,88 @@ export default function App() {
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                     {t('supportBannerSubtitle')}
                   </p>
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs text-slate-400">Direct Email:</span>
-                    <span className="text-xs sm:text-sm font-mono-num text-amber-400 font-bold bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 select-all">
-                      smtradingsupprt@gmail.com
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Telegram:</span>
+                      <a
+                        href="https://t.me/SMTrading_support"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs sm:text-sm font-mono text-sky-300 hover:text-white font-bold bg-[#24A1DE]/20 hover:bg-[#24A1DE]/30 px-2.5 py-1 rounded-lg border border-[#24A1DE]/40 transition-colors inline-flex items-center gap-1.5"
+                      >
+                        <Send className="w-3 h-3 text-[#24A1DE]" />
+                        <span>@SMTrading_support</span>
+                        <ExternalLink className="w-2.5 h-2.5 opacity-80" />
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Direct Email:</span>
+                      <span className="text-xs sm:text-sm font-mono-num text-amber-400 font-bold bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 select-all">
+                        smtradingsupprt@gmail.com
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
-                  <button
-                    onClick={handleCopySupportEmail}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
+                  <a
+                    href="https://t.me/SMTrading_support"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-[#24A1DE] to-[#1a8fc7] hover:from-[#29a8e8] hover:to-[#1d9ad6] text-white font-black text-xs sm:text-sm shadow-md shadow-[#24A1DE]/25 hover:shadow-[#24A1DE]/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
                   >
-                    {supportEmailCopied ? (
+                    <Send className="w-4 h-4 text-white shrink-0" />
+                    <span>Telegram @SMTrading_support</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-90 shrink-0" />
+                  </a>
+
+                  <button
+                    onClick={handleCopySupportTelegram}
+                    className="group relative inline-flex items-center justify-center gap-2 h-11 px-3.5 sm:px-4 rounded-xl bg-[#0B1220]/90 hover:bg-[#0F1A30] border border-sky-500/30 hover:border-sky-400/60 text-slate-200 hover:text-white text-xs font-semibold shadow-sm hover:shadow-[0_0_16px_rgba(36,161,222,0.18)] transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
+                    title="Copy Telegram Username: @SMTrading_support"
+                  >
+                    {supportTelegramCopied ? (
                       <>
-                        <Check className="w-4 h-4 text-emerald-400" />
-                        <span className="text-emerald-400">{t('supportEmailCopied')}</span>
+                        <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                        <span className="font-mono text-xs font-bold text-sky-300">@SMTrading_support Copied!</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="w-4 h-4 text-slate-400" />
-                        <span>{t('supportCopyEmail')}</span>
+                        <Copy className="w-3.5 h-3.5 text-sky-400/80 group-hover:text-sky-300 group-hover:scale-110 transition-all shrink-0" />
+                        <span className="font-mono text-xs text-slate-300 group-hover:text-white">@SMTrading_support</span>
+                        <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-400/30 text-sky-300 group-hover:bg-sky-500/25">
+                          Copy
+                        </span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleCopySupportEmail}
+                    className="group relative inline-flex items-center justify-center gap-2 h-11 px-3.5 sm:px-4 rounded-xl bg-[#0B1220]/90 hover:bg-[#1C160B] border border-amber-500/30 hover:border-amber-400/60 text-slate-200 hover:text-white text-xs font-semibold shadow-sm hover:shadow-[0_0_16px_rgba(245,158,11,0.18)] transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap"
+                    title="Copy Support Email: smtradingsupprt@gmail.com"
+                  >
+                    {supportEmailCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="font-mono text-xs font-bold text-emerald-300">{t('supportEmailCopied')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-amber-400/80 group-hover:text-amber-300 group-hover:scale-110 transition-all shrink-0" />
+                        <span className="font-mono text-xs text-slate-300 group-hover:text-white">smtradingsupprt@gmail.com</span>
+                        <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-400/30 text-amber-300 group-hover:bg-amber-500/25">
+                          Copy
+                        </span>
                       </>
                     )}
                   </button>
 
                   <a
                     href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"
-                    className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                    className="inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
                   >
-                    <Mail className="w-4 h-4 text-slate-950" />
+                    <Mail className="w-4 h-4 text-slate-950 shrink-0" />
                     <span>{t('supportEmailBtn')}</span>
                   </a>
                 </div>

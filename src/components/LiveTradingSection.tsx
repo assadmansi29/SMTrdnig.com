@@ -24,28 +24,28 @@ const INSTRUMENTS: InstrumentOption[] = [
     id: 'gold',
     nameKey: 'instGoldName',
     ticker: 'XAUUSD',
-    symbol: 'BLACKBULL:XAUUSD',
+    symbol: 'OANDA:XAUUSD',
     descKey: 'instGoldDesc'
   },
   {
     id: 'nasdaq',
     nameKey: 'instNasdaqName',
     ticker: 'NAS100',
-    symbol: 'BLACKBULL:NAS100',
+    symbol: 'OANDA:NAS100USD',
     descKey: 'instNasdaqDesc'
   },
   {
     id: 'dow',
     nameKey: 'instDowName',
     ticker: 'US30',
-    symbol: 'BLACKBULL:US30',
+    symbol: 'OANDA:US30USD',
     descKey: 'instDowDesc'
   },
   {
     id: 'dax',
     nameKey: 'instDaxName',
     ticker: 'GER40',
-    symbol: 'BLACKBULL:GER40',
+    symbol: 'OANDA:DE30EUR',
     descKey: 'instDaxDesc'
   }
 ];
@@ -82,7 +82,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
   const canAnalyzeCharts = isSuperAdmin || isAdmin;
   const isStaff = canAnalyzeCharts;
 
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('BLACKBULL:XAUUSD');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('OANDA:XAUUSD');
   const [selectedInterval, setSelectedInterval] = useState<string>('15');
   const [activeStrategy, setActiveStrategy] = useState<ChartStrategyType>(null);
   const [viewMode, setViewMode] = useState<'stream' | 'chart' | 'both'>('both');
@@ -101,15 +101,14 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
     refresh
   } = useYouTubeLive();
 
-  const rawBroker = selectedSymbol.includes(':') ? selectedSymbol.split(':')[0] : 'BlackBull';
+  const rawBroker = selectedSymbol.includes(':') ? selectedSymbol.split(':')[0] : 'OANDA';
   const brokerName =
-    rawBroker === 'BLACKBULL' ? 'BlackBull' :
     rawBroker === 'OANDA' ? 'OANDA' :
     rawBroker === 'BINANCE' ? 'Binance' :
     rawBroker === 'CME_MINI' || rawBroker === 'CME' ? 'CME' :
     rawBroker === 'CAPITALCOM' ? 'Capital.com' :
     rawBroker === 'NASDAQ' ? 'NASDAQ' :
-    rawBroker || 'BlackBull';
+    rawBroker || 'OANDA';
 
   // When inside "Support" or "VIP Signals", completely hide the entire Live Trading Section (including live stream and terminal)
   if (activeCategory === 'Support' || activeCategory === 'VIP Signals') {

@@ -8,7 +8,9 @@ import {
   Crown,
   GraduationCap,
   Briefcase,
-  ShieldCheck
+  ShieldCheck,
+  Send,
+  ExternalLink
 } from 'lucide-react';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { LanguageSelector } from './LanguageSelector';
@@ -369,9 +371,11 @@ export const Header: React.FC<HeaderProps> = ({
               const isActive = activeCategory === cat;
               const label = t(CATEGORY_KEYS[cat]);
               const isLiveTab = cat === 'LIVE Trade';
+              const isSupportTab = cat === 'Support';
               return (
                 <button
                   key={cat}
+                  id={isSupportTab ? 'nav-support-btn' : undefined}
                   onClick={() => {
                     if (cat === 'Trade Now') {
                       onOpenChart();
@@ -379,13 +383,15 @@ export const Header: React.FC<HeaderProps> = ({
                       onSelectCategory(cat);
                     }
                   }}
-                  className={`relative px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
+                  className={`relative px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 group ${
                     isActive && isLiveTab && isLiveStreamActive
                       ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold scale-[1.02]'
                       : isActive
                       ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 font-bold scale-[1.02]'
                       : isLiveTab && isLiveStreamActive
                       ? 'bg-rose-950/70 border border-rose-500/60 text-rose-300 hover:bg-rose-900 hover:text-white shadow-sm shadow-rose-900/30'
+                      : isSupportTab
+                      ? 'bg-slate-900/80 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800 hover:border-[#24A1DE]/60'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
@@ -395,10 +401,36 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
                     </span>
                   )}
+                  {isSupportTab && (
+                    <Send className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-slate-950' : 'text-[#24A1DE]'}`} />
+                  )}
                   <span>{label}</span>
                   {isLiveTab && isLiveStreamActive && (
                     <span className="text-[9px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded font-mono tracking-wider shadow-sm">
                       LIVE
+                    </span>
+                  )}
+                  {isSupportTab && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const a = document.createElement('a');
+                        a.href = 'https://t.me/SMTrading_support';
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }}
+                      title="Direct Telegram Support: @SMTrading_support (https://t.me/SMTrading_support)"
+                      className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-950/20 text-slate-950 hover:bg-slate-950/35 border border-slate-950/30'
+                          : 'bg-[#24A1DE]/20 text-[#38bdf8] hover:bg-[#24A1DE] hover:text-white border border-[#24A1DE]/40'
+                      }`}
+                    >
+                      <span>@SMTrading_support</span>
+                      <ExternalLink className="w-2.5 h-2.5 opacity-80" />
                     </span>
                   )}
                 </button>
