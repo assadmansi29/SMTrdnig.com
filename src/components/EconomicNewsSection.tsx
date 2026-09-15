@@ -31,6 +31,13 @@ import {
   filterGenuinelyUpcomingEvents,
   POPULAR_TIMEZONES
 } from '../utils/economicCalendarUtils';
+import {
+  translateEconomicEvent,
+  translateEconomicCountry,
+  translateWhyItMatters,
+  formatLocalizedCountdown,
+  getLocalizedTimezoneLabel
+} from '../utils/economicTranslation';
 
 interface EconomicNewsSectionProps {
   events?: EconomicEvent[];
@@ -43,9 +50,17 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
   onOpenCalendar,
   onOpenChartModal
 }) => {
-  const { isRTL } = useTranslation();
+  const { t, isRTL, language } = useTranslation();
   const { events: contextEvents, isLoading, isRefreshing, refresh } = useEconomicCalendar();
   const allEvents = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
+
+  // Active Intl locale for culturally accurate date/time rendering
+  const intlLocale = useMemo(() => {
+    if (language === 'ar') return 'ar-SA';
+    if (language === 'ru') return 'ru-RU';
+    if (language === 'uk') return 'uk-UA';
+    return 'en-US';
+  }, [language]);
 
   // Live ticking clock state (updated every 1s for accurate live countdown)
   const [now, setNow] = useState<number>(Date.now());
@@ -105,15 +120,15 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-sm text-white tracking-wide uppercase">
-                {isRTL ? 'المفكرة الاقتصادية المباشرة' : 'Live Economic Calendar'}
+                {t('liveEconomicCalendarTitle')}
               </h3>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                {isRTL ? 'مباشر' : 'Live'}
+                {t('liveEconomicCalendarBadge')}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              {isRTL ? 'أحداث السوق القادمة بالتوقيت المحلي الحقيقي' : 'Real-time scheduled catalysts in your local time'}
+              {t('liveEconomicCalendarSubtitle')}
             </p>
           </div>
         </div>
@@ -136,11 +151,12 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
             {isTzPickerOpen && (
               <div className="absolute right-0 rtl:left-0 rtl:right-auto top-full mt-1.5 w-64 bg-[#0F172A] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50">
                 <div className="px-3 py-1.5 border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  {isRTL ? 'اختر التوقيت' : 'Select Timezone'}
+                  {t('calendarSelectTimezone')}
                 </div>
                 <div className="max-h-56 overflow-y-auto py-1">
                   {POPULAR_TIMEZONES.map(tzOpt => {
                     const isSelected = (selectedTz === tzOpt.timeZone) || (selectedTz === 'AUTO' && tzOpt.timeZone === 'AUTO');
+                    const localizedLabel = getLocalizedTimezoneLabel(tzOpt.timeZone, tzOpt.label, language);
                     return (
                       <button
                         key={tzOpt.timeZone}
@@ -151,7 +167,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                       >
                         <div className="flex items-center gap-2 truncate">
                           <span>{tzOpt.flag}</span>
-                          <span className="truncate">{tzOpt.label}</span>
+                          <span className="truncate">{localizedLabel}</span>
                         </div>
                         {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />}
                       </button>
@@ -167,7 +183,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
             onClick={() => refresh()}
             disabled={isRefreshing || isLoading}
             className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50"
-            title={isRTL ? 'تحديث البيانات' : 'Refresh Live Feed'}
+            title={t('calendarRefreshLiveFeed')}
           >
             <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
           </button>
@@ -182,14 +198,14 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-white tracking-tight">
-                  {nextHighImpactEvent.currency || nextHighImpactEvent.countryCode} • {nextHighImpactEvent.event}
+                  {nextHighImpactEvent.currency || nextHighImpactEvent.countryCode} • {translateEconomicEvent(nextHighImpactEvent.event, language)}
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                  {isRTL ? 'تأثير قوي' : 'High Impact'}
+                  {t('calendarFilterHighImpact')}
                 </span>
               </div>
               <div className="text-[11px] text-slate-400 mt-0.5">
-                {formatEventInTimezone(nextHighImpactEvent.timestamp, effectiveTz).fullFormatted} ({tzMeta.offsetString})
+                {formatEventInTimezone(nextHighImpactEvent.timestamp, effectiveTz, intlLocale).fullFormatted} ({tzMeta.offsetString})
               </div>
             </div>
           </div>
@@ -198,7 +214,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <div className={`px-2.5 py-1 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 ${nextHighCountdown.badgeClass}`}>
               <Clock className="w-3.5 h-3.5" />
-              <span>{nextHighCountdown.formatted}</span>
+              <span>{formatLocalizedCountdown(nextHighCountdown, language)}</span>
             </div>
           </div>
         </div>
@@ -220,17 +236,17 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                     : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
                 }`}
               >
-                {filter === 'High' && (isRTL ? 'عالية التأثير' : 'High Impact')}
-                {filter === 'All' && (isRTL ? 'جميع الأحداث' : 'All Impacts')}
-                {filter === 'Medium' && (isRTL ? 'متوسطة' : 'Medium')}
-                {filter === 'Low' && (isRTL ? 'منخفضة' : 'Low')}
+                {filter === 'High' && t('calendarFilterHighImpact')}
+                {filter === 'All' && t('calendarFilterAllImpacts')}
+                {filter === 'Medium' && t('calendarFilterMedium')}
+                {filter === 'Low' && t('calendarFilterLow')}
               </button>
             );
           })}
         </div>
 
         <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-          {upcomingEvents.length} {isRTL ? 'أحداث قادمة' : 'upcoming'}
+          {t('calendarUpcomingCount', { count: upcomingEvents.length })}
         </span>
       </div>
 
@@ -239,16 +255,16 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
         {isLoading && upcomingEvents.length === 0 ? (
           <div className="py-8 text-center text-slate-400 space-y-2">
             <RotateCw className="w-5 h-5 animate-spin mx-auto text-blue-400" />
-            <p className="text-xs">{isRTL ? 'جاري تحميل المفكرة الاقتصادية الحية...' : 'Loading live economic calendar...'}</p>
+            <p className="text-xs">{t('calendarLoadingFeed')}</p>
           </div>
         ) : displayedEvents.length === 0 ? (
           <div className="py-8 text-center text-slate-400 border border-slate-800/80 rounded-xl bg-slate-900/30 p-4">
             <Calendar className="w-8 h-8 mx-auto text-slate-600 mb-2" />
             <p className="text-xs font-medium text-slate-300">
-              {isRTL ? 'لا توجد أحداث قادمة بهذه المعايير حالياً' : 'No upcoming events matching this filter right now'}
+              {t('calendarNoMatchingEvents')}
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {isRTL ? 'تأكد من فتح الأسواق أو اختر "جميع الأحداث" لعرض المزيد' : 'Markets may be closed or try selecting "All Impacts"'}
+              {t('calendarMarketsClosedHint')}
             </p>
           </div>
         ) : (
@@ -256,8 +272,16 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
             const isExpanded = expandedEventId === ev.id;
             const normImp = normalizeImpact(ev.impact, ev.event);
             const impStyle = getImpactStyle(normImp);
-            const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz);
+            const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz, intlLocale);
             const countdown = calculateLiveCountdown(ev.timestamp, now);
+            const localizedTitle = translateEconomicEvent(ev.event, language);
+            const localizedCountry = translateEconomicCountry(ev.country, language);
+            const localizedWhy = translateWhyItMatters(ev.whyItMatters, ev.event, ev.country, language);
+            const impactBadgeText = normImp === 'High' 
+              ? t('calendarFilterHighImpact') 
+              : normImp === 'Medium' 
+              ? t('calendarFilterMedium') 
+              : t('calendarFilterLow');
 
             return (
               <div
@@ -279,10 +303,10 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-xs text-white group-hover:text-amber-300 transition-colors truncate">
-                          {ev.event}
+                          {localizedTitle}
                         </span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${impStyle.badge}`}>
-                          {impStyle.label}
+                          {impactBadgeText}
                         </span>
                       </div>
 
@@ -296,7 +320,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                           {tzMeta.offsetString}
                         </span>
                         {ev.utcIso && (
-                          <span className="text-slate-500 font-mono text-[10px] hidden sm:inline" title="Exact UTC Time">
+                          <span className="text-slate-500 font-mono text-[10px] hidden sm:inline" title={t('calendarUtcTooltip')}>
                             ({ev.utcIso.split('T')[1].substring(0, 5)} UTC)
                           </span>
                         )}
@@ -308,14 +332,14 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <div className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold flex items-center gap-1 border ${countdown.badgeClass}`}>
                       <Clock className="w-3 h-3" />
-                      <span>{countdown.formatted}</span>
+                      <span>{formatLocalizedCountdown(countdown, language)}</span>
                     </div>
 
                     {/* Forecast / Previous mini info */}
                     <div className="text-[10px] text-slate-400 font-mono">
-                      {ev.forecast && ev.forecast !== '—' && <span>Est: {ev.forecast}</span>}
+                      {ev.forecast && ev.forecast !== '—' && <span>{t('calendarEstPrefix')}: {ev.forecast}</span>}
                       {ev.forecast && ev.previous && ev.previous !== '—' && <span className="mx-1 text-slate-600">|</span>}
-                      {ev.previous && ev.previous !== '—' && <span>Prev: {ev.previous}</span>}
+                      {ev.previous && ev.previous !== '—' && <span>{t('calendarPrevPrefix')}: {ev.previous}</span>}
                     </div>
                   </div>
                 </div>
@@ -326,26 +350,26 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                     {/* Numbers comparison: Previous vs Consensus Forecast */}
                     <div className="grid grid-cols-3 gap-2 p-2 rounded-lg bg-slate-950/60 border border-slate-800 text-center font-mono">
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase">{isRTL ? 'السابق' : 'Previous'}</div>
+                        <div className="text-[10px] text-slate-500 uppercase">{t('ecoPreviousLabel')}</div>
                         <div className="text-xs font-semibold text-slate-300 mt-0.5">{ev.previous || '—'}</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-blue-400 uppercase">{isRTL ? 'التقدير' : 'Forecast'}</div>
+                        <div className="text-[10px] text-blue-400 uppercase">{t('ecoForecastLabel')}</div>
                         <div className="text-xs font-semibold text-blue-300 mt-0.5">{ev.forecast || '—'}</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase">{isRTL ? 'الفعلي' : 'Actual'}</div>
+                        <div className="text-[10px] text-slate-500 uppercase">{t('ecoActualLabel')}</div>
                         <div className="text-xs font-semibold text-slate-400 mt-0.5">
-                          {ev.actual || (isRTL ? 'قيد الانتظار' : 'Pending')}
+                          {ev.actual || t('ecoPendingValue')}
                         </div>
                       </div>
                     </div>
 
                     {/* Why this matters */}
-                    {ev.whyItMatters && (
+                    {localizedWhy && (
                       <div className="flex items-start gap-1.5 text-[11px] text-slate-400 bg-slate-800/30 p-2 rounded-lg">
                         <Info className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-                        <span>{ev.whyItMatters}</span>
+                        <span>{localizedWhy}</span>
                       </div>
                     )}
 
@@ -354,7 +378,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                       <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] text-slate-500 uppercase font-semibold">
-                            {isRTL ? 'الأصول المتأثرة:' : 'Affected:'}
+                            {t('calendarAffectedAssets')}
                           </span>
                           {ev.affectedAssets.map(asset => (
                             <button
@@ -372,7 +396,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                         </div>
 
                         <span className="text-[10px] text-slate-500 font-mono">
-                          {isRTL ? 'المصدر:' : 'Source:'} {ev.country}
+                          {t('calendarSourceLabel')} {localizedCountry}
                         </span>
                       </div>
                     )}
@@ -390,7 +414,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
           onClick={() => setVisibleCount(prev => prev + 5)}
           className="w-full py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition-colors flex items-center justify-center gap-1.5"
         >
-          <span>{isRTL ? `عرض المزيد (${upcomingEvents.length - visibleCount} إضافي)` : `Show More (${upcomingEvents.length - visibleCount} more)`}</span>
+          <span>{t('calendarShowMore', { count: upcomingEvents.length - visibleCount })}</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
       )}
@@ -402,7 +426,7 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
         className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 group cursor-pointer"
       >
         <Calendar className="w-4 h-4" />
-        <span>{isRTL ? 'فتح المفكرة الاقتصادية الكاملة (جميع الجلسات والنتائج)' : 'Open Full Institutional Economic Calendar'}</span>
+        <span>{t('calendarOpenFullInstitutional')}</span>
         <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform" />
       </button>
     </div>

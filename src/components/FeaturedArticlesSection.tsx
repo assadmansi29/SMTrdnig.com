@@ -56,12 +56,12 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
           <div className="absolute top-0 right-0 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
           
           <div className="space-y-4 relative z-10">
-            <div className="flex items-center justify-between">
-              <span className="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-400/20">
-                <Award className="w-3.5 h-3.5 fill-slate-950" />
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <span className="bg-amber-400 text-slate-950 text-[10px] sm:text-xs font-extrabold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 shadow-md sm:shadow-lg shadow-amber-400/20 whitespace-nowrap">
+                <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-slate-950" />
                 {t('mentorAbuRoleBadge')}
               </span>
-              <span className="bg-slate-950/80 backdrop-blur-md text-amber-300 text-xs font-mono-num px-3 py-1 rounded-full border border-amber-400/30">
+              <span className="bg-slate-950/80 backdrop-blur-md text-amber-300 text-[10px] sm:text-xs font-mono-num px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-amber-400/30 whitespace-nowrap">
                 {t('mentorAbuSpecialty')}
               </span>
             </div>
@@ -129,12 +129,12 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
           <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
           
           <div className="space-y-4 relative z-10">
-            <div className="flex items-center justify-between">
-              <span className="bg-blue-500 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-blue-500/20">
-                <Award className="w-3.5 h-3.5 fill-slate-950" />
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <span className="bg-blue-500 text-slate-950 text-[10px] sm:text-xs font-extrabold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 shadow-md sm:shadow-lg shadow-blue-500/20 whitespace-nowrap">
+                <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-slate-950" />
                 {t('mentorAhmadRoleBadge')}
               </span>
-              <span className="bg-slate-950/80 backdrop-blur-md text-blue-300 text-xs font-mono-num px-3 py-1 rounded-full border border-blue-500/30">
+              <span className="bg-slate-950/80 backdrop-blur-md text-blue-300 text-[10px] sm:text-xs font-mono-num px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-blue-500/30 whitespace-nowrap">
                 {t('mentorAhmadSpecialty')}
               </span>
             </div>

@@ -36,6 +36,13 @@ import {
   filterPastReleasedEvents,
   POPULAR_TIMEZONES
 } from '../utils/economicCalendarUtils';
+import {
+  translateEconomicEvent,
+  translateEconomicCountry,
+  translateWhyItMatters,
+  formatLocalizedCountdown,
+  getLocalizedTimezoneLabel
+} from '../utils/economicTranslation';
 
 interface EconomicCalendarModalProps {
   isOpen: boolean;
@@ -48,9 +55,16 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
   onClose,
   events: propEvents
 }) => {
-  const { isRTL } = useTranslation();
+  const { t, isRTL, language } = useTranslation();
   const { events: contextEvents, isLoading, isRefreshing, refresh } = useEconomicCalendar();
   const allEvents = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
+
+  const intlLocale = useMemo(() => {
+    if (language === 'ar') return 'ar-SA';
+    if (language === 'ru') return 'ru-RU';
+    if (language === 'uk') return 'uk-UA';
+    return 'en-US';
+  }, [language]);
 
   // Active View Tab: 'upcoming' vs 'released'
   const [activeTab, setActiveTab] = useState<'upcoming' | 'released'>('upcoming');
@@ -101,14 +115,16 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchesName = ev.event.toLowerCase().includes(q);
-        const matchesCountry = ev.country.toLowerCase().includes(q);
+        const localizedName = translateEconomicEvent(ev.event, language).toLowerCase();
+        const localizedCountry = translateEconomicCountry(ev.country, language).toLowerCase();
+        const matchesName = ev.event.toLowerCase().includes(q) || localizedName.includes(q);
+        const matchesCountry = ev.country.toLowerCase().includes(q) || localizedCountry.includes(q);
         const matchesCurrency = (ev.currency || '').toLowerCase().includes(q);
         if (!matchesName && !matchesCountry && !matchesCurrency) return false;
       }
       return true;
     });
-  }, [baseList, selectedCurrency, searchQuery]);
+  }, [baseList, selectedCurrency, searchQuery, language]);
 
   // Group events by local date in user's active timezone
   const groupedByLocalDate = useMemo(() => {
@@ -116,7 +132,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
     const groupMap = new Map<string, EconomicEvent[]>();
 
     for (const ev of filteredEvents) {
-      const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz);
+      const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz, intlLocale);
       const dateKey = timeInfo.isoDateLocal || 'other';
       if (!groupMap.has(dateKey)) {
         groupMap.set(dateKey, []);
@@ -126,19 +142,19 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
 
     groupMap.forEach((evList, dateKey) => {
       if (evList.length > 0) {
-        const sampleTime = formatEventInTimezone(evList[0].timestamp, effectiveTz);
+        const sampleTime = formatEventInTimezone(evList[0].timestamp, effectiveTz, intlLocale);
         let dateTitle = sampleTime.dateFormatted;
         if (sampleTime.isToday) {
-          dateTitle = isRTL ? `اليوم • ${sampleTime.dateFormatted}` : `Today • ${sampleTime.dateFormatted}`;
+          dateTitle = `${t('calendarTodayPrefix')} • ${sampleTime.dateFormatted}`;
         } else if (sampleTime.isTomorrow) {
-          dateTitle = isRTL ? `غداً • ${sampleTime.dateFormatted}` : `Tomorrow • ${sampleTime.dateFormatted}`;
+          dateTitle = `${t('calendarTomorrowPrefix')} • ${sampleTime.dateFormatted}`;
         }
         groups.push({ dateKey, dateTitle, events: evList });
       }
     });
 
     return groups;
-  }, [filteredEvents, effectiveTz, isRTL]);
+  }, [filteredEvents, effectiveTz, intlLocale, t]);
 
   const majorCurrencies = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'NZD', 'CNY'];
 
@@ -159,17 +175,15 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
-                  {isRTL ? 'المفكرة الاقتصادية المؤسسية' : 'Institutional Economic Calendar'}
+                  {t('calendarFullModalTitle')}
                 </h2>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  {isRTL ? 'بيانات حقيقية مباشرة' : 'Real-Time Feed'}
+                  {t('calendarRealTimeFeedBadge')}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isRTL 
-                  ? 'جدول ومواعيد إصدارات الاقتصاد الكلي العالمي بالتوقيت المحلي بدعم التوقيت الصيفي' 
-                  : 'Global macroeconomic releases synchronized in your local timezone with full DST support'}
+                {t('calendarFullModalSubtitle')}
               </p>
             </div>
           </div>
@@ -191,11 +205,12 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
               {isTzPickerOpen && (
                 <div className="absolute right-0 rtl:left-0 rtl:right-auto top-full mt-2 w-72 bg-[#0F172A] border border-slate-700 rounded-xl shadow-2xl py-2 z-50">
                   <div className="px-3 py-1.5 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    {isRTL ? 'اختر النطاق الزمني' : 'Select Timezone'}
+                    {t('calendarSelectTimezone')}
                   </div>
                   <div className="max-h-64 overflow-y-auto py-1">
                     {POPULAR_TIMEZONES.map(tzOpt => {
                       const isSelected = (selectedTz === tzOpt.timeZone) || (selectedTz === 'AUTO' && tzOpt.timeZone === 'AUTO');
+                      const localizedLabel = getLocalizedTimezoneLabel(tzOpt.timeZone, tzOpt.label, language);
                       return (
                         <button
                           key={tzOpt.timeZone}
@@ -206,7 +221,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                         >
                           <div className="flex items-center gap-2 truncate">
                             <span>{tzOpt.flag}</span>
-                            <span className="truncate">{tzOpt.label}</span>
+                            <span className="truncate">{localizedLabel}</span>
                           </div>
                           {isSelected && <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />}
                         </button>
@@ -223,7 +238,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
               onClick={() => refresh()}
               disabled={isRefreshing || isLoading}
               className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
-              title={isRTL ? 'تحديث فوري' : 'Sync Live Market Data'}
+              title={t('calendarRefreshLiveFeed')}
             >
               <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
             </button>
@@ -252,7 +267,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>{isRTL ? 'الأحداث القادمة (عد تنازلي مباشر)' : 'Upcoming Catalysts (Live Countdown)'}</span>
+              <span>{t('calendarTabUpcomingWithCountdown')}</span>
             </button>
 
             <button
@@ -265,7 +280,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
               }`}
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{isRTL ? 'النتائج الصادرة مؤخراً' : 'Recent Releases & Outcomes'}</span>
+              <span>{t('calendarTabRecentReleases')}</span>
             </button>
           </div>
 
@@ -276,7 +291,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isRTL ? 'ابحث عن حدث، دولة، عملة...' : 'Search event, currency, country...'}
+              placeholder={t('calendarSearchEventPlaceholder')}
               className="w-full pl-9 pr-3 rtl:pr-9 rtl:pl-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
             />
             {searchQuery && (
@@ -295,7 +310,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           {/* Impact filters */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-semibold text-slate-500 uppercase mr-1 rtl:ml-1 rtl:mr-0">
-              {isRTL ? 'التأثير:' : 'Impact:'}
+              {t('calendarImpactLabel')}
             </span>
             {(['High', 'All', 'Medium', 'Low'] as const).map(imp => {
               const isActive = activeImpactFilter === imp;
@@ -309,10 +324,10 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                       : 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800'
                   }`}
                 >
-                  {imp === 'High' && (isRTL ? '🔥 عالي التأثير (CPI/NFP/فائدة)' : '🔥 High Impact (CPI/NFP/Rates)')}
-                  {imp === 'All' && (isRTL ? 'الكل' : 'All Impacts')}
-                  {imp === 'Medium' && (isRTL ? 'متوسط' : 'Medium')}
-                  {imp === 'Low' && (isRTL ? 'منخفض' : 'Low')}
+                  {imp === 'High' && t('calendarHighImpactTag')}
+                  {imp === 'All' && t('calendarFilterAllImpacts')}
+                  {imp === 'Medium' && t('calendarFilterMedium')}
+                  {imp === 'Low' && t('calendarFilterLow')}
                 </button>
               );
             })}
@@ -321,7 +336,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           {/* Major Currency Selectors */}
           <div className="flex items-center gap-1 flex-wrap">
             <span className="text-[11px] font-semibold text-slate-500 uppercase mr-1 rtl:ml-1 rtl:mr-0">
-              {isRTL ? 'العملة:' : 'Currency:'}
+              {t('calendarCurrencyLabel')}
             </span>
             {majorCurrencies.map(cur => {
               const isSelected = selectedCurrency === cur;
@@ -335,7 +350,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                       : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
                   }`}
                 >
-                  {cur}
+                  {cur === 'All' ? t('calendarAllCurrencies') : cur}
                 </button>
               );
             })}
@@ -347,18 +362,18 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           {isLoading && filteredEvents.length === 0 ? (
             <div className="py-16 text-center space-y-3 text-slate-400">
               <RotateCw className="w-8 h-8 animate-spin mx-auto text-blue-400" />
-              <p className="text-sm">{isRTL ? 'جاري مزامنة المفكرة الاقتصادية...' : 'Synchronizing live economic calendar...'}</p>
+              <p className="text-sm">{t('calendarSyncingFeed')}</p>
             </div>
           ) : filteredEvents.length === 0 ? (
             <div className="py-16 text-center border border-slate-800/80 rounded-2xl bg-slate-900/30 p-8 space-y-3">
               <Calendar className="w-10 h-10 mx-auto text-slate-600" />
               <h4 className="text-sm font-semibold text-slate-300">
-                {isRTL ? 'لا توجد أحداث تطابق هذا الفلتر' : 'No economic events match the current filter'}
+                {t('calendarNoMatchingFilter')}
               </h4>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 {activeTab === 'upcoming'
-                  ? (isRTL ? 'لا توجد أحداث قادمة بهذه المعايير في الأيام القادمة. جرب تبديل التأثير إلى "الكل" أو اختيار عملة أخرى.' : 'No upcoming scheduled catalysts in the next window for this filter. Try selecting "All Impacts" or another currency.')
-                  : (isRTL ? 'لا توجد نتائج سابقة مسجلة بهذه المعايير.' : 'No past releases found matching this filter.')}
+                  ? t('calendarNoUpcomingDesc')
+                  : t('calendarNoPastDesc')}
               </p>
             </div>
           ) : (
@@ -371,7 +386,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                     <span>{group.dateTitle}</span>
                   </div>
                   <span className="text-[11px] font-mono text-slate-500 font-normal">
-                    {group.events.length} {isRTL ? 'أحداث' : 'events'} • {tzMeta.offsetString}
+                    {t('calendarEventsCount', { count: group.events.length })} • {tzMeta.offsetString}
                   </span>
                 </div>
 
@@ -381,8 +396,36 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                     const isExpanded = expandedEventId === ev.id;
                     const normImp = normalizeImpact(ev.impact, ev.event);
                     const impStyle = getImpactStyle(normImp);
-                    const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz);
+                    const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz, intlLocale);
                     const countdown = calculateLiveCountdown(ev.timestamp, now);
+                    const localizedTitle = translateEconomicEvent(ev.event, language);
+                    const localizedCountry = translateEconomicCountry(ev.country, language);
+                    const localizedWhy = translateWhyItMatters(ev.whyItMatters, ev.event, ev.country, language);
+                    const impactBadgeText = normImp === 'High' 
+                      ? t('calendarFilterHighImpact') 
+                      : normImp === 'Medium' 
+                      ? t('calendarFilterMedium') 
+                      : t('calendarFilterLow');
+
+                    const getOutcomeLabel = (outcome?: string) => {
+                      if (!outcome) return '';
+                      if (language === 'ar') {
+                        if (outcome === 'beat') return 'أعلى من المتوقع';
+                        if (outcome === 'miss') return 'أقل من المتوقع';
+                        return 'مطابق للتقديرات';
+                      }
+                      if (language === 'ru') {
+                        if (outcome === 'beat') return 'Выше прогноза';
+                        if (outcome === 'miss') return 'Ниже прогноза';
+                        return 'В соответствии';
+                      }
+                      if (language === 'uk') {
+                        if (outcome === 'beat') return 'Вище прогнозу';
+                        if (outcome === 'miss') return 'Нижче прогнозу';
+                        return 'Відповідно';
+                      }
+                      return outcome;
+                    };
 
                     return (
                       <div
@@ -419,14 +462,14 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-semibold text-xs sm:text-sm text-white hover:text-amber-300 transition-colors truncate">
-                                  {ev.event}
+                                  {localizedTitle}
                                 </span>
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${impStyle.badge}`}>
-                                  {impStyle.label}
+                                  {impactBadgeText}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 flex-wrap">
-                                <span>{ev.country}</span>
+                                <span>{localizedCountry}</span>
                                 {ev.category && (
                                   <>
                                     <span className="text-slate-600">•</span>
@@ -436,7 +479,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                                 {ev.utcIso && (
                                   <>
                                     <span className="text-slate-600">•</span>
-                                    <span className="text-slate-500 font-mono text-[10px]">
+                                    <span className="text-slate-500 font-mono text-[10px]" title={t('calendarUtcTooltip')}>
                                       {ev.utcIso.split('T')[1].substring(0, 5)} UTC
                                     </span>
                                   </>
@@ -450,18 +493,18 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                             {/* Forecast & Previous */}
                             <div className="flex items-center gap-3 text-xs font-mono">
                               <div className="text-right rtl:text-left">
-                                <div className="text-[10px] text-slate-500 uppercase">{isRTL ? 'السابق' : 'Prev'}</div>
+                                <div className="text-[10px] text-slate-500 uppercase">{t('ecoPreviousLabel')}</div>
                                 <div className="text-slate-300 font-medium">{ev.previous || '—'}</div>
                               </div>
                               <div className="text-right rtl:text-left">
-                                <div className="text-[10px] text-blue-400 uppercase">{isRTL ? 'التقدير' : 'Forecast'}</div>
+                                <div className="text-[10px] text-blue-400 uppercase">{t('ecoForecastLabel')}</div>
                                 <div className="text-blue-300 font-semibold">{ev.forecast || '—'}</div>
                               </div>
 
                               {/* Actual (if in released tab or published) */}
                               {(activeTab === 'released' || ev.actual) && (
-                                <div className="text-right rtl:text-left pl-2 border-l border-slate-800">
-                                  <div className="text-[10px] text-emerald-400 uppercase">{isRTL ? 'الفعلي' : 'Actual'}</div>
+                                <div className="text-right rtl:text-left pl-2 rtl:pl-0 rtl:pr-2 border-l rtl:border-l-0 rtl:border-r border-slate-800">
+                                  <div className="text-[10px] text-emerald-400 uppercase">{t('ecoActualLabel')}</div>
                                   <div className="text-emerald-300 font-bold text-sm">
                                     {ev.actual || '—'}
                                   </div>
@@ -473,7 +516,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                             {activeTab === 'upcoming' && (
                               <div className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 border ${countdown.badgeClass}`}>
                                 <Clock className="w-3.5 h-3.5" />
-                                <span>{countdown.formatted}</span>
+                                <span>{formatLocalizedCountdown(countdown, language)}</span>
                               </div>
                             )}
 
@@ -486,7 +529,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' 
                                   : 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                               }`}>
-                                {ev.outcome}
+                                {getOutcomeLabel(ev.outcome)}
                               </span>
                             )}
 
@@ -501,13 +544,13 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                         {isExpanded && (
                           <div className="mt-3 pt-3 border-t border-slate-800 space-y-3 text-xs text-slate-300">
                             {/* Why this matters */}
-                            {ev.whyItMatters && (
+                            {localizedWhy && (
                               <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 space-y-1">
                                 <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
                                   <Info className="w-3.5 h-3.5" />
-                                  <span>{isRTL ? 'الأثر التداولي والتفسير الاقتصادي:' : 'Trading Impact & Macro Context:'}</span>
+                                  <span>{t('calendarTradingImpactTitle')}</span>
                                 </div>
-                                <p className="text-slate-300 text-xs leading-relaxed">{ev.whyItMatters}</p>
+                                <p className="text-slate-300 text-xs leading-relaxed">{localizedWhy}</p>
                               </div>
                             )}
 
@@ -515,7 +558,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                             {ev.affectedAssets && ev.affectedAssets.length > 0 && (
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-[11px] font-semibold text-slate-400">
-                                  {isRTL ? 'الأصول الأكثر تأثراً بالتقلبات:' : 'Most Volatile Traded Assets:'}
+                                  {t('calendarMostVolatileAssets')}
                                 </span>
                                 {ev.affectedAssets.map(asset => (
                                   <span
@@ -543,20 +586,20 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
             <span>
-              {isRTL ? 'جميع الأوقات محولة تلقائياً بدقة إلى' : 'All event times automatically localized to'}:{' '}
+              {t('calendarTimesLocalizedTo')}:{' '}
               <strong className="text-white">{effectiveTz}</strong> ({tzMeta.offsetString})
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="font-mono text-[11px] text-slate-500">
-              {filteredEvents.length} {isRTL ? 'أحداث معروضة' : 'events displayed'}
+              {t('calendarEventsDisplayed', { count: filteredEvents.length })}
             </span>
             <button
               onClick={onClose}
               className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-colors"
             >
-              {isRTL ? 'إغلاق' : 'Close'}
+              {t('calendarCloseBtn')}
             </button>
           </div>
         </div>

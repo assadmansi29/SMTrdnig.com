@@ -223,7 +223,7 @@ export default function App() {
                 <span>{t('liveStreamTab')}</span>
               </button>
               <a
-                href={stream.watchUrl || `https://www.youtube.com/watch?v=${stream.videoId}`}
+                href={stream.watchUrl || (stream.videoId && stream.videoId !== 'live_stream' ? `https://www.youtube.com/watch?v=${stream.videoId}` : 'https://www.youtube.com/@Smtradingpro')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-semibold rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5"

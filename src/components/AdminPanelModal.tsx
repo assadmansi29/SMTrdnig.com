@@ -107,12 +107,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [auditSearch, setAuditSearch] = useState('');
 
   // YouTube Stream Config state
-  const [ytChannelHandle, setYtChannelHandle] = useState('');
-  const [ytChannelId, setYtChannelId] = useState('');
+  const [ytChannelHandle, setYtChannelHandle] = useState('@Smtradingpro');
+  const [ytChannelId, setYtChannelId] = useState('UCkohQ1nDiIosi6gTPv0oXQA');
   const [ytApiKeyConfigured, setYtApiKeyConfigured] = useState(false);
   const [ytLiveStatus, setYtLiveStatus] = useState<YouTubeLiveStatus | null>(null);
   const [ytTesting, setYtTesting] = useState(false);
   const [ytSaveStatus, setYtSaveStatus] = useState<string | null>(null);
+  const [ytIsLive, setYtIsLive] = useState(true);
+  const [ytManualVideoId, setYtManualVideoId] = useState('');
 
   // Balance Adjustment Submodal (Super Admin Only)
   const [selectedUserForBalance, setSelectedUserForBalance] = useState<UserProfile | null>(null);
@@ -254,8 +256,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       if (res.ok) {
         const data = await res.json();
         setYtApiKeyConfigured(data.configured);
-        setYtChannelId(data.channelId || '');
-        setYtChannelHandle(data.channelHandle || '');
+        setYtChannelId(data.channelId || 'UCkohQ1nDiIosi6gTPv0oXQA');
+        setYtChannelHandle(data.channelHandle || '@Smtradingpro');
+        setYtIsLive(data.isLive !== undefined ? Boolean(data.isLive) : true);
+        setYtManualVideoId(data.manualVideoId || '');
       }
     } catch (err) {
       console.error('Error loading YouTube settings:', err);
@@ -287,8 +291,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          channelId: ytChannelId.trim(),
-          channelHandle: ytChannelHandle.trim(),
+          isLive: ytIsLive,
+          manualVideoId: ytManualVideoId.trim(),
         }),
       });
       const data = await res.json();
@@ -2077,57 +2081,117 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
           {/* TAB 8: YOUTUBE LIVE DESK */}
           {activeTab === 'youtube' && (isSuperAdmin || isAdmin || isEmployee) && (
-            <div className="max-w-2xl mx-auto p-4 sm:p-6 bg-[#070A11] border border-slate-800 rounded-2xl space-y-4">
+            <div className="max-w-2xl mx-auto p-4 sm:p-6 bg-[#070A11] border border-slate-800 rounded-2xl space-y-5">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Radio className="w-4 h-4 text-rose-500" />
                   <span>YouTube Live Stream Management</span>
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Configure YouTube channel handle or ID to auto-detect and embed live trading sessions into client terminals.
+                <p className="text-xs text-slate-400 mt-1">
+                  Official live broadcast configuration permanently locked to the SM Trading YouTube channel.
+                </p>
+              </div>
+
+              {/* Locked Official Channel Info Card */}
+              <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Official Channel Source (Permanently Locked)</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    LOCKED & VERIFIED
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="bg-[#0A0F1D] p-2.5 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block font-sans">Channel Handle</span>
+                    <span className="text-amber-300 font-bold">@Smtradingpro</span>
+                  </div>
+                  <div className="bg-[#0A0F1D] p-2.5 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-500 block font-sans">Channel ID</span>
+                    <span className="text-slate-300 select-all">UCkohQ1nDiIosi6gTPv0oXQA</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* RTMP Broadcasting Settings Reference */}
+              <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2 text-xs">
+                <div className="font-bold text-slate-300 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                  <span>OBS / Live Encoder Ingestion Endpoints</span>
+                </div>
+                <div className="space-y-1.5 font-mono text-[11px]">
+                  <div className="bg-[#0A0F1D] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-400 font-sans text-[10px]">Primary RTMP:</span>
+                    <span className="text-amber-300 select-all font-semibold">rtmp://a.rtmp.youtube.com/live2</span>
+                  </div>
+                  <div className="bg-[#0A0F1D] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-400 font-sans text-[10px]">Backup RTMP:</span>
+                    <span className="text-amber-300 select-all font-semibold">rtmp://b.rtmp.youtube.com/live2?backup=1</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 font-sans">
+                  Use your stream key from YouTube Studio for the official channel. All live streams from these endpoints are automatically rendered on SMTrading.pro.
                 </p>
               </div>
 
               <form onSubmit={handleSaveYouTubeSettings} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">YouTube Channel Handle</label>
-                  <input
-                    type="text"
-                    value={ytChannelHandle}
-                    onChange={(e) => setYtChannelHandle(e.target.value)}
-                    placeholder="@SMTrading"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
-                  />
+                {/* Live Stream Broadcast Status Toggle */}
+                <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                  <label className="block text-xs font-bold text-slate-200">
+                    Live Stream Broadcast Status
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setYtIsLive(true)}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        ytIsLive
+                          ? 'bg-rose-600 border-rose-500 text-white shadow-md shadow-rose-600/30'
+                          : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${ytIsLive ? 'bg-white animate-ping' : 'bg-slate-500'}`} />
+                      <span>Broadcasting LIVE</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setYtIsLive(false)}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        !ytIsLive
+                          ? 'bg-slate-800 border-slate-600 text-amber-300'
+                          : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>Offline Mode</span>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    When active, SMTrading.pro will display the live stream player.
+                  </p>
                 </div>
 
+                {/* Optional Manual Video ID Override */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">YouTube Channel ID (Optional)</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    Direct Video ID (Optional Override)
+                  </label>
                   <input
                     type="text"
-                    value={ytChannelId}
-                    onChange={(e) => setYtChannelId(e.target.value)}
-                    placeholder="e.g. UCxxxxxxxxxxxxxxxxxxxxxx"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                    value={ytManualVideoId}
+                    onChange={(e) => setYtManualVideoId(e.target.value)}
+                    placeholder="e.g. jfKfPfyJRdk (leave blank to use channel live feed)"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                   />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Leave blank to automatically broadcast from the official channel live stream.
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span className={`w-2 h-2 rounded-full ${ytApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span>API Key Status: {ytApiKeyConfigured ? 'Configured on Server (Strict Channel Filtering)' : 'API Key Missing'}</span>
-                </div>
-
-                {/* RTMP Broadcasting Settings Reference */}
-                <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-1.5 text-xs">
-                  <div className="font-bold text-slate-300 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                    <span>OBS / Encoder Ingestion Settings</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 space-y-1 font-mono">
-                    <div>Stream URL: <span className="text-amber-300 select-all">rtmp://a.rtmp.youtube.com/live2</span></div>
-                    <div className="text-[10px] text-slate-500 font-sans">
-                      Stream Key: Obtain your stream key from YouTube Studio Live Dashboard. The scanner strictly accepts only broadcasts belonging to SMTrading (UCkohQ1nDiIosi6gTPv0oXQA).
-                    </div>
-                  </div>
+                  <span>API Key: {ytApiKeyConfigured ? 'Connected' : 'Default Quota / Direct Scraper Active'}</span>
                 </div>
 
                 {ytSaveStatus && (
@@ -2140,12 +2204,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
                 )}
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-1">
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
+                    className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-lg shadow-rose-600/20"
                   >
-                    Save YouTube Settings
+                    Save Live Stream Settings
                   </button>
 
                   <button
@@ -2154,21 +2218,34 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     disabled={ytTesting}
                     className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-all cursor-pointer"
                   >
-                    {ytTesting ? 'Testing Scanner...' : 'Test Scanner Now'}
+                    {ytTesting ? 'Scanning...' : 'Test Scanner Now'}
                   </button>
                 </div>
               </form>
 
               {ytLiveStatus && (
                 <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl text-xs space-y-2">
-                  <span className="font-bold text-white block">Scanner Test Results:</span>
+                  <span className="font-bold text-white block">Live Stream Status:</span>
                   <div className="text-slate-300">
-                    Live Status: <span className={ytLiveStatus.isLive ? 'text-rose-400 font-bold' : 'text-slate-400'}>
-                      {ytLiveStatus.isLive ? '🔴 LIVE NOW' : 'Offline'}
+                    Broadcast Status:{' '}
+                    <span className={ytLiveStatus.isLive ? 'text-rose-400 font-bold' : 'text-slate-400'}>
+                      {ytLiveStatus.isLive ? '🔴 LIVE NOW ON SMTRADING' : 'Offline'}
                     </span>
                   </div>
                   {ytLiveStatus.stream?.title && <div>Title: <span className="text-white">{ytLiveStatus.stream.title}</span></div>}
-                  {ytLiveStatus.stream?.videoId && <div className="font-mono text-slate-400">Video ID: {ytLiveStatus.stream.videoId}</div>}
+                  {ytLiveStatus.stream?.videoId && <div className="font-mono text-slate-400">Video: {ytLiveStatus.stream.videoId}</div>}
+                  {ytLiveStatus.stream?.embedUrl && (
+                    <div className="pt-1">
+                      <a
+                        href={ytLiveStatus.stream.watchUrl || `https://www.youtube.com/channel/UCkohQ1nDiIosi6gTPv0oXQA/live`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-400 hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        Open Live Stream on YouTube <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -5,6 +5,8 @@ export interface YouTubeLiveContextType {
   isLive: boolean;
   stream: YouTubeLiveStream | null;
   channel: YouTubeLiveStatus['channel'] | null;
+  latestVideo?: YouTubeLiveStatus['latestVideo'];
+  rtmpPrimary?: string;
   message: string;
   status: string;
   apiKeyConfigured: boolean;
@@ -105,6 +107,8 @@ export const YouTubeLiveProvider: React.FC<{ children: React.ReactNode }> = ({ c
         isLive: data?.isLive ?? false,
         stream: data?.stream ?? null,
         channel: data?.channel ?? null,
+        latestVideo: data?.latestVideo ?? null,
+        rtmpPrimary: data?.rtmpPrimary ?? 'rtmp://a.rtmp.youtube.com/live2',
         message: data?.message ?? 'No Live Stream Currently',
         status: data?.status ?? 'idle',
         apiKeyConfigured: data?.apiKeyConfigured ?? false,
@@ -128,6 +132,8 @@ export function useYouTubeLive() {
       isLive: false,
       stream: null,
       channel: null,
+      latestVideo: null,
+      rtmpPrimary: 'rtmp://a.rtmp.youtube.com/live2',
       message: 'No Live Stream Currently',
       status: 'idle',
       apiKeyConfigured: false,

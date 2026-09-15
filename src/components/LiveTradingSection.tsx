@@ -93,6 +93,8 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
     isLive,
     stream,
     channel,
+    latestVideo,
+    rtmpPrimary,
     message,
     status,
     isLoading,
@@ -126,6 +128,8 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
           isLive={isLive}
           stream={stream}
           channel={channel}
+          latestVideo={latestVideo}
+          rtmpPrimary={rtmpPrimary}
           message={message}
           isLoading={isLoading}
           isRefreshing={isRefreshing}

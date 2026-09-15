@@ -284,11 +284,21 @@ export interface YouTubeLiveStatus {
     id?: string | null;
     handle?: string | null;
     title?: string;
+    url?: string;
     thumbnail?: string;
   } | null;
   apiKeyConfigured: boolean;
   checkedAt: string;
   cached?: boolean;
+  rtmpPrimary?: string;
+  rtmpBackup?: string;
+  latestVideo?: {
+    videoId: string;
+    title: string;
+    embedUrl: string;
+    watchUrl: string;
+    thumbnailUrl: string;
+  } | null;
 }
 
 // ====================================================

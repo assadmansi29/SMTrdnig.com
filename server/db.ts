@@ -243,6 +243,8 @@ export interface DatabaseSchema {
     siteName: string;
     youtubeChannelId?: string;
     youtubeChannelHandle?: string;
+    youtubeIsLive?: boolean;
+    youtubeManualVideoId?: string;
   };
 }
 
@@ -534,6 +536,9 @@ export async function isPostgresReady(): Promise<boolean> {
             UPDATE system_settings 
             SET default_admin_commission = 20, default_client_commission = 20 
             WHERE default_admin_commission = 25 OR default_client_commission = 25;
+
+            ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS youtube_is_live BOOLEAN DEFAULT true;
+            ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS youtube_manual_video_id TEXT DEFAULT NULL;
           `);
         } catch (migrationErr) {
           console.warn('[Database Migration Notice]', migrationErr);
@@ -1471,6 +1476,8 @@ export class Database {
         siteName: row.site_name || "SMTrading.pro",
         youtubeChannelId: row.youtube_channel_id || undefined,
         youtubeChannelHandle: row.youtube_channel_handle || undefined,
+        youtubeIsLive: row.youtube_is_live !== null && row.youtube_is_live !== undefined ? Boolean(row.youtube_is_live) : true,
+        youtubeManualVideoId: row.youtube_manual_video_id || undefined,
       };
     }
     return {
@@ -1479,6 +1486,7 @@ export class Database {
       defaultAdminCommission: 20,
       defaultPurchaseCommission: 10,
       siteName: "SMTrading.pro",
+      youtubeIsLive: true,
     };
   }
 
@@ -1489,16 +1497,18 @@ export class Database {
 
     await p.query(`
       INSERT INTO system_settings (
-        id, default_client_commission, default_employee_commission, default_admin_commission, site_name, youtube_channel_id, youtube_channel_handle
+        id, default_client_commission, default_employee_commission, default_admin_commission, site_name, youtube_channel_id, youtube_channel_handle, youtube_is_live, youtube_manual_video_id
       ) VALUES (
-        1, $1, $2, $3, $4, $5, $6
+        1, $1, $2, $3, $4, $5, $6, $7, $8
       ) ON CONFLICT (id) DO UPDATE SET
         default_client_commission = EXCLUDED.default_client_commission,
         default_employee_commission = EXCLUDED.default_employee_commission,
         default_admin_commission = EXCLUDED.default_admin_commission,
         site_name = EXCLUDED.site_name,
         youtube_channel_id = EXCLUDED.youtube_channel_id,
-        youtube_channel_handle = EXCLUDED.youtube_channel_handle
+        youtube_channel_handle = EXCLUDED.youtube_channel_handle,
+        youtube_is_live = EXCLUDED.youtube_is_live,
+        youtube_manual_video_id = EXCLUDED.youtube_manual_video_id
     `, [
       updated.defaultClientCommission,
       updated.defaultEmployeeCommission,
@@ -1506,6 +1516,8 @@ export class Database {
       updated.siteName,
       updated.youtubeChannelId || null,
       updated.youtubeChannelHandle || null,
+      updated.youtubeIsLive !== undefined ? updated.youtubeIsLive : true,
+      updated.youtubeManualVideoId || null,
     ]);
 
     return updated;
