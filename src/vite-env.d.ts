@@ -24,3 +24,12 @@ declare module '*.webp' {
   const src: string;
   export default src;
 }
+
+interface ImportMetaEnv {
+  readonly VITE_GA_MEASUREMENT_ID?: string;
+  readonly [key: string]: unknown;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

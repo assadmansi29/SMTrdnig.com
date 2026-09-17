@@ -48,8 +48,10 @@ import {
   Headphones,
   Check
 } from 'lucide-react';
+import { usePageTracking } from './utils/analytics';
 
 export default function App() {
+  usePageTracking();
   const { t, isRTL, language } = useTranslation();
   const [articles, setArticles] = useState<Article[]>(() => getArticlesByLanguage(language));
   const [activeCategory, setActiveCategory] = useState<ArticleCategory>('All');
