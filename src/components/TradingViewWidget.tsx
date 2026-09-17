@@ -1171,7 +1171,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     if (!manager) return;
 
     const currentStrat = activeStrategyRef.current || 'default';
-    const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
+    const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Hunter Strategy' : 'Strategy';
 
     const allDrawings = manager.exportDrawings().map((d: any) => {
       const live = manager.getDrawing(d.id);
@@ -1246,7 +1246,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     setSaveError(null);
     try {
       await loadPostgresDrawings(symbol, interval, true, activeStrategy);
-      const stratLabel = activeStrategy === '144' ? '144 Strategy' : activeStrategy === 'smc' ? 'SMC Strategy' : activeStrategy === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
+      const stratLabel = activeStrategy === '144' ? '144 Strategy' : activeStrategy === 'smc' ? 'SMC Strategy' : activeStrategy === 'fib' ? 'Hunter Strategy' : 'Strategy';
       setSaveStatus('synced');
       setRefreshNotification(`${stratLabel} Refreshed from Database`);
       setTimeout(() => {
@@ -1347,7 +1347,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   // 7. Clear All Drawings (MANUAL ONLY with Explicit User Confirmation)
   const handleClearAll = useCallback(async () => {
     const currentStrat = activeStrategyRef.current || 'default';
-    const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Fibonacci Strategy' : 'Strategy';
+    const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Hunter Strategy' : 'Strategy';
 
     const confirmed = window.confirm(
       `Are you sure you want to permanently DELETE and CLEAR all saved drawings for ${stratLabel} on ${symbol} from the database?\n\nThis is a manual deletion action and cannot be undone.`
@@ -2602,7 +2602,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
   }, [symbol, interval, activeStrategy, fetchCandles, loadPostgresDrawings]);
 
-  // Switch Independent Strategy Chart View (144 Strategy, SMC Strategy, Fibonacci Strategy)
+  // Switch Independent Strategy Chart View (144 Strategy, SMC Strategy, Hunter Strategy)
   const prevStrategyRef = useRef<string | null>(activeStrategy);
   useEffect(() => {
     if (prevStrategyRef.current !== activeStrategy) {
@@ -2913,7 +2913,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                         : activeStrategy === 'smc'
                         ? 'Save (SMC)'
                         : activeStrategy === 'fib'
-                        ? 'Save (Fib)'
+                        ? 'Save (Hunter)'
                         : 'Save Strategy'}
                     </span>
                     {saveStatus === 'unsaved' && (
@@ -2943,7 +2943,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                 : activeStrategy === 'smc'
                 ? 'Refresh (SMC)'
                 : activeStrategy === 'fib'
-                ? 'Refresh (Fib)'
+                ? 'Refresh (Hunter)'
                 : 'Refresh'}
             </span>
           </button>
@@ -3023,7 +3023,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                 ? '144 Strategy'
                 : activeStrategy === 'smc'
                 ? 'SMC Strategy'
-                : 'Fibonacci Strategy'}
+                : 'Hunter Strategy'}
             </strong>
             {isOwnerOrAdmin ? (
               <span className="ml-2 text-[10px] text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">

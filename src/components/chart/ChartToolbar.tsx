@@ -626,7 +626,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
         {/* Subtle Divider */}
         <div className="h-5 w-px bg-slate-800/80 mx-0.5 hidden sm:block" />
 
-        {/* 3. Three Independent Strategy Views: 144 Strategy, SMC Strategy, Fibonacci Strategy */}
+        {/* 3. Three Independent Strategy Views: 144 Strategy, SMC Strategy, Hunter Strategy */}
         <div className="flex items-center gap-1.5">
           {/* Magic Lines View */}
           <button
@@ -672,7 +672,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             )}
           </button>
 
-          {/* Fibonacci Strategy View */}
+          {/* Hunter Strategy View */}
           <button
             id="btn-strategy-fib"
             type="button"
@@ -684,11 +684,11 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300'
             }`}
-            title="Fibonacci Strategy: Open clean chart view with saved Fibonacci Strategy analysis"
+            title="Hunter Strategy: Open clean chart view with saved Hunter Strategy analysis"
           >
             <Divide className={`w-3.5 h-3.5 ${activeStrategy === 'fib' ? 'text-emerald-300' : 'text-emerald-400'}`} />
-            <span className="hidden sm:inline">Fibonacci Strategy</span>
-            <span className="sm:hidden">Fib</span>
+            <span className="hidden sm:inline">Hunter Strategy</span>
+            <span className="sm:hidden">Hunter</span>
             {activeStrategy === 'fib' && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             )}
