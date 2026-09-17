@@ -136,10 +136,7 @@ export const PublicLandingPage: React.FC = () => {
                 <span className="font-black text-sm sm:text-lg md:text-xl text-white tracking-tight shrink-0">
                   SMTrading<span className="text-amber-400">.pro</span>
                 </span>
-                <div className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-300 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">
-                  <span className="hidden sm:inline">by ABU ASAD ALMANSI</span>
-                  <BlueVerifiedBadge size="sm" />
-                </div>
+                <BlueVerifiedBadge size="sm" />
               </div>
               <div className="flex items-center justify-start ltr:justify-start rtl:justify-start pt-0.5">
                 <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">
@@ -676,7 +673,7 @@ export const PublicLandingPage: React.FC = () => {
                       <h4 className="text-sm font-bold text-white">Abu Asad Almansi</h4>
                       <BlueVerifiedBadge size="sm" />
                     </div>
-                    <p className="text-xs text-amber-400 font-medium">{t('mentorAbuRoleBadge')}</p>
+                    <p className="text-xs text-amber-400 font-medium">{t('mentorAbuTitle')}</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
                     {t('landingAnalystQuote1')}
@@ -701,7 +698,7 @@ export const PublicLandingPage: React.FC = () => {
                       <h4 className="text-sm font-bold text-white">Ahmad Nader Attar</h4>
                       <BlueVerifiedBadge size="sm" />
                     </div>
-                    <p className="text-xs text-amber-400 font-medium">{t('mentorAhmadRoleBadge')}</p>
+                    <p className="text-xs text-amber-400 font-medium">{t('mentorAhmadTitle')}</p>
                   </div>
                   <p className="text-[11px] text-slate-400 italic">
                     {t('landingAnalystQuote2')}
@@ -1299,7 +1296,6 @@ export const PublicLandingPage: React.FC = () => {
             </div>
             <div>
               <div className="font-bold text-white text-sm">SMTrading<span className="text-amber-400">.pro</span></div>
-              <div className="text-[11px] text-slate-500">by Abu Asad Almansi • Verified Desk</div>
               <div className="text-[9px] font-medium tracking-[0.14em] uppercase text-slate-400/80 pt-0.5 select-none">
                 Powered by <span className="font-semibold text-slate-300">Modern Era</span>
               </div>

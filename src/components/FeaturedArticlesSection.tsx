@@ -51,7 +51,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
       {/* Primary Academy Showcase Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Founder & CEO Card */}
+        {/* Abu Asad Almansi (Manager) Card */}
         <div className="relative rounded-3xl overflow-hidden border border-amber-500/35 bg-gradient-to-br from-[#0D1322] via-[#0E162B] to-[#0A0F1D] p-6 sm:p-8 shadow-2xl flex flex-col justify-between space-y-6">
           <div className="absolute top-0 right-0 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
           
@@ -124,7 +124,7 @@ export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = (
           </div>
         </div>
 
-        {/* Co-Founder Card */}
+        {/* Ahmad Nader Attar (Manager) Card */}
         <div className="relative rounded-3xl overflow-hidden border border-blue-500/35 bg-gradient-to-br from-[#0D1322] via-[#0E162B] to-[#0A0F1D] p-6 sm:p-8 shadow-2xl flex flex-col justify-between space-y-6">
           <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
           

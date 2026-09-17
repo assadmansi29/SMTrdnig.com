@@ -12,7 +12,7 @@ export const AUTHORS: Record<string, Author> = {
   abuAsad: {
     id: 'author-0',
     name: 'Abu Asad Almansi',
-    role: 'Founder & CEO',
+    role: 'Manager',
     avatar: abuAsadImg,
     bio: 'Founder of Smart Money Trading (SMTrading.pro). Quantitative market technician specializing in Institutional Order Flow, Smart Money Concepts (SMC), and algorithmic liquidity microstructure.',
     twitter: '@almansi_smc',
@@ -21,7 +21,7 @@ export const AUTHORS: Record<string, Author> = {
   ahmadNader: {
     id: 'author-1',
     name: 'Ahmad Nader Attar',
-    role: 'Co-Founder',
+    role: 'Manager',
     avatar: ahmadNaderImg,
     bio: 'Co-Founder of Smart Money Trading (SMTrading.pro).',
     twitter: '@ahmad_nader',
@@ -30,7 +30,7 @@ export const AUTHORS: Record<string, Author> = {
   marcus: {
     id: 'author-3',
     name: 'Abu Asad Almansi',
-    role: 'Founder & CEO',
+    role: 'Manager',
     avatar: abuAsadImg,
     bio: 'Founder of Smart Money Trading (SMTrading.pro). Quantitative market technician specializing in Institutional Order Flow, Smart Money Concepts (SMC), and algorithmic liquidity microstructure.',
     twitter: '@almansi_smc',

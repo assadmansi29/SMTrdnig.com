@@ -87,7 +87,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
                     <BlueVerifiedBadge size="sm" />
                   </div>
                   <span className="text-[11px] text-amber-300/90 font-medium">
-                    Founder & CEO
+                    Manager
                   </span>
                 </div>
               </div>
