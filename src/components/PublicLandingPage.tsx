@@ -131,7 +131,7 @@ export const PublicLandingPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-1 sm:gap-1.5 flex-nowrap">
                 <span className="font-black text-sm sm:text-lg md:text-xl text-white tracking-tight shrink-0">
                   SMTrading<span className="text-amber-400">.pro</span>
@@ -141,7 +141,12 @@ export const PublicLandingPage: React.FC = () => {
                   <BlueVerifiedBadge size="sm" />
                 </div>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium truncate hidden md:block">
+              <div className="flex items-center justify-start ltr:justify-start rtl:justify-start pt-0.5">
+                <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">
+                  Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium truncate hidden lg:block pt-0.5">
                 Institutional Trading Platform • Quantitative SMC Network
               </p>
             </div>
@@ -1295,6 +1300,9 @@ export const PublicLandingPage: React.FC = () => {
             <div>
               <div className="font-bold text-white text-sm">SMTrading<span className="text-amber-400">.pro</span></div>
               <div className="text-[11px] text-slate-500">by Abu Asad Almansi • Verified Desk</div>
+              <div className="text-[9px] font-medium tracking-[0.14em] uppercase text-slate-400/80 pt-0.5 select-none">
+                Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+              </div>
             </div>
           </div>
 

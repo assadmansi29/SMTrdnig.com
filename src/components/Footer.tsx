@@ -86,6 +86,11 @@ export const Footer: React.FC<FooterProps> = ({
               <div className="text-[11px] text-slate-300 font-semibold uppercase tracking-wider pt-0.5">
                 Smart Money Trading Intelligence
               </div>
+              <div className="pt-1">
+                <span className="text-[9.5px] sm:text-[10px] font-medium tracking-[0.14em] uppercase text-slate-400/80 leading-none select-none">
+                  Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+                </span>
+              </div>
             </div>
           </div>
 

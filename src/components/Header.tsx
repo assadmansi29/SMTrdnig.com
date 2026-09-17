@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
-                <div className="min-w-0">
+                <div className="min-w-0 flex flex-col justify-center">
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <span className="font-black text-base sm:text-lg md:text-xl tracking-tight text-white group-hover:text-amber-300 transition-colors shrink-0">
                       {t('brandTitle')}<span className="text-amber-400">.pro</span>
@@ -112,6 +112,11 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="hidden xs:inline">{t('brandBy')}</span>
                       <BlueVerifiedBadge size="sm" />
                     </div>
+                  </div>
+                  <div className="flex items-center justify-start ltr:justify-start rtl:justify-start pt-0.5">
+                    <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 group-hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">
+                      Powered by <span className="font-semibold text-slate-300 group-hover:text-amber-200 transition-colors">Modern Era</span>
+                    </span>
                   </div>
                 </div>
               </button>

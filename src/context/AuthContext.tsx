@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile } from '../types';
 
 interface AuthContextType {
@@ -22,47 +22,85 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('smtrading_token'));
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem('smtrading_token');
+      if (!stored || stored === 'null' || stored === 'undefined' || stored.trim() === '') {
+        return null;
+      }
+      return stored.trim();
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
+  const retryCountRef = useRef<number>(0);
+  const activeControllerRef = useRef<AbortController | null>(null);
 
   const fetchCurrentUser = useCallback(async (authToken?: string | null) => {
-    const activeToken = authToken !== undefined ? authToken : token;
-    if (!activeToken) {
+    const rawToken = authToken !== undefined ? authToken : token;
+    const cleanToken = (rawToken && typeof rawToken === 'string' && rawToken !== 'null' && rawToken !== 'undefined' && rawToken.trim() !== '')
+      ? rawToken.trim()
+      : null;
+
+    if (!cleanToken) {
       setUser(null);
       setLoading(false);
       return;
     }
 
+    if (activeControllerRef.current) {
+      activeControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    activeControllerRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
       const res = await fetch('/api/auth/me', {
         headers: {
-          'Authorization': `Bearer ${activeToken}`,
+          'Authorization': `Bearer ${cleanToken}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        retryCountRef.current = 0;
       } else if (res.status === 401 || res.status === 403) {
         // Token is genuinely expired, revoked, or invalid
-        localStorage.removeItem('smtrading_token');
+        try {
+          localStorage.removeItem('smtrading_token');
+        } catch {}
         setToken(null);
         setUser(null);
+        retryCountRef.current = 0;
       } else {
-        // Temporary server or database error (e.g. 503 DATABASE_UNAVAILABLE, 502, 504)
-        // Strictly PRESERVE the user's stored token in localStorage and state so session is never lost
-        console.warn(`[AuthContext] Database or server temporarily unavailable (status ${res.status}). Preserving authentication token.`);
-        // Retry fetching user profile after a short delay when the temporary condition clears
-        setTimeout(() => {
-          fetchCurrentUser(activeToken);
-        }, 5000);
+        // Temporary server or database status (e.g. 503 DATABASE_UNAVAILABLE, 502, 504)
+        console.warn(`[AuthContext] Server temporarily unavailable (status ${res.status}). Preserving authentication state.`);
+        if (retryCountRef.current < 2) {
+          retryCountRef.current += 1;
+          setTimeout(() => {
+            fetchCurrentUser(cleanToken);
+          }, 3000 * retryCountRef.current);
+        }
       }
-    } catch (err) {
-      console.error('Network error fetching current user:', err);
-      // Network interruption: do NOT wipe token
-      setTimeout(() => {
-        fetchCurrentUser(activeToken);
-      }, 5000);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err?.name === 'AbortError') {
+        return;
+      }
+      console.warn('[AuthContext] Temporary network interruption verifying session:', err?.message || err);
+      // Bounded retry (max 2 times) to prevent infinite loops
+      if (retryCountRef.current < 2) {
+        retryCountRef.current += 1;
+        setTimeout(() => {
+          fetchCurrentUser(cleanToken);
+        }, 3000 * retryCountRef.current);
+      }
     } finally {
       setLoading(false);
     }
@@ -70,6 +108,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     fetchCurrentUser();
+    return () => {
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+      }
+    };
   }, [fetchCurrentUser]);
 
   const login = async (username: string, password: string) => {
