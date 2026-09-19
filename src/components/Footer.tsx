@@ -1,0 +1,224 @@
+import React from 'react';
+import { ShieldCheck, TrendingUp, Sparkles, Mail, Globe, ArrowUpRight, AlertTriangle } from 'lucide-react';
+import { ArticleCategory } from '../types';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { useTranslation } from '../context/LanguageContext';
+
+interface FooterProps {
+  onSelectCategory: (category: ArticleCategory) => void;
+  onOpenCalculator: () => void;
+  onOpenCalendar: () => void;
+  onOpenChart: () => void;
+  onOpenNewsletter: () => void;
+  onOpenCoachingDesk?: () => void;
+  onOpenECommerce?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({
+  onSelectCategory,
+  onOpenCalculator,
+  onOpenCalendar,
+  onOpenChart,
+  onOpenNewsletter,
+  onOpenCoachingDesk,
+  onOpenECommerce
+}) => {
+  const { t, isRTL } = useTranslation();
+
+  const categoryTranslations: Record<ArticleCategory, string> = {
+    'All': t('catAll'),
+    'Macro & Liquidity': t('catMacro'),
+    'Order Flow & Price Action': t('catOrderFlow'),
+    'Trade Now': t('catQuant'),
+    'BookMap': t('catBookMap'),
+    'LIVE Trade': t('catOptions'),
+    'VIP Signals': t('catVipSignals'),
+    'Support': t('catRisk')
+  };
+
+  return (
+    <footer className="bg-[#070A10] border-t border-slate-800 text-slate-400 text-xs">
+      {/* Top Pre-Footer Banner */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 border-b border-slate-800/80">
+        <div className="bg-gradient-to-r from-[#0C1220] via-[#101728] to-[#0A0E18] border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-1.5 text-center md:text-left rtl:md:text-right">
+            <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px] flex items-center justify-center md:justify-start rtl:md:justify-start gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              {t('footerBannerTag')}
+            </span>
+            <h3 className="text-lg sm:text-xl font-bold text-white">
+              {t('footerBannerHeading')}
+            </h3>
+            <p className="text-xs text-slate-400">
+              {t('footerBannerDesc')}
+            </p>
+          </div>
+
+          <button
+            onClick={onOpenNewsletter}
+            className="shrink-0 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+          >
+            {t('footerBannerBtn')}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Footer Directory */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+        {/* Brand Col */}
+        <div className="lg:col-span-2 space-y-3.5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 p-[1px] shadow-md shadow-amber-500/10">
+              <div className="w-full h-full bg-[#0E131F] rounded-[10px] flex items-center justify-center font-bold text-amber-400 font-mono-num text-sm">
+                SM
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="font-black text-xl sm:text-2xl text-white block tracking-tight">
+                  SMTrading<span className="text-amber-400">.pro</span>
+                </span>
+                <span className="bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1">
+                  <span>by ABU ASAD ALMANSI</span>
+                  <BlueVerifiedBadge size="xs" />
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-300 font-semibold uppercase tracking-wider pt-0.5">
+                Smart Money Trading Intelligence
+              </div>
+              <div className="pt-1">
+                <span className="text-[9.5px] sm:text-[10px] font-medium tracking-[0.14em] uppercase text-slate-400/80 leading-none select-none">
+                  Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed pr-6 rtl:pr-0 rtl:pl-6">
+            {t('footerBrandDesc')}
+          </p>
+
+          <div className="flex items-center gap-3 pt-2 text-slate-300">
+            <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-[11px] font-mono-num text-amber-300">
+              EST. 2026
+            </span>
+            <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-[11px] font-mono-num text-emerald-400">
+              NYSE / CME / EUREX Feeds
+            </span>
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="space-y-3">
+          <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerSectorsTitle')}</h4>
+          <ul className="space-y-2">
+            {(['Macro & Liquidity', 'Order Flow & Price Action', 'Trade Now', 'BookMap', 'LIVE Trade', 'VIP Signals', 'Support'] as ArticleCategory[]).map(c => (
+              <li key={c}>
+                <button
+                  onClick={() => {
+                    if (c === 'Trade Now') {
+                      onOpenChart();
+                    } else {
+                      onSelectCategory(c);
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="hover:text-amber-300 transition-colors text-left rtl:text-right cursor-pointer"
+                >
+                  {categoryTranslations[c] || c}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Interactive Tools */}
+        <div className="space-y-3">
+          <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerToolsTitle')}</h4>
+          <ul className="space-y-2">
+            <li>
+              <button onClick={onOpenCalculator} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navRiskCalculator')}
+              </button>
+            </li>
+            <li>
+              <button onClick={onOpenCalendar} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navCalendar')}
+              </button>
+            </li>
+            <li>
+              <button onClick={onOpenChart} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navChartStudio')}
+              </button>
+            </li>
+            <li>
+              <button onClick={onOpenNewsletter} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                {t('navVipAlpha')}
+              </button>
+            </li>
+            {onOpenCoachingDesk && (
+              <li>
+                <button onClick={onOpenCoachingDesk} className="hover:text-emerald-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                  <span>Coaching Desk</span>
+                </button>
+              </li>
+            )}
+            {onOpenECommerce && (
+              <li>
+                <button onClick={onOpenECommerce} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
+                  <span>SMTrading Store</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {/* Author Desk & Editorial */}
+        <div className="space-y-3">
+          <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerEditorialTitle')}</h4>
+          <ul className="space-y-1.5 text-slate-400">
+            <li className="text-amber-300 font-semibold flex items-center gap-1">
+              <span>Abu Asad Almansi (Manager)</span>
+              <BlueVerifiedBadge size="xs" />
+            </li>
+            <li className="text-amber-300 font-semibold flex items-center gap-1">
+              <span>Ahmad Nader Attar (Manager)</span>
+              <BlueVerifiedBadge size="xs" />
+            </li>
+            <li>Dr. Sarah Chen (Risk Neuroscience)</li>
+            <li className="pt-2 border-t border-slate-800/80">
+              <a 
+                href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"
+                className="text-slate-400 hover:text-amber-400 flex items-center gap-1.5 transition-colors"
+              >
+                <Mail className="w-3 h-3 text-amber-400" />
+                <span className="font-mono-num text-[11px]">smtradingsupprt@gmail.com</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* CFTC Rule 4.41 & Financial Risk Disclosure */}
+      <div className="bg-[#05070C] border-t border-slate-800/80 py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-3">
+          <div className="flex items-start gap-2.5 text-[11px] text-slate-500 leading-relaxed">
+            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <p>
+              <strong>{t('footerRiskWarningTitle')}</strong> {t('footerRiskWarningText')}
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span>{t('footerCopyright')}</span>
+            <div className="flex gap-4">
+              <span className="hover:text-slate-400 cursor-pointer">{t('footerPrivacy')}</span>
+              <span className="hover:text-slate-400 cursor-pointer">{t('footerTerms')}</span>
+              <span className="hover:text-slate-400 cursor-pointer">{t('footerDisclosures')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};

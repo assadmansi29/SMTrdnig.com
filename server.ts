@@ -1,0 +1,204 @@
+import "dotenv/config";
+import express from "express";
+import http from "http";
+import path from "path";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import { createServer as createViteServer } from "vite";
+import { initPostgres, getPool, isDatabaseHealthy } from './server/db';
+import { requireDatabaseReady } from './server/middleware/dbGuard';
+import authRoutes from './server/routes/authRoutes';
+import userRoutes from './server/routes/userRoutes';
+import adminRoutes from './server/routes/adminRoutes';
+import youtubeRoutes from './server/routes/youtubeRoutes';
+import telegramRoutes from './server/routes/telegramRoutes';
+import chartAnalysisRoutes from './server/routes/chartAnalysisRoutes';
+import tradingviewStorageRoutes, { ensureTradingViewStorageTable } from './server/routes/tradingviewStorageRoutes';
+import chartDrawingsRoutes, { ensureChartDrawingsTable } from './server/routes/chartDrawingsRoutes';
+import marketRoutes from './server/routes/marketRoutes';
+import economicCalendarRoutes from './server/routes/economicCalendarRoutes';
+import aiRoutes from './server/routes/aiRoutes';
+import { ensureChartAnalysisTable } from './server/db/chartAnalysisDb';
+import { economicScheduler } from './server/services/economicScheduler';
+import { marketStreamManager } from './server/services/marketStreamService';
+
+async function startServer() {
+  const app = express();
+  const server = http.createServer(app);
+  const PORT = 3000;
+
+  // Trust upstream reverse proxy (Nginx / Cloud Run container ingress)
+  app.set("trust proxy", 1);
+
+  // Initialize Real-time Market Data WebSocket Server on /api/market/ws
+  marketStreamManager.initWebSocketServer(server);
+
+  // Initialize PostgreSQL schema in background to ensure port 3000 binds immediately
+  if (process.env.DATABASE_URL) {
+    initPostgres()
+      .then(() => {
+        console.log("[Database] Connected to PostgreSQL successfully.");
+        const p = getPool();
+        if (p) {
+          ensureChartAnalysisTable(p).catch((err: any) => {
+            console.error("[Chart Analysis] Table ensure notice:", err.message);
+          });
+          ensureTradingViewStorageTable().catch((err: any) => {
+            console.error("[TradingView Storage] Table ensure notice:", err.message);
+          });
+          ensureChartDrawingsTable().catch((err: any) => {
+            console.error("[Chart Drawings] Table ensure notice:", err.message);
+          });
+          economicScheduler.start(p).catch((err: any) => {
+            console.error("[Economic Scheduler] Startup notice:", err.message);
+          });
+        }
+      })
+      .catch((err: any) => {
+        console.error("[Database Notice] PostgreSQL initialization attempt:", err.message);
+      });
+  } else {
+    console.warn("[Database Warning] DATABASE_URL environment variable is not configured.");
+  }
+
+  // 1. Enable HTTP Compression (Gzip / Deflate) for high bandwidth efficiency
+  app.use(compression({
+    level: 6,
+    threshold: 1024, // only compress responses larger than 1KB
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    }
+  }));
+
+  // 2. Global Request Parsers
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+  app.use(cookieParser());
+
+  // 3. Security, CORS & Caching Headers
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
+  // 4. Mount API routes FIRST (Enforced PostgreSQL guard: database-dependent requests fail with 503 if DB is offline/initializing)
+  app.use('/api/auth', requireDatabaseReady, authRoutes);
+  app.use('/api/user', requireDatabaseReady, userRoutes);
+  app.use('/api/admin', requireDatabaseReady, adminRoutes);
+  app.use('/api/youtube', youtubeRoutes);
+  app.use('/api/telegram', requireDatabaseReady, telegramRoutes);
+  app.use('/api/chart-analyses', requireDatabaseReady, chartAnalysisRoutes);
+  app.use('/api/tradingview-storage', requireDatabaseReady, tradingviewStorageRoutes);
+  app.use('/api/chart-drawings', requireDatabaseReady, chartDrawingsRoutes);
+  app.use('/api', requireDatabaseReady, economicCalendarRoutes);
+  app.use('/api/market', marketRoutes);
+  app.use('/api/chart', marketRoutes);
+  app.use('/api/ai', aiRoutes);
+  app.use('/api', marketRoutes);
+
+  // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)
+  app.get("/api/health", (req, res) => {
+    const dbHealthy = isDatabaseHealthy();
+    const statusCode = dbHealthy ? 200 : 503;
+    res.status(statusCode).json({
+      status: dbHealthy ? "ok" : "unavailable",
+      server: "SMTrading Pro Engine",
+      storageEngine: "PostgreSQL (Sole Engine - No Fallback)",
+      databaseConnected: dbHealthy,
+      time: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      memoryUsageMB: Math.round(process.memoryUsage().rss / (1024 * 1024))
+    });
+  });
+
+  // Strict API 404 handler: ensure ANY unhandled /api/* route returns JSON, NEVER HTML index.html
+  app.all('/api/*', (req, res) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(404).json({
+      status: 'error',
+      error: `API route ${req.method} ${req.originalUrl || req.url} not found`
+    });
+  });
+
+  // 5. Frontend & Asset Handling
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      legacy: {
+        skipWebSocketTokenCheck: true,
+      },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+        hmr: {
+          server,
+        },
+      },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    // Serve static assets with aggressive immutable caching
+    app.use(express.static(distPath, {
+      maxAge: '7d',
+      etag: true,
+      immutable: true,
+      index: false
+    }));
+
+    // HTML fallback without cache to ensure instant client updates
+    app.get('*', (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`SMTrading Full-Stack Platform running on http://localhost:${PORT}`);
+  });
+
+  // 6. Graceful Shutdown handlers for zero-downtime autoscaling rollouts
+  const gracefulShutdown = async (signal: string) => {
+    console.log(`[Server] Received ${signal}. Initiating graceful shutdown...`);
+    try {
+      economicScheduler.stop();
+    } catch {}
+    server.close(async () => {
+      console.log('[Server] HTTP server closed.');
+      const pool = getPool();
+      if (pool) {
+        try {
+          await pool.end();
+          console.log('[Database] PostgreSQL connection pool drained and closed.');
+        } catch (err) {
+          console.error('[Database] Error closing PostgreSQL pool:', err);
+        }
+      }
+      process.exit(0);
+    });
+
+    // Force exit if hanging connections don't drain within 10s
+    setTimeout(() => {
+      console.error('[Server] Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
+
+startServer();

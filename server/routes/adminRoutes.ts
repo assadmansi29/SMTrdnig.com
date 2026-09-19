@@ -1,0 +1,1121 @@
+import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { Database, UserRecord, UserRole, SubscriptionStatus, RolePermissions } from '../db';
+import { authenticateToken, requireRole, requirePermission, sanitizeUser, AuthRequest } from '../auth';
+
+const router = Router();
+
+// All routes require valid authentication
+router.use(authenticateToken);
+
+// ====================================================
+// 1. STATS OVERVIEW (Super Admin & Admin)
+// ====================================================
+router.get('/stats', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const users = await Database.getAllUsers();
+  const transactions = await Database.getAllTransactions();
+
+  const totalUsers = users.length;
+  const activeSubscribers = users.filter(u => u.subscriptionStatus === 'active').length;
+  const expiredSubscribers = users.filter(u => u.subscriptionStatus === 'expired').length;
+  const superAdminCount = users.filter(u => u.role === 'super_admin').length;
+  const adminCount = users.filter(u => u.role === 'admin').length;
+  const employeeCount = users.filter(u => u.role === 'employee').length;
+  const coachCount = users.filter(u => u.role === 'coach').length;
+  const clientCount = users.filter(u => u.role === 'client').length;
+
+  const totalBalanceLiability = users.reduce((acc, u) => acc + (u.balance || 0), 0);
+  const totalCommissionsPaid = transactions
+    .filter(t => t.type === 'commission')
+    .reduce((acc, t) => acc + t.amount, 0);
+
+  res.json({
+    success: true,
+    stats: {
+      totalUsers,
+      activeSubscribers,
+      expiredSubscribers,
+      superAdminCount,
+      adminCount,
+      employeeCount,
+      coachCount,
+      clientCount,
+      totalBalanceLiability: Number(totalBalanceLiability.toFixed(2)),
+      totalCommissionsPaid: Number(totalCommissionsPaid.toFixed(2)),
+      totalTransactions: transactions.length,
+      isSuperAdmin: req.user!.role === 'super_admin',
+    }
+  });
+});
+
+// ====================================================
+// 2. USER MANAGEMENT (Super Admin & Admin)
+// ====================================================
+// GET /api/admin/users
+router.get('/users', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  const users = await Database.getAllUsers();
+
+  // Aggregate referral counts across in-memory user list accurately
+  const userMap = new Map(users.map(u => [u.id, u]));
+  const codeToIdMap = new Map(users.filter(u => u.referralCode).map(u => [u.referralCode!.toUpperCase(), u.id]));
+
+  const referralCounts: Record<string, number> = {};
+  for (const u of users) {
+    if (!u.referredBy) continue;
+    const refTarget = u.referredBy.trim();
+    if (userMap.has(refTarget)) {
+      referralCounts[refTarget] = (referralCounts[refTarget] || 0) + 1;
+    } else {
+      const resolvedId = codeToIdMap.get(refTarget.toUpperCase());
+      if (resolvedId) {
+        referralCounts[resolvedId] = (referralCounts[resolvedId] || 0) + 1;
+      }
+    }
+  }
+
+  const sanitized = users.map((u) => {
+    return {
+      ...sanitizeUser(u, callerRole),
+      referralsCount: referralCounts[u.id] || 0,
+    };
+  });
+
+  res.json({ success: true, users: sanitized });
+});
+
+// POST /api/admin/users (Create User)
+router.post('/users', requirePermission('canCreateUsers'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const callerRole = req.user!.role;
+    const {
+      username,
+      email,
+      password,
+      fullName,
+      role = 'client',
+      subscriptionStatus = 'active',
+      commissionRate,
+      balance = 0,
+      planName,
+      coachSpecialty,
+      assignedCoachId,
+      referredBy,
+    } = req.body;
+
+    if (!username || !email || !password) {
+      res.status(400).json({ error: 'Username, email, and password are required.' });
+      return;
+    }
+
+    // Role creation constraint: Admin can ONLY create clients. Only Super Admin can create super_admin, admin, employee, or coach
+    if (callerRole === 'admin' && role !== 'client') {
+      res.status(403).json({
+        error: 'Standard Admins are only authorized to create Client accounts. Creating Super Admin, Admin, Employee, or Coach accounts requires Super Admin privileges.',
+      });
+      return;
+    }
+
+    if (await Database.findUserByUsername(username)) {
+      res.status(409).json({ error: 'Username already in use.' });
+      return;
+    }
+
+    if (await Database.findUserByEmail(email)) {
+      res.status(409).json({ error: 'Email already in use.' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const userRefCode = `SM${username.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6)}${Math.floor(100 + Math.random() * 900)}`;
+    const expDate = new Date();
+    expDate.setFullYear(expDate.getFullYear() + 1);
+
+    const defaultCommRate = 20;
+    const defaultPurchaseCommRate = 10;
+
+    // Validate referredBy if provided
+    let cleanReferredBy: string | undefined = undefined;
+    if (referredBy && typeof referredBy === 'string' && referredBy.trim().length > 0) {
+      const cleanRefInput = referredBy.trim();
+      const referrerUser = await Database.findUserByReferralCode(cleanRefInput) || await Database.findUserByUsername(cleanRefInput);
+      cleanReferredBy = referrerUser ? referrerUser.referralCode : cleanRefInput;
+    }
+
+    const newUser = await Database.createUser({
+      username: username.trim(),
+      email: email.trim().toLowerCase(),
+      passwordHash,
+      fullName: fullName?.trim() || username.trim(),
+      role: role as UserRole,
+      subscriptionStatus: (subscriptionStatus as SubscriptionStatus) || 'active',
+      subscriptionPlan: planName || (role === 'client' ? 'Standard Pro SMC Enrollment' : 'Institutional Staff Access'),
+      subscriptionExpiresAt: expDate.toISOString(),
+      referralCode: userRefCode,
+      referredBy: cleanReferredBy,
+      commissionRate: Number(commissionRate) || defaultCommRate,
+      purchaseCommissionRate: defaultPurchaseCommRate,
+      balance: callerRole === 'super_admin' ? Number(balance) || 0.0 : 0.0,
+      pendingBalance: 0.0,
+      totalEarned: callerRole === 'super_admin' ? Number(balance) || 0.0 : 0.0,
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`,
+      notes: `Created by ${req.user!.role.toUpperCase()} @${req.user!.username}`,
+      assignedCoachId: assignedCoachId || undefined,
+      coachSpecialty: coachSpecialty || undefined,
+      trainingStatus: role === 'client' ? 'active_training' : undefined,
+    });
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'USER_CREATE',
+      targetId: newUser.id,
+      targetUsername: newUser.username,
+      details: `Created new user @${newUser.username} with role '${role}' and plan '${newUser.subscriptionPlan}'`,
+      metadata: { role, email: newUser.email, creatorRole: callerRole },
+    });
+
+    res.status(201).json({ success: true, user: sanitizeUser(newUser, callerRole) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to create user account.' });
+  }
+});
+
+// PATCH /api/admin/users/:id/role (SUPER ADMIN ONLY)
+router.patch('/users/:id/role', requirePermission('canManageAdmins'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  const { id } = req.params;
+  const { role } = req.body;
+
+  // STRICT RBAC: Changing roles or promoting/demoting is restricted to Super Admin
+  if (callerRole !== 'super_admin') {
+    res.status(403).json({
+      error: 'Access denied. Modifying account roles, staff appointments, or RBAC assignments is strictly restricted to Super Admin only.',
+    });
+    return;
+  }
+
+  if (!['super_admin', 'admin', 'employee', 'coach', 'client'].includes(role)) {
+    res.status(400).json({ error: 'Invalid role. Must be super_admin, admin, employee, coach, or client.' });
+    return;
+  }
+
+  const targetUser = await Database.findUserById(id);
+  if (!targetUser) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  // Prevent demoting self if caller is the super admin
+  if (id === req.user!.id && role !== 'super_admin') {
+    res.status(400).json({ error: 'You cannot demote your own active Super Admin account.' });
+    return;
+  }
+
+  const prevRole = targetUser.role;
+  const updated = await Database.updateUser(id, { role });
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'ROLE_CHANGE',
+    targetId: targetUser.id,
+    targetUsername: targetUser.username,
+    details: `Updated role of @${targetUser.username} from '${prevRole}' to '${role}'`,
+    metadata: { previousRole: prevRole, newRole: role },
+  });
+
+  res.json({ success: true, message: `User role updated to ${role}`, user: sanitizeUser(updated!, callerRole) });
+});
+
+// PATCH /api/admin/users/:id/subscription (Super Admin & Admin)
+router.patch('/users/:id/subscription', requirePermission('canManageSubscriptions'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  const { id } = req.params;
+  const { status, planName, expiresAt, addMonths } = req.body;
+
+  const targetUser = await Database.findUserById(id);
+  if (!targetUser) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  // Admin can ONLY modify subscriptions for normal 'client' accounts
+  if (callerRole === 'admin' && targetUser.role !== 'client') {
+    res.status(403).json({
+      error: 'Access denied. Administrators are strictly restricted to managing subscriptions for Client accounts only. Modifying staff or higher-privilege accounts requires Super Admin authorization.',
+    });
+    return;
+  }
+
+  const updates: Partial<UserRecord> = {};
+  if (status && ['active', 'expired', 'inactive'].includes(status)) {
+    updates.subscriptionStatus = status as SubscriptionStatus;
+  }
+  if (planName) {
+    updates.subscriptionPlan = planName;
+  }
+  if (expiresAt) {
+    updates.subscriptionExpiresAt = new Date(expiresAt).toISOString();
+  } else if (addMonths && !isNaN(Number(addMonths))) {
+    const base = new Date(targetUser.subscriptionExpiresAt > new Date().toISOString() ? targetUser.subscriptionExpiresAt : new Date());
+    base.setMonth(base.getMonth() + Number(addMonths));
+    updates.subscriptionExpiresAt = base.toISOString();
+    if (!status) updates.subscriptionStatus = 'active';
+  }
+
+  const updated = await Database.updateUser(id, updates);
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'SUBSCRIPTION_UPDATE',
+    targetId: targetUser.id,
+    targetUsername: targetUser.username,
+    details: `Updated subscription for @${targetUser.username}: status=${updates.subscriptionStatus || targetUser.subscriptionStatus}, expiresAt=${updates.subscriptionExpiresAt || targetUser.subscriptionExpiresAt}`,
+    metadata: { updates },
+  });
+
+  res.json({ success: true, message: 'Subscription updated successfully', user: sanitizeUser(updated!, callerRole) });
+});
+
+// PATCH /api/admin/users/:id/balance (SUPER ADMIN ONLY)
+router.patch('/users/:id/balance', requirePermission('canAdjustBalances'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  if (callerRole !== 'super_admin') {
+    res.status(403).json({
+      error: 'Direct balance adjustments and financial ledger corrections require Super Admin authorization.',
+    });
+    return;
+  }
+
+  const { id } = req.params;
+  const { amount, action = 'set', reason = 'Super Admin Balance Adjustment' } = req.body;
+
+  const validActions = ['add', 'deduct', 'set'];
+  if (!validActions.includes(action)) {
+    res.status(400).json({ error: `Invalid action '${action}'. Allowed actions: add, deduct, set.` });
+    return;
+  }
+
+  const numAmount = Number(amount);
+  if (amount === undefined || isNaN(numAmount) || !Number.isFinite(numAmount) || numAmount < 0) {
+    res.status(400).json({ error: 'Amount must be a non-negative, finite number.' });
+    return;
+  }
+
+  if (numAmount > 10000000) {
+    res.status(400).json({ error: 'Amount exceeds maximum allowable threshold ($10,000,000).' });
+    return;
+  }
+
+  const user = await Database.findUserById(id);
+  if (!user) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  if (action === 'deduct' && numAmount > user.balance) {
+    res.status(400).json({
+      error: `Cannot deduct $${numAmount.toFixed(2)} from available balance of $${user.balance.toFixed(2)}. Balances cannot be negative.`,
+    });
+    return;
+  }
+
+  try {
+    const result = await Database.adjustUserBalanceAtomic(
+      id,
+      numAmount,
+      action,
+      String(reason).trim() || 'Super Admin Balance Adjustment',
+      req.user!
+    );
+
+    res.json({
+      success: true,
+      message: `Balance updated to $${result.user.balance.toFixed(2)}`,
+      user: sanitizeUser(result.user, callerRole),
+      transaction: result.transaction,
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to adjust balance.' });
+  }
+});
+
+// PATCH /api/admin/users/:id/commission-rate (SUPER ADMIN ONLY)
+router.patch('/users/:id/commission-rate', requirePermission('canSetCommissionRates'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  if (callerRole !== 'super_admin') {
+    res.status(403).json({ error: 'Setting referral commission rates requires Super Admin authorization.' });
+    return;
+  }
+
+  const { id } = req.params;
+  const { rate, purchaseRate } = req.body;
+
+  const targetUser = await Database.findUserById(id);
+  if (!targetUser) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  const updateFields: any = {};
+  if (rate !== undefined) {
+    const numRate = Number(rate);
+    if (isNaN(numRate) || numRate < 0 || numRate > 100) {
+      res.status(400).json({ error: 'Subscription commission rate must be a percentage between 0 and 100.' });
+      return;
+    }
+    updateFields.commissionRate = numRate;
+  }
+
+  if (purchaseRate !== undefined) {
+    const numPurchaseRate = Number(purchaseRate);
+    if (isNaN(numPurchaseRate) || numPurchaseRate < 0 || numPurchaseRate > 100) {
+      res.status(400).json({ error: 'Purchase commission rate must be a percentage between 0 and 100.' });
+      return;
+    }
+    updateFields.purchaseCommissionRate = numPurchaseRate;
+  }
+
+  if (Object.keys(updateFields).length === 0) {
+    res.status(400).json({ error: 'No commission rates provided.' });
+    return;
+  }
+
+  const updated = await Database.updateUser(id, updateFields);
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'COMMISSION_RATE_UPDATE',
+    targetId: targetUser.id,
+    targetUsername: targetUser.username,
+    details: `Updated commission rates for @${targetUser.username}: Sub=${updateFields.commissionRate ?? targetUser.commissionRate}%, Purchase=${updateFields.purchaseCommissionRate ?? targetUser.purchaseCommissionRate ?? 10}%`,
+    metadata: { previousRate: targetUser.commissionRate, ...updateFields },
+  });
+
+  res.json({
+    success: true,
+    message: `Commission rates updated: ${updateFields.commissionRate ?? targetUser.commissionRate}% subscriptions, ${updateFields.purchaseCommissionRate ?? targetUser.purchaseCommissionRate ?? 10}% purchases`,
+    user: sanitizeUser(updated!, callerRole)
+  });
+});
+
+// PATCH /api/admin/users/:id/reset-password (Super Admin & Admin)
+router.patch('/users/:id/reset-password', requirePermission('canResetPasswords'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 6) {
+    res.status(400).json({ error: 'New password must be at least 6 characters.' });
+    return;
+  }
+
+  const targetUser = await Database.findUserById(id);
+  if (!targetUser) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  // Admin can ONLY reset password for normal 'client' users
+  if (callerRole === 'admin' && targetUser.role !== 'client') {
+    res.status(403).json({
+      error: 'Admins are only authorized to reset passwords for Client accounts. Resetting staff or admin passwords requires Super Admin authorization.',
+    });
+    return;
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash(newPassword, salt);
+
+  const updated = await Database.updateUser(id, { passwordHash });
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'PASSWORD_RESET',
+    targetId: targetUser.id,
+    targetUsername: targetUser.username,
+    details: `Reset password for user @${targetUser.username}`,
+    metadata: { resetByRole: callerRole },
+  });
+
+  res.json({ success: true, message: `Password for @${updated!.username} successfully reset.` });
+});
+
+// DELETE /api/admin/users/:id (SUPER ADMIN ONLY)
+router.delete('/users/:id', requirePermission('canDeleteUsers'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  if (callerRole !== 'super_admin') {
+    res.status(403).json({ error: 'Account deletion is permanently restricted to Super Admin only.' });
+    return;
+  }
+
+  const { id } = req.params;
+
+  if (id === req.user!.id) {
+    res.status(400).json({ error: 'You cannot delete your own Super Admin account.' });
+    return;
+  }
+
+  const targetUser = await Database.findUserById(id);
+  if (!targetUser) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  const deleted = await Database.deleteUser(id);
+  if (!deleted) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'USER_DELETE',
+    targetId: targetUser.id,
+    targetUsername: targetUser.username,
+    details: `Permanently deleted user account @${targetUser.username} (Role: ${targetUser.role})`,
+    metadata: { deletedUser: targetUser.username, role: targetUser.role },
+  });
+
+  res.json({ success: true, message: `User account @${targetUser.username} removed permanently.` });
+});
+
+// ====================================================
+// 3. TRANSACTIONS (Super Admin & Admin)
+// ====================================================
+router.get('/transactions', requirePermission('canViewTransactions'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const transactions = await Database.getAllTransactions();
+  res.json({ success: true, transactions });
+});
+
+router.patch('/transactions/:id/status', requirePermission('canViewTransactions'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['completed', 'pending', 'rejected'].includes(status)) {
+    res.status(400).json({ error: 'Invalid status.' });
+    return;
+  }
+
+  const existingTx = await Database.findTransactionById(id);
+  if (!existingTx) {
+    res.status(404).json({ error: 'Transaction not found.' });
+    return;
+  }
+
+  // Prevent Admin (and any non-super admin) self-approval or modification of own payout transactions
+  if ((req.user!.role === 'admin' || req.user!.role !== 'super_admin') && existingTx.userId === req.user!.id) {
+    res.status(403).json({
+      error: 'Segregation of duties violation: Administrators are strictly prohibited from approving or modifying their own payout transactions.',
+    });
+    return;
+  }
+
+  // Double execution & replay protection: transactions are immutable once finalized
+  if (existingTx.status === status) {
+    res.status(400).json({ error: `Transaction #${id} is already in status '${status}'.` });
+    return;
+  }
+
+  if (existingTx.status !== 'pending') {
+    res.status(400).json({
+      error: `Transaction #${id} has already been finalized as '${existingTx.status}' and cannot be modified again.`,
+    });
+    return;
+  }
+
+  try {
+    if (existingTx.type === 'payout_request') {
+      const result = await Database.finalizePayoutTransactionAtomic(id, status, req.user!);
+      res.json({
+        success: true,
+        transaction: result.transaction,
+        user: result.user ? sanitizeUser(result.user, req.user!.role) : undefined,
+      });
+      return;
+    }
+
+    const updatedTx = await Database.updateTransactionStatus(id, status);
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'TRANSACTION_STATUS_UPDATE',
+      targetId: updatedTx!.id,
+      details: `Updated transaction #${updatedTx!.id} status to '${status}'`,
+      metadata: { transactionId: updatedTx!.id, status, amount: updatedTx!.amount },
+    });
+
+    res.json({ success: true, transaction: updatedTx });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to update transaction status.' });
+  }
+});
+
+// DELETE /api/admin/transactions/:id
+router.delete('/transactions/:id', requirePermission('canViewTransactions'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const deleted = await Database.deleteTransaction(id);
+    if (!deleted) {
+      res.status(404).json({ error: 'Transaction not found or already removed.' });
+      return;
+    }
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'TRANSACTION_DELETE',
+      targetId: id,
+      details: `Permanently removed transaction #${id}`,
+    });
+    res.json({ success: true, message: `Transaction #${id} deleted.` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete transaction.' });
+  }
+});
+
+// ====================================================
+// 4. AUDIT LOGS (SUPER ADMIN ONLY)
+// ====================================================
+router.get('/audit-logs', requirePermission('canViewAuditLogs'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const limit = parseInt(req.query.limit as string, 10) || 100;
+  const logs = await Database.getAuditLogs(limit);
+  res.json({ success: true, logs });
+});
+
+// ====================================================
+// 5. RBAC DYNAMIC PERMISSION MATRIX (SUPER ADMIN ONLY)
+// ====================================================
+router.get(['/rbac', '/rbac-settings'], requirePermission('canManageRBAC'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const settings = await Database.getRBACSettings();
+  res.json({ success: true, rbac: settings, rbacSettings: settings });
+});
+
+router.patch('/rbac-settings', requirePermission('canManageRBAC'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { role, permission, value, permissions } = req.body;
+
+  if (!role || !['admin', 'employee', 'coach', 'client'].includes(role)) {
+    res.status(400).json({ error: 'Valid configurable role (admin, employee, coach, client) is required.' });
+    return;
+  }
+
+  let permsToUpdate: Partial<RolePermissions> = {};
+  if (permission && typeof value === 'boolean') {
+    permsToUpdate = { [permission]: value };
+  } else if (permissions && typeof permissions === 'object') {
+    permsToUpdate = permissions;
+  } else {
+    res.status(400).json({ error: 'Invalid permission payload provided.' });
+    return;
+  }
+
+  const updated = await Database.updateRBACSettings(role as UserRole, permsToUpdate, req.user!.username);
+  const allSettings = await Database.getRBACSettings();
+
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'RBAC_CONFIG_UPDATE',
+    details: `Updated RBAC permissions for role '${role}': ${JSON.stringify(permsToUpdate)}`,
+    metadata: { role, updates: permsToUpdate },
+  });
+
+  res.json({ success: true, message: `RBAC permissions updated for role ${role}`, rbacSettings: allSettings, permissions: updated });
+});
+
+router.patch('/rbac/:role', requirePermission('canManageRBAC'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { role } = req.params;
+  const permissions = req.body.permissions as Partial<RolePermissions>;
+
+  if (!['super_admin', 'admin', 'employee', 'coach', 'client'].includes(role)) {
+    res.status(400).json({ error: 'Invalid role specified.' });
+    return;
+  }
+
+  if (role === 'super_admin') {
+    res.status(400).json({ error: 'Super Admin permissions are immutable and permanently full.' });
+    return;
+  }
+
+  const updated = await Database.updateRBACSettings(role as UserRole, permissions, req.user!.username);
+  const allSettings = await Database.getRBACSettings();
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'RBAC_CONFIG_UPDATE',
+    details: `Updated RBAC permission matrix for role '${role}'`,
+    metadata: { role, permissions },
+  });
+
+  res.json({ success: true, message: `RBAC permissions updated for role ${role}`, permissions: updated, rbacSettings: allSettings });
+});
+
+// ====================================================
+// 6. COACHING DESK (Coach, Admin, Super Admin)
+// ====================================================
+router.get(['/coaching/students', '/coaching-students'], requirePermission('canAccessCoachingDesk'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const callerRole = req.user!.role;
+  const coachFilter = callerRole === 'coach' ? req.user!.id : (req.query.coachId as string | undefined);
+
+  const students = await Database.getCoachingStudents(coachFilter);
+  const sanitized = students.map(s => sanitizeUser(s, callerRole));
+
+  res.json({ success: true, students: sanitized });
+});
+
+router.patch(['/coaching/students/:id/progress', '/coaching-students/:id'], requirePermission('canAccessCoachingDesk'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { progress, trainingProgress, trainingStatus, coachNotes, coachingNotes } = req.body;
+
+  const targetStudent = await Database.findUserById(id);
+  if (!targetStudent) {
+    res.status(404).json({ error: 'Student not found.' });
+    return;
+  }
+
+  if (targetStudent.role !== 'client') {
+    res.status(400).json({ error: 'Coaching training milestones can only be updated for student accounts.' });
+    return;
+  }
+
+  // If caller is coach, verify they are assigned to this student
+  if (req.user!.role === 'coach' && targetStudent.assignedCoachId !== req.user!.id) {
+    res.status(403).json({ error: 'Access denied. You can only update training milestones for your personally assigned students.' });
+    return;
+  }
+
+  const updatedMilestones = trainingProgress || progress;
+  const updatedNotes = coachingNotes || coachNotes;
+
+  const updated = await Database.updateStudentTrainingProgress(id, updatedMilestones, trainingStatus, updatedNotes);
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'COACHING_PROGRESS_UPDATE',
+    targetId: targetStudent.id,
+    targetUsername: targetStudent.username,
+    details: `Updated coaching training milestones & notes for student @${targetStudent.username}`,
+    metadata: { student: targetStudent.username, trainingStatus },
+  });
+
+  res.json({ success: true, message: 'Coaching progress updated', student: sanitizeUser(updated!, req.user!.role) });
+});
+
+router.patch(['/coaching/students/:id/assign-coach', '/coaching-students/:id/assign-coach'], requirePermission('canAccessCoachingDesk'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { coachId } = req.body;
+
+  if (req.user!.role === 'coach') {
+    res.status(403).json({ error: 'Coaches cannot assign or reassign student accounts. Admin or Super Admin privileges required.' });
+    return;
+  }
+
+  const student = await Database.findUserById(id);
+  if (!student) {
+    res.status(404).json({ error: 'Student not found.' });
+    return;
+  }
+
+  if (student.role !== 'client') {
+    res.status(400).json({ error: 'Coaches can only be assigned to Client student accounts.' });
+    return;
+  }
+
+  const coach = await Database.findUserById(coachId);
+  if (!coach || coach.role !== 'coach') {
+    res.status(400).json({ error: 'Target user is not a valid certified coach.' });
+    return;
+  }
+
+  const updated = await Database.assignStudentCoach(id, coachId);
+
+  // Record Audit Log
+  await Database.addAuditLog({
+    actorId: req.user!.id,
+    actorUsername: req.user!.username,
+    actorRole: req.user!.role,
+    action: 'COACH_ASSIGNMENT',
+    targetId: student.id,
+    targetUsername: student.username,
+    details: `Assigned coach @${coach.username} to student @${student.username}`,
+    metadata: { studentId: student.id, coachId: coach.id },
+  });
+
+  res.json({ success: true, message: `Student assigned to Coach @${coach.username}`, student: sanitizeUser(updated!, req.user!.role) });
+});
+
+// ====================================================
+// 7. OPERATIONS QUEUE (Employee, Admin, Super Admin)
+// ====================================================
+router.get(['/operations/queue', '/operations-queue'], requirePermission('canAccessOperations'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const items = await Database.getOperationalItems();
+  res.json({ success: true, items });
+});
+
+router.post(['/operations/queue', '/operations-queue'], requirePermission('canAccessOperations'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { title, type, priority = 'medium', status = 'pending', assignedTo, notes } = req.body;
+
+  if (!title || !type) {
+    res.status(400).json({ error: 'Title and type are required.' });
+    return;
+  }
+
+  const newItem = await Database.addOperationalItem({
+    title,
+    type,
+    priority,
+    status,
+    assignedTo: assignedTo || req.user!.username,
+    notes,
+  });
+
+  res.status(201).json({ success: true, item: newItem });
+});
+
+router.patch(['/operations/queue/:id', '/operations-queue/:id'], requirePermission('canAccessOperations'), async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { title, type, priority, status, assignedTo, notes } = req.body;
+
+  const updated = await Database.updateOperationalItem(id, {
+    title,
+    type,
+    priority,
+    status,
+    assignedTo,
+    notes,
+  });
+
+  if (!updated) {
+    res.status(404).json({ error: 'Operational item not found.' });
+    return;
+  }
+
+  res.json({ success: true, item: updated });
+});
+
+// ====================================================
+// 8. PAYMENT VERIFICATION & DIRECT SUBSCRIPTION ACTIVATION
+// (Super Admin & Admin only)
+// ====================================================
+router.post('/payment-verifications/:id/approve', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { 
+      username, 
+      email, 
+      password, 
+      planId = 'all-inclusive', 
+      notes = '' 
+    } = req.body;
+
+    const opItem = (await Database.getOperationalItems()).find(i => i.id === id);
+    if (!opItem) {
+      res.status(404).json({ error: 'Payment verification ticket not found.' });
+      return;
+    }
+
+    // Try parsing structured metadata from notes
+    let parsedNotes: any = {};
+    try {
+      if (opItem.notes && opItem.notes.startsWith('{')) {
+        parsedNotes = JSON.parse(opItem.notes);
+      }
+    } catch {
+      parsedNotes = {};
+    }
+
+    const effectivePlanId = planId || parsedNotes.planId || 'all-inclusive';
+    const effectiveEmail = (email || parsedNotes.subscriberEmail || '').trim().toLowerCase();
+    const effectiveTelegram = (parsedNotes.telegramUsername || '').trim();
+    
+    // Determine exact subscription plan name and duration
+    let assignedPlanName = 'All-Inclusive Package ($999/Year)';
+    let durationDays = 365;
+    let planAmount = 999;
+    let includedCourses: string[] = ['SMC Trading Course', '144 Strategy Course'];
+
+    if (effectivePlanId === 'monthly' || effectivePlanId.toLowerCase().includes('monthly') || effectivePlanId.toLowerCase().includes('80')) {
+      assignedPlanName = 'Site Subscription — Monthly ($80)';
+      durationDays = 30; // 1 month
+      planAmount = 80;
+      includedCourses = [];
+    } else if (effectivePlanId === '6months' || effectivePlanId.toLowerCase().includes('6 month') || effectivePlanId.toLowerCase().includes('400')) {
+      assignedPlanName = 'Site Subscription — 6 Months ($400)';
+      durationDays = 180; // 6 months
+      planAmount = 400;
+      includedCourses = [];
+    } else if (effectivePlanId === '1year' || effectivePlanId.toLowerCase().includes('1 year') || effectivePlanId.toLowerCase().includes('650')) {
+      assignedPlanName = 'Site Subscription — 1 Year ($650)';
+      durationDays = 365; // 12 months
+      planAmount = 650;
+      includedCourses = [];
+    } else {
+      assignedPlanName = 'All-Inclusive Package ($999/Year)';
+      durationDays = 365; // 12 months + SMC Course + 144 Strategy Course
+      planAmount = 999;
+      includedCourses = ['SMC Trading Course', '144 Strategy Course'];
+    }
+
+    const startDate = new Date();
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + durationDays);
+
+    // Target username
+    const rawUsername = username || effectiveTelegram || effectiveEmail.split('@')[0] || `trader${Math.floor(1000 + Math.random() * 9000)}`;
+    const cleanUsername = rawUsername.replace(/[^a-zA-Z0-9_]/g, '').trim() || `trader${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Target password
+    const clearPassword = password || `SM_Pass${Math.floor(1000 + Math.random() * 9000)}!`;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(clearPassword, salt);
+
+    // Check if user already exists by email or username
+    let targetUser: UserRecord | null = null;
+    if (effectiveEmail && effectiveEmail.includes('@')) {
+      targetUser = await Database.findUserByEmail(effectiveEmail);
+    }
+    if (!targetUser) {
+      targetUser = await Database.findUserByUsername(cleanUsername);
+    }
+
+    // Resolve referral code
+    const effectiveReferral = (parsedNotes.referralCode || parsedNotes.referredBy || '').trim();
+    let validReferrer: UserRecord | null = null;
+    if (effectiveReferral) {
+      validReferrer = (await Database.findUserByReferralCode(effectiveReferral)) || (await Database.findUserByUsername(effectiveReferral));
+    }
+    const cleanReferredBy = validReferrer ? validReferrer.referralCode : (effectiveReferral || undefined);
+
+    let resultingUser: UserRecord;
+
+    if (targetUser) {
+      // Activate existing account
+      const updatePayload: any = {
+        subscriptionStatus: 'active',
+        subscriptionPlan: assignedPlanName,
+        subscriptionExpiresAt: expirationDate.toISOString(),
+        notes: `USDT TRC20 verified & approved by @${req.user!.username} on ${new Date().toISOString()}. ${notes}`.trim()
+      };
+      if (cleanReferredBy && !targetUser.referredBy) {
+        updatePayload.referredBy = cleanReferredBy;
+      }
+      const updatedUser = await Database.updateUser(targetUser.id, updatePayload);
+      resultingUser = updatedUser!;
+    } else {
+      // Create new client account
+      const userRefCode = `SM${cleanUsername.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6)}${Math.floor(100 + Math.random() * 900)}`;
+      const newUser = await Database.createUser({
+        username: cleanUsername,
+        email: effectiveEmail || `${cleanUsername}@smtrading.pro`,
+        passwordHash,
+        fullName: cleanUsername,
+        role: 'client',
+        subscriptionStatus: 'active',
+        subscriptionPlan: assignedPlanName,
+        subscriptionExpiresAt: expirationDate.toISOString(),
+        referralCode: userRefCode,
+        referredBy: cleanReferredBy,
+        commissionRate: 20,
+        purchaseCommissionRate: 10,
+        balance: 0.0,
+        pendingBalance: 0.0,
+        totalEarned: 0.0,
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanUsername)}`,
+        notes: `Created via USDT TRC20 payment approval by @${req.user!.username}. Plan: ${assignedPlanName}. ${notes}`.trim(),
+      });
+      resultingUser = newUser;
+    }
+
+    // Record Real Transaction in Account Ledger
+    try {
+      await Database.addTransaction({
+        userId: resultingUser.id,
+        username: resultingUser.username,
+        type: 'subscription_purchase',
+        amount: planAmount,
+        description: `Subscription activated: ${assignedPlanName} (USDT TRC20 Verification #${id.substring(0, 8)})`,
+        status: 'completed',
+        metadata: {
+          ticketId: id,
+          planId: effectivePlanId,
+          planName: assignedPlanName,
+          amount: planAmount,
+          currency: 'USD',
+          paymentMethod: 'USDT (TRC20)',
+          txHash: parsedNotes.txHash || 'Pending confirmation',
+          approvedBy: req.user!.username,
+          expiresAt: expirationDate.toISOString(),
+        }
+      });
+    } catch (txErr) {
+      console.error('Error logging subscription transaction on approval:', txErr);
+    }
+
+    // Process Referral Commission atomically if user is referred
+    if (resultingUser.referredBy) {
+      try {
+        const isProductOrder =
+          parsedNotes.itemType === 'purchase' ||
+          parsedNotes.itemType === 'course' ||
+          parsedNotes.itemType === 'package' ||
+          parsedNotes.itemType === 'product' ||
+          assignedPlanName.toLowerCase().includes('course') ||
+          assignedPlanName.toLowerCase().includes('package') ||
+          assignedPlanName.toLowerCase().includes('strategy') ||
+          assignedPlanName.toLowerCase().includes('bundle') ||
+          assignedPlanName.toLowerCase().includes('masterclass');
+
+        await Database.processReferralCommission(
+          resultingUser.id,
+          planAmount,
+          `${isProductOrder ? 'Product purchase' : 'Subscription'} commission on ${assignedPlanName}`,
+          isProductOrder ? 'purchase' : 'subscription',
+          id // Operational item ID as deduplication key
+        );
+      } catch (commErr) {
+        console.error('Failed to process referral commission on approval:', commErr);
+      }
+    }
+
+    // Update operational item status to 'resolved' (Approved)
+    await Database.updateOperationalItem(id, {
+      status: 'resolved',
+      assignedTo: req.user!.username,
+      notes: JSON.stringify({
+        ...parsedNotes,
+        approvalStatus: 'Approved / Active',
+        approvedBy: req.user!.username,
+        approvedAt: new Date().toISOString(),
+        activatedUsername: resultingUser.username,
+        activatedEmail: resultingUser.email,
+        assignedPlan: assignedPlanName,
+        durationDays,
+        includedCourses,
+        startDate: startDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        dispatchPassword: clearPassword
+      })
+    });
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'PAYMENT_VERIFICATION_APPROVED',
+      targetId: resultingUser.id,
+      targetUsername: resultingUser.username,
+      details: `Approved USDT TRC20 payment #${id}. Activated '${assignedPlanName}' for @${resultingUser.username} (Expires: ${expirationDate.toISOString().split('T')[0]})`,
+      metadata: {
+        ticketId: id,
+        plan: assignedPlanName,
+        durationDays,
+        expiresAt: expirationDate.toISOString(),
+        username: resultingUser.username,
+        email: resultingUser.email
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Payment approved! Subscription '${assignedPlanName}' activated for @${resultingUser.username}.`,
+      credentials: {
+        username: resultingUser.username,
+        password: clearPassword,
+        email: resultingUser.email,
+        planName: assignedPlanName,
+        startDate: startDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
+        includedCourses,
+        subscriptionStatus: 'active'
+      },
+      user: sanitizeUser(resultingUser, req.user!.role)
+    });
+  } catch (err: any) {
+    console.error('Payment approval error:', err);
+    res.status(500).json({ error: err.message || 'Failed to approve payment verification.' });
+  }
+});
+
+router.post('/payment-verifications/:id/reject', requirePermission('canManageClients'), async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Transaction hash invalid or unconfirmed on TRC20 network.' } = req.body;
+
+    const opItem = (await Database.getOperationalItems()).find(i => i.id === id);
+    if (!opItem) {
+      res.status(404).json({ error: 'Payment verification ticket not found.' });
+      return;
+    }
+
+    let parsedNotes: any = {};
+    try {
+      if (opItem.notes && opItem.notes.startsWith('{')) {
+        parsedNotes = JSON.parse(opItem.notes);
+      }
+    } catch {
+      parsedNotes = {};
+    }
+
+    await Database.updateOperationalItem(id, {
+      status: 'rejected' as any,
+      assignedTo: req.user!.username,
+      notes: JSON.stringify({
+        ...parsedNotes,
+        approvalStatus: 'Rejected',
+        rejectedBy: req.user!.username,
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: reason
+      })
+    });
+
+    // Record Audit Log
+    await Database.addAuditLog({
+      actorId: req.user!.id,
+      actorUsername: req.user!.username,
+      actorRole: req.user!.role,
+      action: 'PAYMENT_VERIFICATION_REJECTED',
+      details: `Rejected payment verification ticket #${id}. Reason: ${reason}`,
+      metadata: { ticketId: id, reason }
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment verification rejected. No subscription was activated.'
+    });
+  } catch (err: any) {
+    console.error('Payment rejection error:', err);
+    res.status(500).json({ error: err.message || 'Failed to reject payment verification.' });
+  }
+});
+
+export default router;

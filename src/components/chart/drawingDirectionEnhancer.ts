@@ -1,0 +1,1317 @@
+import * as DrawingPkg from 'lightweight-charts-drawing';
+import {
+  Ray,
+  GannFan,
+  TrendAngle,
+  ToolRegistry,
+  GannBox,
+  Drawing,
+  Rectangle,
+  DrawingManager,
+} from 'lightweight-charts-drawing';
+
+/**
+ * Clips a ray originating at `start` in direction (dx, dy) to the chart viewport bounds [0, width] x [0, height].
+ * Always extends forward along (dx, dy) and NEVER snaps backwards.
+ */
+export function clipRayToViewport(
+  start: { x: number; y: number },
+  dx: number,
+  dy: number,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1e-6) return { ...start };
+
+  let tMin = Infinity;
+
+  // X boundary checks
+  if (dx < -1e-6) {
+    // Heading left: intersects x = 0
+    const t = (0 - start.x) / dx;
+    if (t > 0 && t < tMin) tMin = t;
+  } else if (dx > 1e-6) {
+    // Heading right: intersects x = width
+    const t = (width - start.x) / dx;
+    if (t > 0 && t < tMin) tMin = t;
+  }
+
+  // Y boundary checks
+  if (dy < -1e-6) {
+    // Heading up: intersects y = 0
+    const t = (0 - start.y) / dy;
+    if (t > 0 && t < tMin) tMin = t;
+  } else if (dy > 1e-6) {
+    // Heading down: intersects y = height
+    const t = (height - start.y) / dy;
+    if (t > 0 && t < tMin) tMin = t;
+  }
+
+  // Fallback if ray originates outside or parallel
+  if (tMin === Infinity || tMin <= 0) {
+    tMin = (Math.max(width, height) * 2) / dist;
+  }
+
+  return {
+    x: start.x + tMin * dx,
+    y: start.y + tMin * dy,
+  };
+}
+
+/**
+ * Calculates perpendicular distance from `point` to a forward ray from `start` through `dirPoint`.
+ */
+export function distanceToRay(
+  point: { x: number; y: number },
+  start: { x: number; y: number },
+  dirPoint: { x: number; y: number }
+): number {
+  const dx = dirPoint.x - start.x;
+  const dy = dirPoint.y - start.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq < 1e-6) {
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  }
+
+  const wx = point.x - start.x;
+  const wy = point.y - start.y;
+  const proj = (wx * dx + wy * dy) / lenSq;
+
+  if (proj < 0) {
+    // Point is behind ray origin
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  }
+
+  const nearestX = start.x + proj * dx;
+  const nearestY = start.y + proj * dy;
+  return Math.hypot(point.x - nearestX, point.y - nearestY);
+}
+
+// -----------------------------------------------------------------------------
+// 1. Bidirectional Ray Renderer & PaneView
+// -----------------------------------------------------------------------------
+class BidirectionalRayRenderer {
+  private _drawing: any;
+
+  constructor(drawing: any) {
+    this._drawing = drawing;
+  }
+
+  renderer() {
+    return this;
+  }
+
+  draw(target: any) {
+    if (typeof target?.useBitmapCoordinateSpace === 'function') {
+      target.useBitmapCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    } else if (typeof target?.useMediaCoordinateSpace === 'function') {
+      target.useMediaCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    }
+  }
+
+  drawImpl(scope: any) {
+    const ctx = scope.context;
+    const pr = scope.horizontalPixelRatio || window.devicePixelRatio || 1;
+    const viewport = this._drawing.getViewport?.();
+    if (!ctx || !viewport || !this._drawing.options.visible || !this._drawing.isValid()) return;
+
+    const anchors = this._drawing.anchors;
+    const r = this._drawing.anchorToPixel(anchors[0], viewport);
+    const a = this._drawing.anchorToPixel(anchors[1], viewport);
+    if (!r || !a) return;
+
+    const dx = a.x - r.x;
+    const dy = a.y - r.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-6) return;
+
+    ctx.save();
+
+    const style = this._drawing.style || {};
+    const lineColor = style.lineColor || '#2962FF';
+    const lineWidth = (style.lineWidth || 2) * pr;
+    const lineDash = style.lineDash && style.lineDash.length > 0 ? style.lineDash.map((d: number) => d * pr) : [];
+
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = lineWidth;
+    if (lineDash.length > 0) {
+      ctx.setLineDash(lineDash);
+    } else {
+      ctx.setLineDash([]);
+    }
+
+    // Clip forward ray to viewport in the exact direction (dx, dy)
+    const endPoint = clipRayToViewport(r, dx, dy, viewport.width, viewport.height);
+
+    ctx.beginPath();
+    ctx.moveTo(r.x * pr, r.y * pr);
+    ctx.lineTo(endPoint.x * pr, endPoint.y * pr);
+    ctx.stroke();
+
+    // Show Angle readout if enabled
+    const rayOpts = this._drawing.rayOptions || {};
+    if (rayOpts.showAngle) {
+      const angleDeg = Math.atan2(r.y - a.y, a.x - r.x) * (180 / Math.PI);
+      const mid = { x: (r.x + a.x) / 2, y: (r.y + a.y) / 2 };
+      const labelText = `${angleDeg.toFixed(1)}°`;
+
+      ctx.font = `${Math.round(11 * pr)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      const textMetrics = ctx.measureText(labelText);
+      const pillW = textMetrics.width + 8 * pr;
+      const pillH = 16 * pr;
+
+      ctx.fillStyle = 'rgba(14, 19, 31, 0.85)';
+      ctx.fillRect(mid.x * pr - pillW / 2, (mid.y - 18) * pr, pillW, pillH);
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1 * pr;
+      ctx.strokeRect(mid.x * pr - pillW / 2, (mid.y - 18) * pr, pillW, pillH);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labelText, mid.x * pr, (mid.y - 18) * pr + pillH / 2);
+    }
+
+    // Interactive Selection Handles
+    if (this._drawing.state === 'selected' || this._drawing.state === 'editing') {
+      ctx.setLineDash([]);
+      const radius = 5 * pr;
+      for (const pt of [r, a]) {
+        ctx.beginPath();
+        ctx.arc(pt.x * pr, pt.y * pr, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2 * pr;
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+}
+
+class BidirectionalRayPaneView {
+  private _renderer: BidirectionalRayRenderer;
+
+  constructor(drawing: any) {
+    this._renderer = new BidirectionalRayRenderer(drawing);
+  }
+
+  zOrder() {
+    return 'normal';
+  }
+
+  renderer() {
+    return this._renderer;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 2. Bidirectional Gann Fan Renderer & PaneView
+// -----------------------------------------------------------------------------
+const DEFAULT_GANN_FAN_ANGLES = [
+  { ratio: 8, label: '8x1', color: '#EF4444' },
+  { ratio: 4, label: '4x1', color: '#F97316' },
+  { ratio: 3, label: '3x1', color: '#F59E0B' },
+  { ratio: 2, label: '2x1', color: '#EAB308' },
+  { ratio: 1, label: '1x1', color: '#3B82F6' },
+  { ratio: 0.5, label: '1x2', color: '#10B981' },
+  { ratio: 0.333, label: '1x3', color: '#06B6D4' },
+  { ratio: 0.25, label: '1x4', color: '#6366F1' },
+  { ratio: 0.125, label: '1x8', color: '#8B5CF6' },
+];
+
+class BidirectionalGannFanRenderer {
+  private _drawing: any;
+
+  constructor(drawing: any) {
+    this._drawing = drawing;
+  }
+
+  renderer() {
+    return this;
+  }
+
+  draw(target: any) {
+    if (typeof target?.useBitmapCoordinateSpace === 'function') {
+      target.useBitmapCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    } else if (typeof target?.useMediaCoordinateSpace === 'function') {
+      target.useMediaCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    }
+  }
+
+  drawImpl(scope: any) {
+    const ctx = scope.context;
+    const pr = scope.horizontalPixelRatio || window.devicePixelRatio || 1;
+    const viewport = this._drawing.getViewport?.();
+    if (!ctx || !viewport || !this._drawing.options.visible || !this._drawing.isValid()) return;
+
+    const anchors = this._drawing.anchors;
+    const r = this._drawing.anchorToPixel(anchors[0], viewport);
+    const a = this._drawing.anchorToPixel(anchors[1], viewport);
+    if (!r || !a) return;
+
+    const dx = a.x - r.x;
+    const dy = a.y - r.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-6) return;
+
+    const gannOpts = this._drawing.gannOptions || {};
+    const angles = gannOpts.angles || DEFAULT_GANN_FAN_ANGLES;
+    const extendLines = gannOpts.extendLines !== false;
+    const showLabels = gannOpts.showLabels !== false;
+    const style = this._drawing.style || {};
+    const baseLineWidth = (style.lineWidth || 1.5) * pr;
+
+    ctx.save();
+
+    for (const item of angles) {
+      const ratio = item.ratio ?? 1;
+      const label = item.label ?? `${ratio}x1`;
+      const color = item.color || style.lineColor || '#3B82F6';
+
+      // Horizontal component vx maintains the exact direction (left or right) of the user drag!
+      const vx = dx;
+      const vy = dy * ratio;
+
+      const endPoint = extendLines
+        ? clipRayToViewport(r, vx, vy, viewport.width, viewport.height)
+        : { x: r.x + vx * 2.5, y: r.y + vy * 2.5 };
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = label === '1x1' ? baseLineWidth * 1.5 : baseLineWidth;
+      ctx.setLineDash([]);
+
+      ctx.beginPath();
+      ctx.moveTo(r.x * pr, r.y * pr);
+      ctx.lineTo(endPoint.x * pr, endPoint.y * pr);
+      ctx.stroke();
+
+      if (showLabels) {
+        // Position label 35% along the fan ray
+        const labelPos = {
+          x: (r.x + vx * 0.4) * pr,
+          y: (r.y + vy * 0.4) * pr,
+        };
+
+        ctx.font = `bold ${Math.round(9.5 * pr)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        const textMetrics = ctx.measureText(label);
+        const pillW = textMetrics.width + 6 * pr;
+        const pillH = 14 * pr;
+
+        ctx.fillStyle = 'rgba(13, 19, 34, 0.88)';
+        ctx.fillRect(labelPos.x - pillW / 2, labelPos.y - pillH / 2, pillW, pillH);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1 * pr;
+        ctx.strokeRect(labelPos.x - pillW / 2, labelPos.y - pillH / 2, pillW, pillH);
+
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, labelPos.x, labelPos.y);
+      }
+    }
+
+    // Interactive Selection Handles at anchor 0 and anchor 1
+    if (this._drawing.state === 'selected' || this._drawing.state === 'editing') {
+      ctx.setLineDash([]);
+      const radius = 5 * pr;
+      for (const pt of [r, a]) {
+        ctx.beginPath();
+        ctx.arc(pt.x * pr, pt.y * pr, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = '#3B82F6';
+        ctx.lineWidth = 2 * pr;
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+}
+
+class BidirectionalGannFanPaneView {
+  private _renderer: BidirectionalGannFanRenderer;
+
+  constructor(drawing: any) {
+    this._renderer = new BidirectionalGannFanRenderer(drawing);
+  }
+
+  zOrder() {
+    return 'normal';
+  }
+
+  renderer() {
+    return this._renderer;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 3. Bidirectional Trend Angle / Gann Angle Renderer & PaneView
+// -----------------------------------------------------------------------------
+class BidirectionalTrendAngleRenderer {
+  private _drawing: any;
+
+  constructor(drawing: any) {
+    this._drawing = drawing;
+  }
+
+  renderer() {
+    return this;
+  }
+
+  draw(target: any) {
+    if (typeof target?.useBitmapCoordinateSpace === 'function') {
+      target.useBitmapCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    } else if (typeof target?.useMediaCoordinateSpace === 'function') {
+      target.useMediaCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    }
+  }
+
+  drawImpl(scope: any) {
+    const ctx = scope.context;
+    const pr = scope.horizontalPixelRatio || window.devicePixelRatio || 1;
+    const viewport = this._drawing.getViewport?.();
+    if (!ctx || !viewport || !this._drawing.options.visible || !this._drawing.isValid()) return;
+
+    const anchors = this._drawing.anchors;
+    const r = this._drawing.anchorToPixel(anchors[0], viewport);
+    const a = this._drawing.anchorToPixel(anchors[1], viewport);
+    if (!r || !a) return;
+
+    const dx = a.x - r.x;
+    const dy = a.y - r.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-6) return;
+
+    const style = this._drawing.style || {};
+    const lineColor = style.lineColor || '#F59E0B';
+    const lineWidth = (style.lineWidth || 2) * pr;
+    const trendOpts = this._drawing.trendAngleOptions || {};
+    const arcRadius = (trendOpts.arcRadius || 42) * pr;
+    const isLeft = dx < 0;
+
+    ctx.save();
+
+    // 1. Primary Trend Angle Line
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = lineWidth;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(r.x * pr, r.y * pr);
+    ctx.lineTo(a.x * pr, a.y * pr);
+    ctx.stroke();
+
+    // 2. Horizontal Reference Baseline (points Left when dragged left, Right when dragged right!)
+    if (trendOpts.showArc !== false) {
+      const baselineLength = arcRadius + 24 * pr;
+      const baselineEndX = isLeft ? r.x * pr - baselineLength : r.x * pr + baselineLength;
+
+      ctx.save();
+      ctx.setLineDash([4 * pr, 4 * pr]);
+      ctx.strokeStyle = `${lineColor}88`;
+      ctx.lineWidth = 1 * pr;
+      ctx.beginPath();
+      ctx.moveTo(r.x * pr, r.y * pr);
+      ctx.lineTo(baselineEndX, r.y * pr);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Arc Wedge & Fill
+      const lineAngle = Math.atan2(dy, dx);
+      const baseAngle = isLeft ? Math.PI : 0;
+
+      ctx.beginPath();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1.8 * pr;
+
+      // Arc connects baseline to trend line in shortest angular direction
+      if (isLeft) {
+        if (dy >= 0) {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, Math.PI, lineAngle, false);
+        } else {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, Math.PI, lineAngle, true);
+        }
+      } else {
+        if (dy >= 0) {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, 0, lineAngle, false);
+        } else {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, 0, lineAngle, true);
+        }
+      }
+      ctx.stroke();
+
+      // Soft wedge fill
+      ctx.beginPath();
+      ctx.moveTo(r.x * pr, r.y * pr);
+      if (isLeft) {
+        if (dy >= 0) {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, Math.PI, lineAngle, false);
+        } else {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, Math.PI, lineAngle, true);
+        }
+      } else {
+        if (dy >= 0) {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, 0, lineAngle, false);
+        } else {
+          ctx.arc(r.x * pr, r.y * pr, arcRadius, 0, lineAngle, true);
+        }
+      }
+      ctx.closePath();
+      ctx.fillStyle = `${lineColor}22`;
+      ctx.fill();
+    }
+
+    // 4. Degree Readout Badge
+    if (trendOpts.showDegrees !== false) {
+      // Geometric angle relative to the horizontal baseline
+      const angleFromHorizontal = Math.abs(Math.atan2(-dy, Math.abs(dx))) * (180 / Math.PI);
+      const labelText = `${angleFromHorizontal.toFixed(1)}°`;
+
+      const midAngle = isLeft
+        ? (dy >= 0 ? Math.PI - (Math.PI - Math.atan2(dy, dx)) / 2 : -Math.PI + (Math.PI + Math.atan2(dy, dx)) / 2)
+        : Math.atan2(dy, dx) / 2;
+
+      const badgeDist = arcRadius + 16 * pr;
+      const badgeX = r.x * pr + badgeDist * Math.cos(midAngle);
+      const badgeY = r.y * pr + badgeDist * Math.sin(midAngle);
+
+      ctx.font = `bold ${Math.round(11 * pr)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      const textMetrics = ctx.measureText(labelText);
+      const pillW = textMetrics.width + 8 * pr;
+      const pillH = 16 * pr;
+
+      ctx.fillStyle = 'rgba(14, 19, 31, 0.9)';
+      ctx.fillRect(badgeX - pillW / 2, badgeY - pillH / 2, pillW, pillH);
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1 * pr;
+      ctx.strokeRect(badgeX - pillW / 2, badgeY - pillH / 2, pillW, pillH);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labelText, badgeX, badgeY);
+    }
+
+    // Interactive Selection Handles
+    if (this._drawing.state === 'selected' || this._drawing.state === 'editing') {
+      ctx.setLineDash([]);
+      const radius = 5 * pr;
+      for (const pt of [r, a]) {
+        ctx.beginPath();
+        ctx.arc(pt.x * pr, pt.y * pr, radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2 * pr;
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+}
+
+class BidirectionalTrendAnglePaneView {
+  private _renderer: BidirectionalTrendAngleRenderer;
+
+  constructor(drawing: any) {
+    this._renderer = new BidirectionalTrendAngleRenderer(drawing);
+  }
+
+  zOrder() {
+    return 'normal';
+  }
+
+  renderer() {
+    return this._renderer;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 3.5 Dense Gann Angle Grid Renderer & PaneView (Matching Reference Image)
+// -----------------------------------------------------------------------------
+export const DEFAULT_GANN_ANGLE_RATIOS = [
+  { ratio: 16, label: '16x1', color: '#60A5FA', width: 1 },
+  { ratio: 8, label: '8x1', color: '#3B82F6', width: 1.2 },
+  { ratio: 4, label: '4x1', color: '#3B82F6', width: 1.4 },
+  { ratio: 3, label: '3x1', color: '#60A5FA', width: 1 },
+  { ratio: 2, label: '2x1', color: '#2563EB', width: 1.5 },
+  { ratio: 1.5, label: '1.5x1', color: '#60A5FA', width: 1 },
+  { ratio: 1.25, label: '1.25x1', color: '#93C5FD', width: 1 },
+  { ratio: 1, label: '1x1', color: '#1D4ED8', width: 2 }, // Master baseline
+  { ratio: 1 / 1.25, label: '1x1.25', color: '#93C5FD', width: 1 },
+  { ratio: 1 / 1.5, label: '1x1.5', color: '#60A5FA', width: 1 },
+  { ratio: 1 / 2, label: '1x2', color: '#2563EB', width: 1.5 },
+  { ratio: 1 / 3, label: '1x3', color: '#60A5FA', width: 1 },
+  { ratio: 1 / 4, label: '1x4', color: '#3B82F6', width: 1.4 },
+  { ratio: 1 / 8, label: '1x8', color: '#3B82F6', width: 1.2 },
+  { ratio: 1 / 16, label: '1x16', color: '#60A5FA', width: 1 },
+];
+
+export function isPointNearGannGrid(
+  point: { x: number; y: number },
+  r: { x: number; y: number },
+  a: { x: number; y: number }
+): boolean {
+  if (Math.hypot(point.x - r.x, point.y - r.y) <= 12) return true;
+  if (Math.hypot(point.x - a.x, point.y - a.y) <= 12) return true;
+
+  const dx = a.x - r.x;
+  const dy = a.y - r.y;
+  if (Math.hypot(dx, dy) < 1e-6) return false;
+
+  for (const item of DEFAULT_GANN_ANGLE_RATIOS) {
+    const ratio = item.ratio;
+    const vy = dy * ratio;
+
+    // Rays from Anchor 0
+    if (
+      distanceToRay(point, r, { x: r.x + dx, y: r.y + vy }) <= 8 ||
+      distanceToRay(point, r, { x: r.x + dx, y: r.y - vy }) <= 8 ||
+      distanceToRay(point, r, { x: r.x - dx, y: r.y - vy }) <= 8 ||
+      distanceToRay(point, r, { x: r.x - dx, y: r.y + vy }) <= 8
+    ) {
+      return true;
+    }
+
+    // Counter rays from Anchor 1
+    if (
+      distanceToRay(point, a, { x: a.x - dx, y: a.y - vy }) <= 8 ||
+      distanceToRay(point, a, { x: a.x - dx, y: a.y + vy }) <= 8 ||
+      distanceToRay(point, a, { x: a.x + dx, y: a.y + vy }) <= 8 ||
+      distanceToRay(point, a, { x: a.x + dx, y: a.y - vy }) <= 8
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+class DenseGannAngleGridRenderer {
+  private _drawing: any;
+
+  constructor(drawing: any) {
+    this._drawing = drawing;
+  }
+
+  renderer() {
+    return this;
+  }
+
+  draw(target: any) {
+    if (typeof target?.useBitmapCoordinateSpace === 'function') {
+      target.useBitmapCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    } else if (typeof target?.useMediaCoordinateSpace === 'function') {
+      target.useMediaCoordinateSpace((scope: any) => {
+        this.drawImpl(scope);
+      });
+    }
+  }
+
+  drawImpl(scope: any) {
+    const ctx = scope.context;
+    const pr = scope.horizontalPixelRatio || window.devicePixelRatio || 1;
+    const viewport = this._drawing.getViewport?.();
+    if (!ctx || !viewport || !this._drawing.options?.visible || !this._drawing.isValid?.()) return;
+
+    const anchors = this._drawing.anchors;
+    if (!anchors || anchors.length < 2) return;
+    const r = this._drawing.anchorToPixel(anchors[0], viewport);
+    const a = this._drawing.anchorToPixel(anchors[1], viewport);
+    if (!r || !a) return;
+
+    const dx = a.x - r.x;
+    const dy = a.y - r.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1e-4) return;
+
+    const width = viewport.width;
+    const height = viewport.height;
+    const style = this._drawing.style || {};
+    const isSelected = this._drawing.state === 'selected' || this._drawing.state === 'editing';
+
+    ctx.save();
+
+    // Helper to draw a single ray clipped to viewport
+    const drawRay = (
+      origin: { x: number; y: number },
+      vx: number,
+      vy: number,
+      color: string,
+      lineWidth: number,
+      dash: number[] = []
+    ) => {
+      const end = clipRayToViewport(origin, vx, vy, width, height);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth * pr;
+      ctx.setLineDash(dash.map((d) => d * pr));
+      ctx.beginPath();
+      ctx.moveTo(origin.x * pr, origin.y * pr);
+      ctx.lineTo(end.x * pr, end.y * pr);
+      ctx.stroke();
+      return end;
+    };
+
+    // Helper to render angle label
+    const drawBadge = (
+      origin: { x: number; y: number },
+      vx: number,
+      vy: number,
+      text: string
+    ) => {
+      const labelDist = Math.min(dist * 0.45, 160);
+      const vLen = Math.hypot(vx, vy);
+      if (vLen < 1e-6) return;
+      const nx = vx / vLen;
+      const ny = vy / vLen;
+      const lx = origin.x + nx * labelDist;
+      const ly = origin.y + ny * labelDist;
+
+      if (lx < 10 || lx > width - 10 || ly < 10 || ly > height - 10) return;
+
+      ctx.save();
+      ctx.font = `bold ${Math.round(10 * pr)}px "JetBrains Mono", Consolas, monospace`;
+      const tm = ctx.measureText(text);
+      const pw = tm.width + 8 * pr;
+      const ph = 15 * pr;
+
+      ctx.fillStyle = 'rgba(10, 16, 30, 0.88)';
+      ctx.fillRect(lx * pr - pw / 2, ly * pr - ph / 2, pw, ph);
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+      ctx.lineWidth = 1 * pr;
+      ctx.strokeRect(lx * pr - pw / 2, ly * pr - ph / 2, pw, ph);
+
+      ctx.fillStyle = '#93C5FD';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, lx * pr, ly * pr);
+      ctx.restore();
+    };
+
+    // Draw all angle lines radiating in both directions from Anchor 0 and Anchor 1
+    for (const item of DEFAULT_GANN_ANGLE_RATIOS) {
+      const ratio = item.ratio;
+      const vy = dy * ratio;
+      const strokeColor = item.color;
+      const lineW = item.width;
+
+      // 1. Radiating from Anchor 0 (r):
+      // Forward positive
+      drawRay(r, dx, vy, strokeColor, lineW);
+      // Forward symmetrical negative (opposite slope)
+      drawRay(r, dx, -vy, strokeColor, lineW);
+      // Backward positive (extending in opposite direction across chart)
+      drawRay(r, -dx, -vy, strokeColor, lineW, [4, 4]);
+      // Backward negative
+      drawRay(r, -dx, vy, strokeColor, lineW, [4, 4]);
+
+      // 2. Counter-radiating from Anchor 1 (a) across the grid:
+      drawRay(a, -dx, -vy, strokeColor, lineW * 0.9);
+      drawRay(a, -dx, vy, strokeColor, lineW * 0.9);
+      drawRay(a, dx, vy, strokeColor, lineW * 0.9, [4, 4]);
+      drawRay(a, dx, -vy, strokeColor, lineW * 0.9, [4, 4]);
+
+      // Clear readable badges on key Gann ratios
+      if (['1x1', '2x1', '1x2', '4x1', '1x4', '8x1', '1x8'].includes(item.label)) {
+        drawBadge(r, dx, vy, item.label);
+      }
+    }
+
+    // Prominent Master 1x1 Vector line between anchors
+    ctx.strokeStyle = '#1D4ED8';
+    ctx.lineWidth = 2.5 * pr;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(r.x * pr, r.y * pr);
+    ctx.lineTo(a.x * pr, a.y * pr);
+    ctx.stroke();
+
+    // Interactive Drag Handles
+    if (isSelected) {
+      ctx.setLineDash([]);
+      for (const pt of [r, a]) {
+        // Outer halo
+        ctx.beginPath();
+        ctx.arc(pt.x * pr, pt.y * pr, 7 * pr, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(37, 99, 235, 0.35)';
+        ctx.fill();
+
+        // White handle circle
+        ctx.beginPath();
+        ctx.arc(pt.x * pr, pt.y * pr, 5 * pr, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = '#2563EB';
+        ctx.lineWidth = 2 * pr;
+        ctx.stroke();
+
+        // Blue center dot
+        ctx.beginPath();
+        ctx.arc(pt.x * pr, pt.y * pr, 2 * pr, 0, Math.PI * 2);
+        ctx.fillStyle = '#2563EB';
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+}
+
+class DenseGannAngleGridPaneView {
+  private _renderer: DenseGannAngleGridRenderer;
+
+  constructor(drawing: any) {
+    this._renderer = new DenseGannAngleGridRenderer(drawing);
+  }
+
+  zOrder() {
+    return 'normal';
+  }
+
+  renderer() {
+    return this._renderer;
+  }
+
+  update() {}
+}
+
+// -----------------------------------------------------------------------------
+export function timeToLogicalIndex(targetTime: number, candles: any[]): number {
+  if (!candles || candles.length === 0) return 0;
+  const N = candles.length;
+  if (N === 1) return 0;
+
+  const lastTime = Number(candles[N - 1].time);
+  const firstTime = Number(candles[0].time);
+
+  // Calculate robust candle step duration (median of recent candle diffs to avoid weekend gaps)
+  let step: number = (candles as any).__cachedStep;
+  if (!step || typeof step !== 'number') {
+    step = 3600;
+    if (N >= 2) {
+      const diffs: number[] = [];
+      const samples = Math.min(N - 1, 20);
+      for (let i = N - 1; i > N - 1 - samples; i--) {
+        const d = Number(candles[i].time) - Number(candles[i - 1].time);
+        if (d > 0) diffs.push(d);
+      }
+      diffs.sort((a, b) => a - b);
+      if (diffs.length > 0) {
+        step = diffs[Math.floor(diffs.length / 2)] || 3600;
+      }
+    }
+    try {
+      (candles as any).__cachedStep = step;
+    } catch {}
+  }
+
+  // Future projection (beyond rightmost candle)
+  if (targetTime >= lastTime) {
+    return (N - 1) + (targetTime - lastTime) / step;
+  }
+  // Historical past projection (before leftmost candle)
+  if (targetTime <= firstTime) {
+    return 0 - (firstTime - targetTime) / step;
+  }
+
+  // Exact match or binary search within candle array
+  let low = 0;
+  let high = N - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const mt = Number(candles[mid].time);
+    if (mt === targetTime) {
+      return mid;
+    } else if (mt < targetTime) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  // targetTime falls between high and low (high = low - 1)
+  const safeHigh = Math.max(0, Math.min(N - 1, high));
+  const safeLow = Math.max(0, Math.min(N - 1, low));
+  const tHigh = Number(candles[safeHigh].time);
+  const tLow = Number(candles[safeLow].time);
+  const frac = tLow > tHigh ? (targetTime - tHigh) / (tLow - tHigh) : 0;
+  return safeHigh + frac;
+}
+
+export function projectLogicalCoordinate(timeScale: any, logicalIdx: number, chart?: any): number | null {
+  if (isNaN(logicalIdx)) return null;
+
+  const realTs = chart?.timeScale?.() || (typeof window !== 'undefined' && (window as any).__currentChart?.timeScale?.()) || timeScale;
+  if (!realTs) return null;
+
+  // 1. If integer logical index, test direct coordinate conversion
+  if (Number.isInteger(logicalIdx)) {
+    const direct = realTs.logicalToCoordinate?.(logicalIdx);
+    if (direct !== null && direct !== undefined && !isNaN(direct)) {
+      return direct;
+    }
+  }
+
+  // 2. Primary method: continuous linear calculation using two visible integer indices
+  // Lightweight Charts time scale is strictly linear in logical index space:
+  // coordinate = x1 + (logicalIdx - i1) * barSpacing
+  try {
+    const range = realTs.getVisibleLogicalRange?.();
+    if (range && typeof range.from === 'number' && typeof range.to === 'number' && range.to > range.from) {
+      const i1 = Math.ceil(range.from) + 1;
+      const i2 = Math.floor(range.to) - 1;
+      if (i2 > i1) {
+        const x1 = realTs.logicalToCoordinate?.(i1);
+        const x2 = realTs.logicalToCoordinate?.(i2);
+        if (x1 !== null && x2 !== null && !isNaN(x1) && !isNaN(x2)) {
+          const barSpacing = (x2 - x1) / (i2 - i1);
+          if (barSpacing > 0) {
+            return x1 + (logicalIdx - i1) * barSpacing;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Interpolation between floor and ceil indices
+  const floorIdx = Math.floor(logicalIdx);
+  const ceilIdx = Math.ceil(logicalIdx);
+
+  if (floorIdx === ceilIdx) {
+    const coord = realTs.logicalToCoordinate?.(floorIdx);
+    if (coord !== null && coord !== undefined && !isNaN(coord)) return coord;
+  } else {
+    const coordFloor = realTs.logicalToCoordinate?.(floorIdx);
+    const coordCeil = realTs.logicalToCoordinate?.(ceilIdx);
+    if (coordFloor !== null && coordCeil !== null && !isNaN(coordFloor) && !isNaN(coordCeil)) {
+      return coordFloor + (logicalIdx - floorIdx) * (coordCeil - coordFloor);
+    }
+  }
+
+  // 4. Fallback: native barSpacing and visible midpoint
+  try {
+    const barSpacing = realTs.options?.()?.barSpacing || 6;
+    const range = realTs.getVisibleLogicalRange?.();
+    if (range) {
+      const midInt = Math.round((range.from + range.to) / 2);
+      const midX = realTs.logicalToCoordinate?.(midInt);
+      if (midX !== null && midX !== undefined && !isNaN(midX)) {
+        return midX + (logicalIdx - midInt) * barSpacing;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+// 4. Prototype Patching & Registry Installation
+// -----------------------------------------------------------------------------
+export function installDirectionalEnhancers() {
+  try {
+    // 0. Disable autoscaleInfo on Drawing and ALL drawing subclasses.
+    // In Lightweight Charts, primitives with an autoscaleInfo() method force the chart
+    // price scale to automatically rescale, zoom out, recenter, and fit the drawing's min/max
+    // prices into the viewport whenever any anchor is created, moved, or edited.
+    // Disabling autoscaleInfo across ALL classes ensures the chart camera zoom, price scale,
+    // and position remain 100% locked and stable, matching professional TradingView-style behavior.
+    for (const key of Object.keys(DrawingPkg)) {
+      const item = (DrawingPkg as any)[key];
+      if (typeof item === 'function' && item.prototype) {
+        if (item.prototype.autoscaleInfo || Object.getOwnPropertyNames(item.prototype).includes('autoscaleInfo')) {
+          item.prototype.autoscaleInfo = function () {
+            return null;
+          };
+        }
+      }
+    }
+
+    if (Drawing && Drawing.prototype) {
+      (Drawing.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+
+      const origAnchorToPixel = Drawing.prototype.anchorToPixel;
+      Drawing.prototype.anchorToPixel = function (anchor: any, viewport: any) {
+        if (!anchor || !viewport) return null;
+
+        const chart = (this as any)._chart || (typeof window !== 'undefined' ? (window as any).__currentChart : null);
+        const series = (this as any)._series || (typeof window !== 'undefined' ? (window as any).__currentSeries : null);
+        const timeScale = viewport.timeScale || chart?.timeScale?.();
+        const priceScale = viewport.priceScale || series;
+
+        if (!timeScale) return null;
+
+        // Price coordinate (Y): map absolute anchor.price to the current price scale
+        // Check series first because it correctly resolves firstValue for PriceScale
+        let y: number | null = null;
+        const priceNum = typeof anchor.price === 'number' ? anchor.price : parseFloat(anchor.price);
+        if (!isNaN(priceNum) && isFinite(priceNum) && priceNum > 0 && priceNum < 1e9) {
+          if (series?.priceToCoordinate) {
+            y = series.priceToCoordinate(priceNum);
+          }
+          if ((y === null || y === undefined || isNaN(y)) && priceScale?.priceToCoordinate) {
+            y = priceScale.priceToCoordinate(priceNum);
+          }
+        }
+        if (y === null || isNaN(y)) {
+          const direct = origAnchorToPixel ? origAnchorToPixel.call(this, anchor, viewport) : null;
+          if (direct && typeof direct.y === 'number' && !isNaN(direct.y)) {
+            y = direct.y;
+          }
+        }
+        if (y === null || isNaN(y)) return null;
+
+        // Time coordinate (X): map absolute chart timestamp (seconds) to the current timeframe's time scale
+        let x: number | null = null;
+        let targetTime = typeof anchor.time === 'number' ? anchor.time : Number(anchor.time);
+        if (isNaN(targetTime) && typeof anchor.time === 'string') {
+          targetTime = Math.floor(new Date(anchor.time).getTime() / 1000);
+        }
+
+        if (!isNaN(targetTime)) {
+          // 1. First check direct native timeToCoordinate - instant and accurate for visible bars matching candle timestamps!
+          const directTimeX = timeScale?.timeToCoordinate?.(targetTime) ?? chart?.timeScale?.().timeToCoordinate?.(targetTime);
+          if (directTimeX !== null && directTimeX !== undefined && !isNaN(directTimeX)) {
+            x = directTimeX;
+          } else {
+            // 2. Continuous logical projection for future projection, past projection, or timestamps between candles
+            const candles = (chart as any)?._candles || (typeof window !== 'undefined' && (window as any).__chartCandles) || [];
+            if (Array.isArray(candles) && candles.length > 0) {
+              const logicalIdx = timeToLogicalIndex(targetTime, candles);
+              const projectedX = projectLogicalCoordinate(timeScale, logicalIdx, chart);
+              if (projectedX !== null && !isNaN(projectedX)) {
+                x = projectedX;
+              }
+            }
+          }
+        }
+
+        if (x === null || isNaN(x)) {
+          const direct = origAnchorToPixel ? origAnchorToPixel.call(this, anchor, viewport) : null;
+          if (direct && typeof direct.x === 'number' && !isNaN(direct.x)) {
+            x = direct.x;
+          }
+        }
+
+        if (x === null || isNaN(x) || y === null || isNaN(y)) {
+          return null;
+        }
+        return { x, y };
+      };
+
+      const origPixelToAnchor = (Drawing.prototype as any).pixelToAnchor;
+      (Drawing.prototype as any).pixelToAnchor = function (point: any, viewport: any) {
+        if (!point || !viewport) return null;
+
+        const chart = (this as any)._chart || (typeof window !== 'undefined' ? (window as any).__currentChart : undefined);
+        const series = (this as any)._series || (typeof window !== 'undefined' ? (window as any).__currentSeries : undefined);
+        const timeScale = viewport.timeScale || chart?.timeScale?.();
+        const priceScale = viewport.priceScale || series;
+        if (!timeScale || !priceScale) return null;
+
+        let price: number | null = null;
+        if (series?.coordinateToPrice) {
+          price = series.coordinateToPrice(point.y);
+        } else if (priceScale.coordinateToPrice) {
+          price = priceScale.coordinateToPrice(point.y);
+        }
+        if (price === null || price === undefined || isNaN(price) || !isFinite(price) || price <= 0 || price > 1e9) {
+          return null;
+        }
+
+        let time: number | null = null;
+        const rawTs = chart?.timeScale?.() || timeScale;
+        const directTime = rawTs?.coordinateToTime ? rawTs.coordinateToTime(point.x) : null;
+        if (directTime !== null && directTime !== undefined) {
+          time = typeof directTime === 'number' ? directTime : Math.floor(new Date(directTime).getTime() / 1000);
+        }
+
+        if (!time) {
+          const logical = rawTs?.coordinateToLogical ? rawTs.coordinateToLogical(point.x) : null;
+          const candles = (chart as any)?._candles || (typeof window !== 'undefined' ? (window as any).__chartCandles : undefined);
+          if (logical !== null && logical !== undefined && !isNaN(logical) && Array.isArray(candles) && candles.length > 0) {
+            const N = candles.length;
+            const lastCandle = candles[N - 1];
+            const firstCandle = candles[0];
+
+            let step = 3600;
+            if (N >= 2) {
+              const diffs: number[] = [];
+              const samples = Math.min(N - 1, 20);
+              for (let i = N - 1; i > N - 1 - samples; i--) {
+                const d = Number(candles[i].time) - Number(candles[i - 1].time);
+                if (d > 0) diffs.push(d);
+              }
+              diffs.sort((a, b) => a - b);
+              if (diffs.length > 0) {
+                step = diffs[Math.floor(diffs.length / 2)] || 3600;
+              }
+            }
+
+            if (logical >= N - 1) {
+              time = Number(lastCandle.time) + Math.round((logical - (N - 1)) * step);
+            } else if (logical <= 0) {
+              time = Number(firstCandle.time) + Math.round(logical * step);
+            } else {
+              const floor = Math.floor(logical);
+              const ceil = Math.ceil(logical);
+              if (floor === ceil) {
+                time = Number(candles[floor].time);
+              } else {
+                const t0 = Number(candles[floor].time);
+                const t1 = Number(candles[ceil].time);
+                time = Math.round(t0 + (logical - floor) * (t1 - t0));
+              }
+            }
+          }
+        }
+
+        if (time === null || time === undefined || price === null || isNaN(price) || !isFinite(price) || price <= 0 || price > 1e9) {
+          return null;
+        }
+
+        // Format price precision intelligently based on asset scale: Forex (5 decimals), DXY/Mid (3 decimals), Standard (2 decimals)
+        const formattedPrice = Math.abs(price) < 5 ? Number(price.toFixed(5)) : Math.abs(price) < 500 ? Number(price.toFixed(3)) : Number(price.toFixed(2));
+        return { time, price: formattedPrice };
+      };
+    }
+
+    if (DrawingManager && DrawingManager.prototype) {
+      const origAddDrawing = DrawingManager.prototype.addDrawing;
+      DrawingManager.prototype.addDrawing = function (drawing: any) {
+        if (drawing) {
+          drawing.autoscaleInfo = function () {
+            return null;
+          };
+          if (drawing._primitive) {
+            drawing._primitive.autoscaleInfo = function () {
+              return null;
+            };
+          }
+        }
+        return origAddDrawing.call(this, drawing);
+      };
+    }
+
+    // 0. Disable autoscaleInfo on Drawing and subclasses so drawings NEVER force the chart to zoom in or zoom out
+    if (Drawing && Drawing.prototype) {
+      (Drawing.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (GannFan && GannFan.prototype) {
+      (GannFan.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (GannBox && GannBox.prototype) {
+      (GannBox.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (Ray && Ray.prototype) {
+      (Ray.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+    if (TrendAngle && TrendAngle.prototype) {
+      (TrendAngle.prototype as any).autoscaleInfo = function () {
+        return null;
+      };
+    }
+
+    // 1. Patch Ray
+    if (Ray && Ray.prototype) {
+      (Ray.prototype as any).paneViews = function () {
+        return [new BidirectionalRayPaneView(this)];
+      };
+
+      (Ray.prototype as any).testHit = function (point: { x: number; y: number }, viewport: any) {
+        if (!this.isValid()) return false;
+        const vp = viewport || this.getViewport?.();
+        if (!vp) return false;
+        const r = this.anchorToPixel(this._anchors[0], vp);
+        const a = this.anchorToPixel(this._anchors[1], vp);
+        if (!r || !a) return false;
+        return distanceToRay(point, r, a) <= 8;
+      };
+
+      (Ray.prototype as any).computeGeometry = function (viewport: any) {
+        if (!this.isValid()) return [];
+        const vp = viewport || this.getViewport?.();
+        if (!vp) return [];
+        const s = this.anchorToPixel(this._anchors[0], vp);
+        const e = this.anchorToPixel(this._anchors[1], vp);
+        if (!s || !e) return [];
+        const isLeft = e.x < s.x;
+        return [{
+          type: 'line',
+          start: s,
+          end: e,
+          extendLeft: isLeft,
+          extendRight: !isLeft,
+        }];
+      };
+    }
+
+    // 2. Patch GannFan
+    if (GannFan && GannFan.prototype) {
+      (GannFan.prototype as any).paneViews = function () {
+        return [new BidirectionalGannFanPaneView(this)];
+      };
+
+      (GannFan.prototype as any).testHit = function (point: { x: number; y: number }, viewport: any) {
+        if (!this.isValid()) return false;
+        const vp = viewport || this.getViewport?.();
+        if (!vp) return false;
+        const r = this.anchorToPixel(this._anchors[0], vp);
+        const a = this.anchorToPixel(this._anchors[1], vp);
+        if (!r || !a) return false;
+
+        const dx = a.x - r.x;
+        const dy = a.y - r.y;
+        const angles = this._gannOptions?.angles || DEFAULT_GANN_FAN_ANGLES;
+
+        for (const item of angles) {
+          const ratio = item.ratio ?? 1;
+          const vx = dx;
+          const vy = dy * ratio;
+          const fanDirPoint = { x: r.x + vx, y: r.y + vy };
+          if (distanceToRay(point, r, fanDirPoint) <= 8) {
+            return true;
+          }
+        }
+        return false;
+      };
+    }
+
+    // 3. Patch TrendAngle (Dense Gann Angle Grid for 'gann-angle', Bidirectional for 'trend-angle')
+    if (TrendAngle && TrendAngle.prototype) {
+      (TrendAngle.prototype as any).paneViews = function () {
+        if (this.type === 'gann-angle') {
+          return [new DenseGannAngleGridPaneView(this)];
+        }
+        return [new BidirectionalTrendAnglePaneView(this)];
+      };
+
+      (TrendAngle.prototype as any).testHit = function (point: { x: number; y: number }, viewport: any) {
+        if (!this.isValid()) return false;
+        const vp = viewport || this.getViewport?.();
+        if (!vp) return false;
+        const r = this.anchorToPixel(this._anchors[0], vp);
+        const a = this.anchorToPixel(this._anchors[1], vp);
+        if (!r || !a) return false;
+
+        if (this.type === 'gann-angle') {
+          return isPointNearGannGrid(point, r, a);
+        }
+
+        return distanceToRay(point, r, a) <= 8;
+      };
+    }
+
+    // 3b. Patch Rectangle testHit so clicking empty interior pans the chart, only edges/handles select
+    if (Rectangle && Rectangle.prototype) {
+      (Rectangle.prototype as any).testHit = function (point: { x: number; y: number }, viewport: any) {
+        if (!this.isValid()) return false;
+        const vp = viewport || this.getViewport?.();
+        if (!vp) return false;
+        const e = this.anchorToPixel(this._anchors[0], vp);
+        const n = this.anchorToPixel(this._anchors[1], vp);
+        if (!e || !n) return false;
+        const minX = Math.min(e.x, n.x);
+        const maxX = Math.max(e.x, n.x);
+        const minY = Math.min(e.y, n.y);
+        const maxY = Math.max(e.y, n.y);
+        const THRESHOLD = 8;
+
+        const nearLeft = Math.abs(point.x - minX) <= THRESHOLD && point.y >= minY - THRESHOLD && point.y <= maxY + THRESHOLD;
+        const nearRight = Math.abs(point.x - maxX) <= THRESHOLD && point.y >= minY - THRESHOLD && point.y <= maxY + THRESHOLD;
+        const nearTop = Math.abs(point.y - minY) <= THRESHOLD && point.x >= minX - THRESHOLD && point.x <= maxX + THRESHOLD;
+        const nearBottom = Math.abs(point.y - maxY) <= THRESHOLD && point.x >= minX - THRESHOLD && point.x <= maxX + THRESHOLD;
+
+        if (nearLeft || nearRight || nearTop || nearBottom) return true;
+
+        if (this._rectangleOptions?.filled && this._style?.fillOpacity && this._style.fillOpacity > 0.4) {
+          return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY;
+        }
+        return false;
+      };
+    }
+
+    // 4. GannBox control points are managed cleanly by gannBoxEnhancer (6 corner/edge handles)
+
+    // 5. Register 'gann-angle' tool and aliases in ToolRegistry
+    const registry = ToolRegistry.getInstance();
+    try {
+      if (registry.has('gann-angle')) {
+        (registry as any)._tools?.delete?.('gann-angle');
+      }
+      registry.register({
+        type: 'gann-angle',
+        name: 'Gann Angle',
+        category: 'gann',
+        requiredAnchors: 2,
+        factory: (id: string, anchors: any[], options: any) => {
+          const drawing = new TrendAngle(id, anchors, {
+            ...options,
+            trendAngleOptions: {
+              showArc: true,
+              showDegrees: true,
+              arcRadius: 40,
+            },
+          });
+          (drawing as any).type = 'gann-angle';
+          return drawing;
+        },
+      } as any);
+
+      // Aliases
+      if (!registry.has('pitchfork') && registry.has('andrews-pitchfork')) {
+        const entry = registry.get('andrews-pitchfork');
+        if (entry) {
+          registry.register({
+            ...entry,
+            type: 'pitchfork',
+            name: 'Pitchfork',
+          } as any);
+        }
+      }
+      if (!registry.has('measure') && registry.has('date-price-range')) {
+        const entry = registry.get('date-price-range');
+        if (entry) {
+          registry.register({
+            ...entry,
+            type: 'measure',
+            name: 'Measure / Ruler',
+          } as any);
+        }
+      }
+    } catch {
+      // safe fallback
+    }
+
+    console.log('[Drawing Direction Enhancer] Bidirectional Ray, Gann Fan, Dense Gann Angle Grid, and Gann Box installed successfully.');
+  } catch (err: any) {
+    console.warn('[Drawing Direction Enhancer] Failed to patch prototypes:', err.message);
+  }
+}

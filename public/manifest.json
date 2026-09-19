@@ -1,0 +1,17 @@
+{
+  "name": "SMTrading.pro",
+  "short_name": "SMTrading",
+  "description": "Smart Money Trading by Abu Asad Almansi - Institutional SMC Analysis & Financial Charting",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F17",
+  "theme_color": "#0E131F",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

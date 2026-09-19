@@ -1,0 +1,453 @@
+import React from 'react';
+import { ArticleCategory } from '../types';
+import { 
+  Search, 
+  Bookmark, 
+  Sparkles, 
+  ShoppingBag,
+  Crown,
+  GraduationCap,
+  Briefcase,
+  ShieldCheck,
+  Send,
+  ExternalLink
+} from 'lucide-react';
+import { BlueVerifiedBadge } from './BlueVerifiedBadge';
+import { LanguageSelector } from './LanguageSelector';
+import { TradingToolsMenu } from './TradingToolsMenu';
+import { useTranslation } from '../context/LanguageContext';
+import { TranslationKey } from '../locales';
+import { useAuth } from '../context/AuthContext';
+import { UserAvatar } from './UserAvatar';
+import { MarketStatusIndicator } from './chart/MarketStatusIndicator';
+import { AdminPanelTabType } from './AdminPanelModal';
+import { useYouTubeLive } from '../hooks/useYouTubeLive';
+
+interface HeaderProps {
+  activeCategory: ArticleCategory;
+  onSelectCategory: (category: ArticleCategory) => void;
+  savedArticlesCount: number;
+  onOpenSavedModal: () => void;
+  onOpenSearchModal: () => void;
+  onOpenCalculator: () => void;
+  onOpenCalendar: () => void;
+  onOpenChart: () => void;
+  onOpenAiCopilot?: () => void;
+  onOpenNewsletter: () => void;
+  onOpenECommerce: () => void;
+  onOpenCoachingDesk: () => void;
+  onOpenProfile: () => void;
+  onOpenAdmin: (tab?: AdminPanelTabType) => void;
+}
+
+const CATEGORIES: ArticleCategory[] = [
+  'All',
+  'Trade Now',
+  'BookMap',
+  'LIVE Trade',
+  'VIP Signals',
+  'Support'
+];
+
+const CATEGORY_KEYS: Record<ArticleCategory, TranslationKey> = {
+  'All': 'catAll',
+  'Macro & Liquidity': 'catMacro',
+  'Order Flow & Price Action': 'catOrderFlow',
+  'Trade Now': 'catQuant',
+  'BookMap': 'catBookMap',
+  'LIVE Trade': 'catOptions',
+  'VIP Signals': 'catVipSignals',
+  'Support': 'catRisk'
+};
+
+export const Header: React.FC<HeaderProps> = ({
+  activeCategory,
+  onSelectCategory,
+  savedArticlesCount,
+  onOpenSavedModal,
+  onOpenSearchModal,
+  onOpenCalculator,
+  onOpenCalendar,
+  onOpenChart,
+  onOpenAiCopilot,
+  onOpenNewsletter,
+  onOpenECommerce,
+  onOpenCoachingDesk,
+  onOpenProfile,
+  onOpenAdmin
+}) => {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const { isLive: isLiveStreamActive } = useYouTubeLive();
+
+  return (
+    <header className="relative bg-[#0B0F17] border-b border-slate-800">
+      {/* 1. Main Top Branding & Central Control Head */}
+      <div className="border-b border-slate-800/80 bg-[#0B0F17]/95 backdrop-blur-md sticky top-0 z-40 w-full">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 sm:py-3">
+          
+          {/* Main Flex Row: Left Brand Logo, Central Head Controls, Mobile Right Controls */}
+          <div className="flex items-center justify-between gap-2 sm:gap-4 md:gap-6">
+            
+            {/* Left: Brand Identity Logo & Professional Market Status */}
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
+              <button 
+                onClick={() => onSelectCategory('All')}
+                className="flex items-center gap-2 sm:gap-3 text-left ltr:text-left rtl:text-right group focus:outline-none cursor-pointer"
+              >
+                {/* Monogram Badge */}
+                <div className="relative w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 p-[1px] shadow-lg shadow-amber-500/10 shrink-0">
+                  <div className="w-full h-full bg-[#0E131F] rounded-[11px] flex items-center justify-center relative overflow-hidden group-hover:bg-[#131a2a] transition-colors">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/20 to-transparent opacity-50"></div>
+                    <span className="font-bold text-base sm:text-lg tracking-tighter bg-gradient-to-r from-amber-200 via-amber-400 to-amber-100 bg-clip-text text-transparent font-mono-num">
+                      SM
+                    </span>
+                  </div>
+                </div>
+
+                <div className="min-w-0 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="font-black text-base sm:text-lg md:text-xl tracking-tight text-white group-hover:text-amber-300 transition-colors shrink-0">
+                      {t('brandTitle')}<span className="text-amber-400">.pro</span>
+                    </span>
+                    <div className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-400/35 shadow-xs backdrop-blur-sm tracking-wide shrink-0">
+                      <span className="hidden xs:inline">{t('brandBy')}</span>
+                      <BlueVerifiedBadge size="sm" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-start ltr:justify-start rtl:justify-start pt-0.5">
+                    <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 group-hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">
+                      Powered by <span className="font-semibold text-slate-300 group-hover:text-amber-200 transition-colors">Modern Era</span>
+                    </span>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Central Head: Search, Language, Admin Desk, Profile & Trading Tools Hub */}
+            <div className="hidden md:flex flex-1 items-center justify-center px-1 lg:px-3">
+              <div className="flex items-center gap-1.5 lg:gap-2 bg-slate-950/80 border border-slate-800/90 rounded-2xl px-3 py-1.5 shadow-xl shadow-black/50 backdrop-blur-md">
+                
+                {/* 1. Search Alpha Button */}
+                <button
+                  onClick={onOpenSearchModal}
+                  className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl border border-slate-800 hover:border-slate-700 transition-all text-xs font-medium cursor-pointer whitespace-nowrap shadow-xs"
+                  title={t('navSearchPlaceholder')}
+                >
+                  <Search className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="hidden xl:inline text-slate-300">{t('navSearchPlaceholder')}</span>
+                  <kbd className="bg-slate-800 text-[10px] text-amber-300 px-1.5 py-0.5 rounded border border-slate-700 font-mono-num leading-none">
+                    ⌘K
+                  </kbd>
+                </button>
+
+                {/* 2. Languages Selector */}
+                <div className="w-[82px] shrink-0">
+                  <LanguageSelector />
+                </div>
+
+                <div className="h-4 w-px bg-slate-800 mx-0.5" />
+
+                {/* 3. Master Staff Desk Button (When Super Admin, Admin, Employee, Coach) */}
+                {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
+                  <button
+                    onClick={() => onOpenAdmin(user.role === 'coach' ? 'coaching' : user.role === 'employee' ? 'operations' : 'users')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm shrink-0 ${
+                      user.role === 'super_admin'
+                        ? 'bg-gradient-to-r from-amber-500/25 via-amber-500/15 to-amber-600/20 hover:from-amber-500/35 hover:to-amber-600/30 border border-amber-400/70 text-amber-300 shadow-amber-500/15'
+                        : user.role === 'coach'
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/60 text-emerald-300'
+                        : user.role === 'employee'
+                        ? 'bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/60 text-blue-300'
+                        : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/60 text-purple-300'
+                    }`}
+                    title={user.role === 'super_admin' ? 'Super Admin Desk' : user.role === 'coach' ? 'Master Coaching Desk' : user.role === 'employee' ? 'Operations Desk' : 'Admin Desk'}
+                  >
+                    {user.role === 'super_admin' ? (
+                      <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    ) : user.role === 'coach' ? (
+                      <GraduationCap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    ) : user.role === 'employee' ? (
+                      <Briefcase className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    ) : (
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    )}
+                    <span>
+                      {user.role === 'super_admin' ? 'Super Admin' : user.role === 'coach' ? 'Coaching Desk' : user.role === 'employee' ? 'Operations' : 'Admin Desk'}
+                    </span>
+                  </button>
+                )}
+
+                {/* 4. User Profile Button */}
+                {user && (
+                  <button
+                    onClick={onOpenProfile}
+                    className="flex items-center gap-2 bg-slate-900/95 hover:bg-slate-850 text-slate-200 border border-slate-700/90 hover:border-amber-400/60 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group shrink-0 shadow-xs"
+                    title="View Profile & Account Settings"
+                  >
+                    <UserAvatar
+                      user={user}
+                      size="sm"
+                      className="shrink-0 group-hover:ring-1 group-hover:ring-amber-400/60 rounded-md"
+                    />
+                    <div className="text-left hidden lg:block">
+                      <div className="text-[11px] font-bold text-white group-hover:text-amber-300 leading-tight truncate max-w-[100px]">
+                        @{user.username}
+                      </div>
+                      <div className="text-[9px] font-mono text-emerald-400 font-bold leading-none">
+                        ${(user.balance ?? 0).toFixed(2)}
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                <div className="h-4 w-px bg-slate-800 mx-0.5" />
+
+                {/* 5. Tools Dropdown (Chart, AI Copilot, Calculator, Calendar, Coaching Desk, Store) */}
+                <TradingToolsMenu
+                  onOpenChart={onOpenChart}
+                  onOpenCalculator={onOpenCalculator}
+                  onOpenCalendar={onOpenCalendar}
+                  onOpenAiCopilot={onOpenAiCopilot}
+                  onOpenCoachingDesk={onOpenCoachingDesk}
+                  onOpenECommerce={onOpenECommerce}
+                />
+
+                {/* 6. E-Commerce Store Quick Action */}
+                <button
+                  id="nav-ecommerce-btn"
+                  onClick={onOpenECommerce}
+                  className="flex items-center gap-1.5 bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 hover:text-amber-200 border border-amber-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
+                  title={t('navEcommerceTitle')}
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span className="hidden md:inline">{t('navEcommerce')}</span>
+                </button>
+
+                {/* 8. Bookmarks Drawer Trigger */}
+                <button
+                  onClick={onOpenSavedModal}
+                  className="relative p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-amber-300 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shrink-0"
+                  title={t('navSavedArticlesTitle')}
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+                  {savedArticlesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 rtl:-left-1 rtl:right-auto bg-amber-500 text-slate-950 font-mono-num font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-md">
+                      {savedArticlesCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Top Right Utilities (< md) */}
+            <div className="flex md:hidden items-center gap-1.5 shrink-0">
+              {user && (user.role === 'super_admin' || user.role === 'admin' || user.role === 'employee' || user.role === 'coach') && (
+                <button
+                  onClick={() => onOpenAdmin(user.role === 'coach' ? 'coaching' : user.role === 'employee' ? 'operations' : 'users')}
+                  className="p-1.5 bg-amber-500/20 border border-amber-400/60 text-amber-300 rounded-lg text-xs font-bold cursor-pointer"
+                  title="Staff Management Desk"
+                >
+                  {user.role === 'super_admin' ? (
+                    <Crown className="w-4 h-4 text-amber-400" />
+                  ) : user.role === 'coach' ? (
+                    <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  ) : user.role === 'employee' ? (
+                    <Briefcase className="w-4 h-4 text-blue-400" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4 text-purple-400" />
+                  )}
+                </button>
+              )}
+
+              {user && (
+                <button
+                  onClick={onOpenProfile}
+                  className="p-1 rounded-lg border border-slate-700 hover:border-amber-400/60 bg-slate-900 cursor-pointer transition-colors"
+                  title="Profile"
+                >
+                  <UserAvatar
+                    user={user}
+                    size="sm"
+                    className="shrink-0 rounded-md"
+                  />
+                </button>
+              )}
+
+              <button
+                onClick={onOpenSavedModal}
+                className="relative p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer shrink-0"
+                title={t('navSavedArticlesTitle')}
+              >
+                <Bookmark className="w-4 h-4 text-amber-400" />
+                {savedArticlesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 rtl:-left-1 rtl:right-auto bg-amber-400 text-slate-950 font-mono-num font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-sm leading-none">
+                    {savedArticlesCount}
+                  </span>
+                )}
+              </button>
+
+              <div className="w-[68px] shrink-0">
+                <LanguageSelector />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Quick Action Strip (< md) */}
+        <div className="md:hidden border-t border-slate-800/80 bg-[#090D14]/95 px-2 sm:px-4 py-2 grid grid-cols-4 gap-1.5 items-center">
+          <button
+            onClick={onOpenSearchModal}
+            className="w-full flex items-center justify-center gap-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 border border-slate-800 px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer"
+          >
+            <Search className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate">{(t('navSearchPlaceholder') || 'Search').replace('...', '')}</span>
+          </button>
+
+          <div className="w-full">
+            <TradingToolsMenu
+              onOpenChart={onOpenChart}
+              onOpenCalculator={onOpenCalculator}
+              onOpenCalendar={onOpenCalendar}
+              onOpenAiCopilot={onOpenAiCopilot}
+              onOpenCoachingDesk={onOpenCoachingDesk}
+              onOpenECommerce={onOpenECommerce}
+              compact={true}
+            />
+          </div>
+
+          <button
+            id="mobile-nav-coaching-desk"
+            onClick={onOpenCoachingDesk}
+            className="w-full flex items-center justify-center gap-1 bg-[#0E1726] hover:bg-[#132035] text-emerald-300 border border-emerald-500/30 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
+            title="Coaching Desk"
+          >
+            <GraduationCap className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span className="truncate">Coaching</span>
+          </button>
+
+          <button
+            id="mobile-nav-ecommerce-btn"
+            onClick={onOpenECommerce}
+            className="w-full flex items-center justify-center gap-1 bg-[#1A150A] hover:bg-[#261E0E] text-amber-300 border border-amber-500/30 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
+            title={t('navEcommerce')}
+          >
+            <ShoppingBag className="w-3 h-3 text-amber-400 shrink-0" />
+            <span className="truncate">Store</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Institutional Tagline Bar & Compact Market Status */}
+      <div className="bg-[#080C13] border-b border-slate-800/60 py-1.5 px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto relative flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs min-h-[32px]">
+          {/* Market Status (MARKET OPEN) aligned on the left under SMTrading.pro */}
+          <div className="flex items-center shrink-0 z-10 ltr:pl-5 sm:ltr:pl-7 md:ltr:pl-9 rtl:pr-5 sm:rtl:pr-7 md:rtl:pr-9">
+            <MarketStatusIndicator
+              id="brand-bar-market-status"
+              compact={true}
+              align="left"
+            />
+          </div>
+
+          {/* Main Title Area Tagline: Smart Money Trading + Order Flow & SMC centered in the middle */}
+          <div className="sm:absolute sm:left-1/2 sm:-translate-x-1/2 flex items-center justify-center z-0 w-full sm:w-auto">
+            <div className="group relative flex items-center gap-2 bg-gradient-to-r from-[#0B1322]/95 via-[#0F1B30]/95 to-[#0B1322]/95 hover:from-[#0E1A2E] hover:to-[#0E1A2E] border border-amber-500/30 hover:border-amber-400/60 px-3.5 py-1 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(245,158,11,0.12)] hover:shadow-[0_2px_14px_rgba(245,158,11,0.18)] transition-all duration-200 shrink-0 select-none backdrop-blur-md">
+              <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/50"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400 shadow-[0_0_8px_#f59e0b]"></span>
+              </span>
+              <span className="text-amber-400 font-bold uppercase tracking-wider text-[11px] font-mono shrink-0">
+                {t('brandSubtitle')}
+              </span>
+              <span className="text-slate-600/90 shrink-0 text-[10px] select-none font-mono">|</span>
+              <span className="text-slate-200 font-medium text-[11px] tracking-normal shrink-0">
+                {t('brandTagline')}
+              </span>
+            </div>
+          </div>
+
+          {/* Symmetrical placeholder on the right for balanced spacing */}
+          <div className="hidden sm:flex items-center shrink-0 w-[120px] pointer-events-none" aria-hidden="true" />
+        </div>
+      </div>
+
+      {/* 3. Category Navigation Bar - Centered across all screens */}
+      <div className="bg-[#090D14]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 overflow-x-auto no-scrollbar py-2.5">
+            {CATEGORIES.map((cat) => {
+              const isActive = activeCategory === cat;
+              const label = t(CATEGORY_KEYS[cat]);
+              const isLiveTab = cat === 'LIVE Trade';
+              const isSupportTab = cat === 'Support';
+              return (
+                <button
+                  key={cat}
+                  id={isSupportTab ? 'nav-support-btn' : undefined}
+                  onClick={() => {
+                    if (cat === 'Trade Now') {
+                      onOpenChart();
+                    } else {
+                      onSelectCategory(cat);
+                    }
+                  }}
+                  className={`relative px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 sm:gap-2 group ${
+                    isActive && isLiveTab && isLiveStreamActive
+                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 font-bold scale-[1.02]'
+                      : isActive
+                      ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 font-bold scale-[1.02]'
+                      : isLiveTab && isLiveStreamActive
+                      ? 'bg-rose-950/70 border border-rose-500/60 text-rose-300 hover:bg-rose-900 hover:text-white shadow-sm shadow-rose-900/30'
+                      : isSupportTab
+                      ? 'bg-slate-900/80 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800 hover:border-[#24A1DE]/60'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                >
+                  {isLiveTab && isLiveStreamActive && (
+                    <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+                    </span>
+                  )}
+                  {isSupportTab && (
+                    <Send className={`w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-slate-950' : 'text-[#24A1DE]'}`} />
+                  )}
+                  <span>{label}</span>
+                  {isLiveTab && isLiveStreamActive && (
+                    <span className="text-[9px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded font-mono tracking-wider shadow-sm">
+                      LIVE
+                    </span>
+                  )}
+                  {isSupportTab && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const a = document.createElement('a');
+                        a.href = 'https://t.me/SMTrading_support';
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }}
+                      title="Direct Telegram Support: @SMTrading_support (https://t.me/SMTrading_support)"
+                      className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-950/20 text-slate-950 hover:bg-slate-950/35 border border-slate-950/30'
+                          : 'bg-[#24A1DE]/20 text-[#38bdf8] hover:bg-[#24A1DE] hover:text-white border border-[#24A1DE]/40'
+                      }`}
+                    >
+                      <span>@SMTrading_support</span>
+                      <ExternalLink className="w-2.5 h-2.5 opacity-80" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
