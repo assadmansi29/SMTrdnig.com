@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../../hooks/useInterfaceText';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -12,6 +13,7 @@ import {
   ExternalLink,
   X,
   Clock,
+  Calendar,
   Coins,
   TrendingUp,
   Sparkles,
@@ -30,47 +32,13 @@ export interface ChartInstrument {
 }
 
 export const ALL_INSTRUMENTS: ChartInstrument[] = [
-  // Spot Metals (Gold across major brokers)
   { symbol: 'OANDA:XAUUSD', name: 'Spot Gold (OANDA)', ticker: 'XAUUSD', broker: 'OANDA', category: 'Metals', description: 'Spot Gold / US Dollar (OANDA Institutional Feed)' },
-  { symbol: 'FOREXCOM:XAUUSD', name: 'Spot Gold (FOREX.com)', ticker: 'XAUUSD', broker: 'FOREX.com', category: 'Metals', description: 'Spot Gold / US Dollar (FOREX.com Feed)' },
-  { symbol: 'PEPPERSTONE:XAUUSD', name: 'Spot Gold (Pepperstone)', ticker: 'XAUUSD', broker: 'Pepperstone', category: 'Metals', description: 'Spot Gold / US Dollar (Pepperstone Feed)' },
-  { symbol: 'FXCM:XAUUSD', name: 'Spot Gold (FXCM)', ticker: 'XAUUSD', broker: 'FXCM', category: 'Metals', description: 'Spot Gold / US Dollar (FXCM Feed)' },
-  { symbol: 'CAPITALCOM:GOLD', name: 'Spot Gold (Capital.com)', ticker: 'GOLD', broker: 'Capital.com', category: 'Metals', description: 'Spot Gold (Capital.com Feed)' },
-  { symbol: 'ICMARKETS:XAUUSD', name: 'Spot Gold (IC Markets)', ticker: 'XAUUSD', broker: 'IC Markets', category: 'Metals', description: 'Spot Gold / US Dollar (IC Markets Feed)' },
-  { symbol: 'SAXO:XAUUSD', name: 'Spot Gold (Saxo Bank)', ticker: 'XAUUSD', broker: 'Saxo', category: 'Metals', description: 'Spot Gold / US Dollar (Saxo Bank Feed)' },
-  { symbol: 'TVC:GOLD', name: 'Spot Gold (TVC)', ticker: 'GOLD', broker: 'TVC', category: 'Metals', description: 'Spot Gold (TradingView Composite Feed)' },
-
-  // Indices across brokers
   { symbol: 'OANDA:NAS100USD', name: 'Nasdaq 100 (OANDA)', ticker: 'NAS100', broker: 'OANDA', category: 'Indices', description: 'US Wall St Tech 100 (OANDA Feed)' },
-  { symbol: 'FOREXCOM:NAS100', name: 'Nasdaq 100 (FOREX.com)', ticker: 'NAS100', broker: 'FOREX.com', category: 'Indices', description: 'US Tech 100 (FOREX.com Feed)' },
-  { symbol: 'PEPPERSTONE:NAS100', name: 'Nasdaq 100 (Pepperstone)', ticker: 'NAS100', broker: 'Pepperstone', category: 'Indices', description: 'US Tech 100 (Pepperstone Feed)' },
   { symbol: 'OANDA:US30USD', name: 'Dow Jones 30 (OANDA)', ticker: 'US30', broker: 'OANDA', category: 'Indices', description: 'US Wall St 30 / Dow (OANDA Feed)' },
-  { symbol: 'FOREXCOM:US30', name: 'Dow Jones 30 (FOREX.com)', ticker: 'US30', broker: 'FOREX.com', category: 'Indices', description: 'Wall Street 30 (FOREX.com Feed)' },
-  { symbol: 'PEPPERSTONE:US30', name: 'Dow Jones 30 (Pepperstone)', ticker: 'US30', broker: 'Pepperstone', category: 'Indices', description: 'Wall Street 30 (Pepperstone Feed)' },
-  { symbol: 'FXCM:US30', name: 'Dow Jones 30 (FXCM)', ticker: 'US30', broker: 'FXCM', category: 'Indices', description: 'US30 (FXCM Feed)' },
   { symbol: 'OANDA:DE30EUR', name: 'DAX 40 (OANDA)', ticker: 'GER40', broker: 'OANDA', category: 'Indices', description: 'Germany 40 / DAX (OANDA Feed)' },
-
-  // Forex across brokers
   { symbol: 'OANDA:EURUSD', name: 'EUR / USD (OANDA)', ticker: 'EURUSD', broker: 'OANDA', category: 'Forex', description: 'Euro / US Dollar (OANDA Feed)' },
-  { symbol: 'FOREXCOM:EURUSD', name: 'EUR / USD (FOREX.com)', ticker: 'EURUSD', broker: 'FOREX.com', category: 'Forex', description: 'Euro / US Dollar (FOREX.com Feed)' },
-  { symbol: 'PEPPERSTONE:EURUSD', name: 'EUR / USD (Pepperstone)', ticker: 'EURUSD', broker: 'Pepperstone', category: 'Forex', description: 'Euro / US Dollar (Pepperstone Feed)' },
-  { symbol: 'FXCM:EURUSD', name: 'EUR / USD (FXCM)', ticker: 'EURUSD', broker: 'FXCM', category: 'Forex', description: 'Euro / US Dollar (FXCM Feed)' },
   { symbol: 'OANDA:GBPUSD', name: 'GBP / USD (OANDA)', ticker: 'GBPUSD', broker: 'OANDA', category: 'Forex', description: 'British Pound / US Dollar (OANDA Feed)' },
-  { symbol: 'FOREXCOM:GBPUSD', name: 'GBP / USD (FOREX.com)', ticker: 'GBPUSD', broker: 'FOREX.com', category: 'Forex', description: 'British Pound / US Dollar (FOREX.com Feed)' },
-
-  // Crypto across brokers
   { symbol: 'BINANCE:BTCUSDT', name: 'Bitcoin (Binance)', ticker: 'BTCUSDT', broker: 'Binance', category: 'Crypto', description: 'Bitcoin / Tether (Binance Spot Feed)' },
-  { symbol: 'BYBIT:BTCUSDT', name: 'Bitcoin (Bybit)', ticker: 'BTCUSDT', broker: 'Bybit', category: 'Crypto', description: 'Bitcoin / Tether (Bybit Feed)' },
-  { symbol: 'BINANCE:ETHUSDT', name: 'Ethereum (Binance)', ticker: 'ETHUSDT', broker: 'Binance', category: 'Crypto', description: 'Ethereum / Tether (Binance Feed)' },
-
-  // Futures
-  { symbol: 'CME_MINI:ES1!', name: 'ES Futures (S&P 500)', ticker: 'ES1!', broker: 'CME', category: 'Futures', description: 'E-mini S&P 500 Futures (CME Globex)' },
-  { symbol: 'CME_MINI:NQ1!', name: 'NQ Futures (Nasdaq)', ticker: 'NQ1!', broker: 'CME', category: 'Futures', description: 'E-mini Nasdaq 100 Futures (CME Globex)' },
-
-  // Equities & Macro
-  { symbol: 'NASDAQ:NVDA', name: 'NVIDIA Corp', ticker: 'NVDA', broker: 'NASDAQ', category: 'Equities', description: 'NVIDIA Corporation (NASDAQ)' },
-  { symbol: 'CAPITALCOM:DXY', name: 'US Dollar Index', ticker: 'DXY', broker: 'Capital.com', category: 'Macro', description: 'US Dollar Currency Index (Capital.com)' },
-  { symbol: 'TVC:DXY', name: 'US Dollar Index (TVC)', ticker: 'DXY', broker: 'TVC', category: 'Macro', description: 'US Dollar Currency Index (TVC)' },
 ];
 
 export interface ChartTimeframe {
@@ -108,7 +76,6 @@ interface ChartToolbarProps {
   onSelectInterval: (interval: string) => void;
   activeStrategy: ChartStrategyType;
   onSelectStrategy: (strategy: ChartStrategyType) => void;
-  onOpenAiCopilot?: () => void;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
   onClose?: () => void;
@@ -123,13 +90,13 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
   onSelectInterval,
   activeStrategy,
   onSelectStrategy,
-  onOpenAiCopilot,
   isFullscreen = false,
   onToggleFullscreen,
   onClose,
   showModalControls = false,
   className = '',
 }) => {
+  const ui = useInterfaceText();
   const [isInstrumentMenuOpen, setIsInstrumentMenuOpen] = useState(false);
   const [isTimeframeMenuOpen, setIsTimeframeMenuOpen] = useState(false);
   const [instrumentSearch, setInstrumentSearch] = useState('');
@@ -229,22 +196,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
       group: 'Minutes' as const,
     };
 
-  const brokers = [
-    'All',
-    'OANDA',
-    'FOREX.com',
-    'Pepperstone',
-    'FXCM',
-    'Capital.com',
-    'IC Markets',
-    'Saxo',
-    'TVC',
-    'Binance',
-    'Bybit',
-    'CME',
-    'NASDAQ',
-  ];
-  const categories = ['All', 'Metals', 'Indices', 'Forex', 'Crypto', 'Futures', 'Equities', 'Macro'];
+  const brokers = ['All', 'OANDA', 'Binance'];
+  const categories = ['All', 'Metals', 'Indices', 'Forex', 'Crypto'];
 
   // Filter instruments by search, category & broker
   const filteredInstruments = ALL_INSTRUMENTS.filter((inst) => {
@@ -268,28 +221,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
     switch (broker) {
       case 'OANDA':
         return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
-      case 'FOREX.com':
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-      case 'Pepperstone':
-        return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
-      case 'FXCM':
-        return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
-      case 'Capital.com':
-        return 'bg-teal-500/20 text-teal-300 border-teal-500/40';
-      case 'IC Markets':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-      case 'Saxo':
-        return 'bg-violet-500/20 text-violet-300 border-violet-500/40';
-      case 'TVC':
-        return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
       case 'Binance':
         return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-      case 'Bybit':
-        return 'bg-amber-400/20 text-amber-200 border-amber-400/40';
-      case 'CME':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
-      case 'NASDAQ':
-        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
       default:
         return 'bg-slate-700/60 text-slate-300 border-slate-600/50';
     }
@@ -297,20 +230,6 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
 
   const getCategoryDotColor = (category: string) => {
     switch (category) {
-      case 'Metals':
-        return 'bg-amber-400';
-      case 'Indices':
-        return 'bg-sky-400';
-      case 'Forex':
-        return 'bg-emerald-400';
-      case 'Crypto':
-        return 'bg-orange-400';
-      case 'Futures':
-        return 'bg-violet-400';
-      case 'Equities':
-        return 'bg-cyan-400';
-      case 'Macro':
-        return 'bg-pink-400';
       default:
         return 'bg-slate-400';
     }
@@ -362,12 +281,12 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-slate-800 border-amber-500/60 text-white ring-1 ring-amber-500/30'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-slate-600 text-slate-100'
             }`}
-            title="Click to search and change financial instrument & broker"
+            title={ui("Click to search and change financial instrument & broker")}
           >
             <span className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${getCategoryDotColor(currentInstrument.category)} animate-pulse`} />
               <span className="font-semibold tracking-tight truncate max-w-[130px] sm:max-w-[180px] md:max-w-none text-white">
-                {currentInstrument.name}
+                {ui(currentInstrument.name)}
               </span>
             </span>
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${getBrokerBadgeColor(currentInstrument.broker)}`}>
@@ -401,8 +320,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                       <BarChart2 className="w-5 h-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base font-bold text-white truncate">Select Market & Broker</h3>
-                      <p className="text-xs text-slate-400 font-mono truncate">Real-Time Institutional Multi-Broker Feed</p>
+                      <h3 className="text-base font-bold text-white truncate">{ui("Select Market & Broker")}</h3>
+                      <p className="text-xs text-slate-400 font-mono truncate">{ui("Real-Time Institutional Multi-Broker Feed")}</p>
                     </div>
                   </div>
 
@@ -410,7 +329,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                     type="button"
                     onClick={() => setIsInstrumentMenuOpen(false)}
                     className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                    aria-label="Close instrument selector"
+                    aria-label={ui("Close instrument selector")}
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -424,7 +343,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                     type="text"
                     value={instrumentSearch}
                     onChange={(e) => setInstrumentSearch(e.target.value)}
-                    placeholder="Search instrument or broker (e.g. Gold, OANDA, US30, Binance)..."
+                    placeholder={ui("Search instrument or broker (e.g. Gold, OANDA, US30, Binance)...")}
                     className="w-full bg-[#11192E] border border-slate-700/90 rounded-xl pl-9 pr-8 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 transition-all font-mono"
                   />
                   {instrumentSearch && (
@@ -440,9 +359,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
 
                 {/* Broker Filter Pills */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 shrink-0 mr-1">
-                    Broker:
-                  </span>
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 shrink-0 mr-1">{ui(" Broker: ")}</span>
                   {brokers.map((brk) => (
                     <button
                       key={brk}
@@ -454,16 +371,14 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border-slate-800/80 bg-[#090D17]/80'
                       }`}
                     >
-                      {brk === 'All' ? 'All Brokers' : brk}
+                      {brk === 'All' ? ui("All Brokers") : brk}
                     </button>
                   ))}
                 </div>
 
                 {/* Category Filter Pills */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs border-b border-slate-800/80">
-                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 shrink-0 mr-1">
-                    Market:
-                  </span>
+                  <span className="text-[10px] font-mono font-bold uppercase text-slate-400 shrink-0 mr-1">{ui(" Market: ")}</span>
                   {categories.map((cat) => (
                     <button
                       key={cat}
@@ -483,8 +398,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 {/* Instruments List */}
                 <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
                   {filteredInstruments.length === 0 ? (
-                    <div className="py-8 text-center text-slate-500 text-xs">
-                      No instruments found matching "{instrumentSearch}"
+                    <div className="py-8 text-center text-slate-500 text-xs">{ui(" No instruments found matching \"")}{instrumentSearch}"
                     </div>
                   ) : (
                     filteredInstruments.map((inst) => {
@@ -519,11 +433,11 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                                   {inst.broker}
                                 </span>
                                 <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-400 border border-slate-700/50">
-                                  {inst.category}
+                                  {ui(inst.category)}
                                 </span>
                               </div>
                               <div className="text-xs text-slate-400 truncate mt-0.5">
-                                {inst.description}
+                                {ui(inst.description)}
                               </div>
                             </div>
                           </div>
@@ -560,7 +474,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                       ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/70 border border-transparent'
                   }`}
-                  title={`Switch to ${tf.label} timeframe`}
+                  title={ui("Switch to {p0} timeframe", {p0: tf.label})}
                 >
                   {tf.label}
                 </button>
@@ -584,7 +498,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                   ? 'text-amber-400 bg-slate-800'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
               }`}
-              title="All Timeframes"
+              title={ui("All Timeframes")}
             >
               {!QUICK_TIMEFRAMES.some((q) => q.value === currentInterval) && (
                 <span className="text-xs font-mono font-bold text-amber-300 px-1">{currentTimeframe.label}</span>
@@ -617,8 +531,8 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                         <Clock className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-bold text-white truncate">Select Timeframe</h3>
-                        <p className="text-xs text-slate-400 font-mono truncate">Chart Interval Scale</p>
+                        <h3 className="text-base font-bold text-white truncate">{ui("Select Timeframe")}</h3>
+                        <p className="text-xs text-slate-400 font-mono truncate">{ui("Chart Interval Scale")}</p>
                       </div>
                     </div>
 
@@ -626,7 +540,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                       type="button"
                       onClick={() => setIsTimeframeMenuOpen(false)}
                       className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                      aria-label="Close timeframe selector"
+                      aria-label={ui("Close timeframe selector")}
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -639,7 +553,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                     return (
                       <div key={group} className="space-y-1.5">
                         <div className="text-xs font-mono uppercase text-slate-400 px-1 py-0.5 tracking-wider font-semibold">
-                          {group}
+                          {ui(group)}
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           {groupItems.map((tf) => {
@@ -691,11 +605,11 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-amber-500/20 border-amber-500 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-amber-500/40 text-slate-300 hover:text-amber-300'
             }`}
-            title="Magic Lines: Open clean chart view with saved Magic Lines analysis"
+            title={ui("Magic Lines: Open clean chart view with saved Magic Lines analysis")}
           >
             <Grid3X3 className={`w-3.5 h-3.5 ${activeStrategy === '144' ? 'text-amber-300' : 'text-amber-400'}`} />
-            <span className="hidden sm:inline">Magic Lines</span>
-            <span className="sm:hidden">Magic Lines</span>
+            <span className="hidden sm:inline">{ui("Magic Lines")}</span>
+            <span className="sm:hidden">{ui("Magic Lines")}</span>
             {activeStrategy === '144' && (
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             )}
@@ -713,10 +627,10 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-sky-500/20 border-sky-500 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.25)] ring-1 ring-sky-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-sky-500/40 text-slate-300 hover:text-sky-300'
             }`}
-            title="SMC Strategy: Smart Money Concepts (LuxAlgo) with BOS, CHoCH, Order Blocks, and FVGs"
+            title={ui("SMC Strategy: Smart Money Concepts (LuxAlgo) with BOS, CHoCH, Order Blocks, and FVGs")}
           >
             <Layers className={`w-3.5 h-3.5 ${activeStrategy === 'smc' ? 'text-sky-300' : 'text-sky-400'}`} />
-            <span className="hidden sm:inline">SMC Strategy</span>
+            <span className="hidden sm:inline">{ui("SMC Strategy")}</span>
             <span className="sm:hidden">SMC</span>
             {activeStrategy === 'smc' && (
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
@@ -735,33 +649,20 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
                 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/40'
                 : 'bg-[#0E1526] hover:bg-[#151F36] border-[#1E293B] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300'
             }`}
-            title="Hunter Strategy: Open clean chart view with saved Hunter Strategy analysis"
+            title={ui("Hunter Strategy: Open clean chart view with saved Hunter Strategy analysis")}
           >
             <Divide className={`w-3.5 h-3.5 ${activeStrategy === 'fib' ? 'text-emerald-300' : 'text-emerald-400'}`} />
-            <span className="hidden sm:inline">Hunter Strategy</span>
-            <span className="sm:hidden">Hunter</span>
+            <span className="hidden sm:inline">{ui("Hunter Strategy")}</span>
+            <span className="sm:hidden">{ui("Hunter")}</span>
             {activeStrategy === 'fib' && (
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             )}
           </button>
 
-          {/* 6. AI Trading Copilot Button */}
-          {onOpenAiCopilot && (
-            <button
-              id="btn-toolbar-ai-copilot"
-              type="button"
-              onClick={onOpenAiCopilot}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-300 hover:text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.98]"
-              title="Open AI Trading Copilot: Real-time SMC analysis and Reaction Zone setups"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="hidden sm:inline">AI Copilot</span>
-              <span className="sm:hidden">AI</span>
-            </button>
-          )}
 
           <div className="h-4 w-px bg-slate-800/80 mx-1 hidden lg:block" />
 
+          <button type="button" aria-label={ui("Open Economic Calendar")} title={ui("Economic Calendar")} onClick={() => window.dispatchEvent(new Event('smtrading:open-calendar'))} className="p-1.5 rounded-lg border border-[#1E293B] bg-[#0E1526] text-slate-400 hover:text-amber-300 hover:border-slate-600"><Calendar className="w-3.5 h-3.5" /></button>
           {/* Professional Compact Market Status Indicator */}
           <MarketStatusIndicator 
             id="chart-toolbar-market-status-button"
@@ -782,7 +683,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#0E1526] hover:bg-[#151F36] border border-[#1E293B] hover:border-slate-600 text-slate-300 hover:text-white transition-all text-xs cursor-pointer"
-          title="Open in full TradingView browser tab"
+          title={ui("Open in full TradingView browser tab")}
         >
           <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
           <span className="hidden lg:inline">TradingView</span>
@@ -795,7 +696,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             type="button"
             onClick={onToggleFullscreen}
             className="p-1.5 rounded-lg bg-[#0E1526] hover:bg-[#151F36] border border-[#1E293B] hover:border-slate-600 text-slate-300 hover:text-white transition-all cursor-pointer"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            title={isFullscreen ? ui("Exit Fullscreen") : ui("Fullscreen")}
           >
             {isFullscreen ? (
               <Minimize2 className="w-3.5 h-3.5" />
@@ -812,7 +713,7 @@ export const ChartToolbar: React.FC<ChartToolbarProps> = ({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 transition-all cursor-pointer"
-            title="Close Chart"
+            title={ui("Close Chart")}
           >
             <X className="w-3.5 h-3.5" />
           </button>

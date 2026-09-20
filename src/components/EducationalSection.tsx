@@ -1,3 +1,5 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
+import { LiveTrainingNotice } from './PurchaseNotices';
 import React, { useState } from 'react';
 import { 
   GraduationCap, 
@@ -434,6 +436,7 @@ export const EDUCATIONAL_CARDS: EducationalCardData[] = [
 ];
 
 export const EducationalSection: React.FC = () => {
+  const ui = useInterfaceText();
   const { isRTL, language } = useTranslation();
   const { user } = useAuth();
   const [selectedTopic, setSelectedTopic] = useState<EducationalCardData | null>(null);
@@ -471,7 +474,7 @@ export const EducationalSection: React.FC = () => {
 
   return (
     <section 
-      aria-label="Educational Academy" 
+      aria-label={ui("Educational Academy")}
       className="space-y-5 my-6"
       id="trading-academy-section"
     >
@@ -484,18 +487,13 @@ export const EducationalSection: React.FC = () => {
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black text-amber-300 uppercase tracking-wider">
-                  Site Subscription Notice
-                </span>
+                <span className="text-xs font-black text-amber-300 uppercase tracking-wider">{ui(" Site Subscription Notice ")}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  {user?.subscriptionPlan || 'Standard Site Subscription'}
+                  {user?.subscriptionPlan || ui("Standard Site Subscription")}
                 </span>
               </div>
-              <p className="text-xs font-bold text-white leading-relaxed">
-                “Courses and educational programs are NOT included in this subscription.”
-              </p>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Your subscription provides full platform charts, live analysts, trading recommendations, and ready-made strategy setups. To access the <strong>SMC Trading Course</strong> and <strong>144 Strategy Course</strong>, upgrade to the <strong>$999/Year All-Inclusive Package</strong>.
+              <p className="text-xs font-bold text-white leading-relaxed">{ui(" “Courses and educational programs are NOT included in this subscription.” ")}</p>
+              <p className="text-xs text-slate-300 leading-relaxed">{ui(" Your subscription provides full platform charts, live analysts, trading recommendations, and ready-made strategy setups. To access the ")}<strong>{ui("SMC Trading Course")}</strong>{ui(", upgrade to the ")}<strong>{ui("$999/Year All-Inclusive Package")}</strong>.
               </p>
             </div>
           </div>
@@ -506,7 +504,7 @@ export const EducationalSection: React.FC = () => {
             className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs flex items-center justify-center gap-2 shrink-0 transition-all cursor-pointer shadow-md shadow-amber-500/20"
           >
             <Crown className="w-4 h-4" />
-            <span>Upgrade to All-Inclusive ($999)</span>
+            <span>{ui("Upgrade to All-Inclusive ($999)")}</span>
           </button>
         </div>
       )}
@@ -520,17 +518,17 @@ export const EducationalSection: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
-                {isArabic ? 'الأكاديمية التعليمية الاحترافية' : 'Institutional Trading Academy'}
+                {isArabic ? 'الأكاديمية التعليمية الاحترافية' : ui("Institutional Trading Academy")}
               </h3>
               <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-amber-400/30 uppercase">
                 <Sparkles className="w-3 h-3 text-amber-400" />
-                {isArabic ? 'مناهج معتمدة' : 'Core Masterclasses'}
+                {isArabic ? 'مناهج معتمدة' : ui("Core Masterclasses")}
               </span>
             </div>
             <p className="text-xs text-slate-400 font-light mt-0.5">
               {isArabic 
                 ? 'مناهج تطبيقية متقدمة: السيولة الذكية، التحليل الزمني، التحليل الكلاسيكي، وأسس التداول الاحترافي'
-                : 'Advanced trading curriculums: Smart Money Concepts, Time Cycles, Classical Technical Analysis, and Execution'}
+                : ui("Advanced trading curriculums: Smart Money Concepts, Time Cycles, Classical Technical Analysis, and Execution")}
             </p>
           </div>
         </div>
@@ -538,7 +536,7 @@ export const EducationalSection: React.FC = () => {
         <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span>{isArabic ? '٤ مسارات تعليمية' : '4 Masterclasses'}</span>
+            <span>{isArabic ? '٤ مسارات تعليمية' : ui("4 Masterclasses")}</span>
           </span>
         </div>
       </div>
@@ -546,10 +544,10 @@ export const EducationalSection: React.FC = () => {
       {/* Grid of Exactly Four Educational Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
         {EDUCATIONAL_CARDS.map((card) => {
-          const title = isArabic ? card.titleAr : card.titleEn;
-          const category = isArabic ? card.categoryAr : card.categoryEn;
-          const shortDesc = isArabic ? card.shortDescAr : card.shortDescEn;
-          const level = isArabic ? card.levelAr : card.levelEn;
+          const title = ui(isArabic ? card.titleAr : card.titleEn);
+          const category = ui(isArabic ? card.categoryAr : card.categoryEn);
+          const shortDesc = ui(isArabic ? card.shortDescAr : card.shortDescEn);
+          const level = ui(isArabic ? card.levelAr : card.levelEn);
 
           return (
             <div
@@ -575,10 +573,10 @@ export const EducationalSection: React.FC = () => {
                         <Lock className="w-4 h-4" />
                       </div>
                       <span className="text-[11px] font-extrabold text-amber-300 leading-tight">
-                        {isArabic ? 'باقة 999$ الشاملة مطلوبة' : '$999 All-Inclusive Required'}
+                        {isArabic ? 'باقة 999$ الشاملة مطلوبة' : ui("$999 All-Inclusive Required")}
                       </span>
                       <span className="text-[10px] text-slate-300 mt-1 leading-tight">
-                        {isArabic ? 'غير مشمول في الاشتراك العادي' : 'Not in Site Subscription'}
+                        {isArabic ? 'غير مشمول في الاشتراك العادي' : ui("Not in Site Subscription")}
                       </span>
                     </div>
                   )}
@@ -596,7 +594,7 @@ export const EducationalSection: React.FC = () => {
                   {/* Study Time Badge */}
                   <span className="absolute bottom-2.5 left-2.5 rtl:left-auto rtl:right-2.5 bg-slate-950/90 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded-md border border-slate-800/80 backdrop-blur-sm flex items-center gap-1">
                     <Clock className="w-3 h-3 text-amber-400" />
-                    {card.readTime}
+                    {ui(card.readTime)}
                   </span>
                 </div>
 
@@ -607,7 +605,7 @@ export const EducationalSection: React.FC = () => {
                       {category}
                     </span>
                     <span className="text-[10px] font-mono text-slate-500 shrink-0">
-                      {isArabic ? 'منهج تطبيقي' : 'Curriculum'}
+                      {isArabic ? 'منهج تطبيقي' : ui("Curriculum")}
                     </span>
                   </div>
 
@@ -623,11 +621,12 @@ export const EducationalSection: React.FC = () => {
                 </div>
               </div>
 
+              <LiveTrainingNotice />
               {/* Bottom Action Footer */}
               <div className="pt-3.5 mt-3.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1 text-[11px] font-mono text-slate-400 group-hover:text-slate-200 transition-colors">
                   <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{isArabic ? 'دليل دراسي شامل' : 'Interactive Guide'}</span>
+                  <span>{isArabic ? 'دليل دراسي شامل' : ui("Interactive Guide")}</span>
                 </span>
 
                 <button
@@ -637,9 +636,9 @@ export const EducationalSection: React.FC = () => {
                     handleCardClick(card);
                   }}
                   className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-all cursor-pointer"
-                  aria-label={`${isArabic ? 'تعلم المزيد عن' : 'Learn more about'} ${title}`}
+                  aria-label={`${isArabic ? 'تعلم المزيد عن' : ui('Learn more about')} ${title}`}
                 >
-                  <span>{isArabic ? 'تعلم المزيد' : 'Learn More'}</span>
+                  <span>{isArabic ? 'تعلم المزيد' : ui("Learn More")}</span>
                   <ArrowRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
                 </button>
               </div>
@@ -654,19 +653,19 @@ export const EducationalSection: React.FC = () => {
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="font-semibold text-white">
-              {isArabic ? 'منهجية مؤسسية منضبطة' : 'Institutional Order Flow Methodology'}
+              {isArabic ? 'منهجية مؤسسية منضبطة' : ui("Institutional Order Flow Methodology")}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-emerald-400 shrink-0" />
             <span className="font-semibold text-white">
-              {isArabic ? 'إدارة مخاطر رياضية صارمة' : 'Mathematical Capital Protection'}
+              {isArabic ? 'إدارة مخاطر رياضية صارمة' : ui("Mathematical Capital Protection")}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-cyan-400 shrink-0" />
             <span className="font-semibold text-white">
-              {isArabic ? 'تكامل التحليل السعري والزمني' : 'Price-Time Confluence Framework'}
+              {isArabic ? 'تكامل التحليل السعري والزمني' : ui("Price-Time Confluence Framework")}
             </span>
           </div>
         </div>
@@ -696,11 +695,12 @@ export const EducationalSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] font-mono uppercase text-amber-400 font-bold tracking-wider">
-                    {isArabic ? selectedTopic.categoryAr : selectedTopic.categoryEn}
+                    {ui(isArabic ? selectedTopic.categoryAr : selectedTopic.categoryEn)}
                   </span>
                   <h3 className="text-base sm:text-lg font-extrabold text-white">
-                    {isArabic ? selectedTopic.titleAr : selectedTopic.titleEn}
+                    {ui(isArabic ? selectedTopic.titleAr : selectedTopic.titleEn)}
                   </h3>
+                  <LiveTrainingNotice />
                 </div>
               </div>
 
@@ -709,7 +709,7 @@ export const EducationalSection: React.FC = () => {
                   type="button"
                   onClick={() => handleShare(selectedTopic)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-slate-800/80 transition-colors cursor-pointer"
-                  title={isArabic ? 'نسخ الرابط' : 'Copy link'}
+                  title={isArabic ? 'نسخ الرابط' : ui("Copy link")}
                 >
                   {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
                 </button>
@@ -717,7 +717,7 @@ export const EducationalSection: React.FC = () => {
                   type="button"
                   onClick={() => setSelectedTopic(null)}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
-                  aria-label="Close modal"
+                  aria-label={ui("Close modal")}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -730,17 +730,17 @@ export const EducationalSection: React.FC = () => {
               <div className="relative w-full h-48 sm:h-56 rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
                 <img
                   src={selectedTopic.image}
-                  alt={isArabic ? selectedTopic.titleAr : selectedTopic.titleEn}
+                  alt={ui(isArabic ? selectedTopic.titleAr : selectedTopic.titleEn)}
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B101E] via-black/40 to-transparent"></div>
                 <div className="absolute bottom-3 left-3 rtl:left-auto rtl:right-3 flex flex-wrap items-center gap-2">
                   <span className="bg-slate-900/90 text-amber-400 border border-amber-500/30 text-xs font-mono font-bold px-2.5 py-1 rounded-md">
-                    {isArabic ? selectedTopic.levelAr : selectedTopic.levelEn}
+                    {ui(isArabic ? selectedTopic.levelAr : selectedTopic.levelEn)}
                   </span>
                   <span className="bg-slate-900/90 text-slate-300 border border-slate-800 text-xs font-mono px-2.5 py-1 rounded-md flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    {selectedTopic.readTime}
+                    {ui(selectedTopic.readTime)}
                   </span>
                 </div>
               </div>
@@ -748,7 +748,7 @@ export const EducationalSection: React.FC = () => {
               {/* Key Topics Badges */}
               <div>
                 <span className="text-xs font-mono text-slate-400 uppercase font-bold block mb-2">
-                  {isArabic ? 'المفاهيم المحورية في هذا المسار:' : 'Core Topics Covered:'}
+                  {isArabic ? 'المفاهيم المحورية في هذا المسار:' : ui("Core Topics Covered:")}
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {(isArabic ? selectedTopic.keyTopicsAr : selectedTopic.keyTopicsEn).map((topic, i) => (
@@ -756,7 +756,7 @@ export const EducationalSection: React.FC = () => {
                       key={i}
                       className="px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium"
                     >
-                      {topic}
+                      {ui(topic)}
                     </span>
                   ))}
                 </div>
@@ -766,10 +766,10 @@ export const EducationalSection: React.FC = () => {
               <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-slate-200">
                 <div className="flex items-center gap-2 text-amber-400 font-bold mb-1.5 text-sm">
                   <Compass className="w-4 h-4" />
-                  <span>{isArabic ? 'نظرة عامة على المنهج' : 'Executive Overview'}</span>
+                  <span>{isArabic ? 'نظرة عامة على المنهج' : ui("Executive Overview")}</span>
                 </div>
                 <p className="leading-relaxed">
-                  {isArabic ? selectedTopic.fullContent.overviewAr : selectedTopic.fullContent.overviewEn}
+                  {ui(isArabic ? selectedTopic.fullContent.overviewAr : selectedTopic.fullContent.overviewEn)}
                 </p>
               </div>
 
@@ -779,10 +779,10 @@ export const EducationalSection: React.FC = () => {
                   <div key={idx} className="space-y-2.5 border-t border-slate-800/80 pt-4">
                     <h4 className="text-base font-extrabold text-white flex items-center gap-2">
                       <span className="text-amber-400 font-mono">#0{idx + 1}</span>
-                      <span>{isArabic ? sec.headingAr : sec.headingEn}</span>
+                      <span>{ui(isArabic ? sec.headingAr : sec.headingEn)}</span>
                     </h4>
                     <p className="text-slate-300 leading-relaxed">
-                      {isArabic ? sec.bodyAr : sec.bodyEn}
+                      {ui(isArabic ? sec.bodyAr : sec.bodyEn)}
                     </p>
 
                     {(isArabic ? sec.bulletPointsAr : sec.bulletPointsEn) && (
@@ -790,7 +790,7 @@ export const EducationalSection: React.FC = () => {
                         {(isArabic ? sec.bulletPointsAr : sec.bulletPointsEn)?.map((bullet, bIdx) => (
                           <li key={bIdx} className="flex items-start gap-2 text-xs sm:text-sm text-slate-300">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                            <span>{bullet}</span>
+                            <span>{ui(bullet)}</span>
                           </li>
                         ))}
                       </ul>
@@ -803,13 +803,13 @@ export const EducationalSection: React.FC = () => {
               <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 space-y-2">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                   <Lightbulb className="w-4 h-4" />
-                  <span>{isArabic ? 'قواعد التنفيذ الذهبية' : 'Golden Execution Rules'}</span>
+                  <span>{isArabic ? 'قواعد التنفيذ الذهبية' : ui("Golden Execution Rules")}</span>
                 </div>
                 <ul className="space-y-1.5 pl-4 rtl:pl-0 rtl:pr-4 text-xs sm:text-sm text-slate-300">
                   {(isArabic ? selectedTopic.fullContent.rulesAr : selectedTopic.fullContent.rulesEn).map((rule, rIdx) => (
                     <li key={rIdx} className="flex items-start gap-2">
                       <span className="text-emerald-400 font-bold shrink-0">•</span>
-                      <span>{rule}</span>
+                      <span>{ui(rule)}</span>
                     </li>
                   ))}
                 </ul>
@@ -819,13 +819,13 @@ export const EducationalSection: React.FC = () => {
               <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-500/30 space-y-2">
                 <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>{isArabic ? 'أخطاء شائعة يجب تجنبها' : 'Common Pitfalls to Avoid'}</span>
+                  <span>{isArabic ? 'أخطاء شائعة يجب تجنبها' : ui("Common Pitfalls to Avoid")}</span>
                 </div>
                 <ul className="space-y-1.5 pl-4 rtl:pl-0 rtl:pr-4 text-xs sm:text-sm text-slate-300">
                   {(isArabic ? selectedTopic.fullContent.pitfallsAr : selectedTopic.fullContent.pitfallsEn).map((pit, pIdx) => (
                     <li key={pIdx} className="flex items-start gap-2">
                       <span className="text-rose-400 font-bold shrink-0">•</span>
-                      <span>{pit}</span>
+                      <span>{ui(pit)}</span>
                     </li>
                   ))}
                 </ul>
@@ -835,14 +835,14 @@ export const EducationalSection: React.FC = () => {
             {/* Modal Footer */}
             <div className="px-5 py-3.5 border-t border-slate-800 bg-[#090D17] flex items-center justify-between">
               <span className="text-xs text-slate-400 font-mono">
-                {isArabic ? 'أكاديمية SMTrading الرسمية' : 'SMTrading Official Academy'}
+                {isArabic ? ui("أكاديمية SMTrading الرسمية") : ui("SMTrading Official Academy")}
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedTopic(null)}
                 className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer"
               >
-                {isArabic ? 'إغلاق المنهج' : 'Close Curriculum'}
+                {isArabic ? 'إغلاق المنهج' : ui("Close Curriculum")}
               </button>
             </div>
           </div>
@@ -868,10 +868,10 @@ export const EducationalSection: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
-                    {isArabic ? 'باقة 999$ الشاملة' : 'All-Inclusive Package Required'}
+                    {isArabic ? 'باقة 999$ الشاملة' : ui("All-Inclusive Package Required")}
                   </span>
                   <h3 className="text-lg sm:text-xl font-black text-white">
-                    {isArabic ? 'المسارات الأكاديمية التعليمية' : 'Academy Educational Masterclasses'}
+                    {isArabic ? 'المسارات الأكاديمية التعليمية' : ui("Academy Educational Masterclasses")}
                   </h3>
                 </div>
               </div>
@@ -886,45 +886,36 @@ export const EducationalSection: React.FC = () => {
 
             {/* Mandatory Package Disclaimer */}
             <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-1.5">
-              <p className="text-xs font-black text-amber-300">
-                “Courses and educational programs are NOT included in this subscription.”
-              </p>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Your current subscription includes full platform access, live analyst desk, trading recommendations, and ready-made strategy setups.
-              </p>
+              <p className="text-xs font-black text-amber-300">{ui(" “Courses and educational programs are NOT included in this subscription.” ")}</p>
+              <p className="text-xs text-slate-300 leading-relaxed">{ui(" Your current subscription includes full platform access, live analyst desk, trading recommendations, and ready-made strategy setups. ")}</p>
             </div>
 
             {/* Included in $999 All-Inclusive */}
             <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-2.5">
-              <span className="text-xs font-bold text-white block">
-                Upgrade to $999 All-Inclusive to unlock:
-              </span>
+              <span className="text-xs font-bold text-white block">{ui(" Upgrade to $999 All-Inclusive to unlock: ")}</span>
               <ul className="space-y-2 text-xs text-slate-300">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span><strong>SMC Trading Course</strong> (Full Institutional Curriculum)</span>
+                  <span><strong>{ui("SMC Trading Course")}</strong>{ui(" (Full Institutional Curriculum)")}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span><strong>144 Strategy Course</strong> (Proprietary Execution System)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>12 Months Full Platform & Analyst Desk Access</span>
+                  <span>{ui("12 Months Full Platform & Analyst Desk Access")}</span>
                 </li>
               </ul>
             </div>
 
+            <LiveTrainingNotice />
             {/* Action Buttons */}
             <div className="space-y-2.5 pt-1">
               <a
-                href={`https://t.me/SMTrading_SUPPORT?text=${encodeURIComponent('Hello @SMTrading_SUPPORT, I would like to upgrade my account to the $999/Year All-Inclusive Package to access the SMC Trading Course and 144 Strategy Course.')}`}
+                href={`https://t.me/SMTrading_SUPPORT?text=${encodeURIComponent('Hello @SMTrading_SUPPORT, I would like to upgrade my account to the $999/Year All-Inclusive Package to access the SMC Trading Course.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-3 bg-[#24A1DE] hover:bg-[#2094cc] text-white font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#24A1DE]/25 transition-all cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>Contact Support to Upgrade on Telegram</span>
+                <span>{ui("Contact Support to Upgrade on Telegram")}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
 
@@ -932,9 +923,7 @@ export const EducationalSection: React.FC = () => {
                 type="button"
                 onClick={() => setShowUpgradeModal(false)}
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-              >
-                Close Notice
-              </button>
+              >{ui(" Close Notice ")}</button>
             </div>
           </div>
         </div>

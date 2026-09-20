@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Clock, ArrowRight, Tag, Sparkles } from 'lucide-react';
@@ -17,6 +18,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   articles,
   onSelectArticle
 }) => {
+  const ui = useInterfaceText();
   const { t, isRTL } = useTranslation();
   const [query, setQuery] = useState('');
 
@@ -83,7 +85,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             type="button"
             onClick={onClose}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-            aria-label="Close search"
+            aria-label={ui("Close search")}
           >
             <X className="w-5 h-5" />
           </button>

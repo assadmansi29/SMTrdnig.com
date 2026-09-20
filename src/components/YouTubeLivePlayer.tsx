@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { 
   Radio, 
@@ -55,6 +56,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
   checkedAt,
   onRefresh,
 }) => {
+  const ui = useInterfaceText();
   const { t } = useTranslation();
   const [showLatestVideo, setShowLatestVideo] = React.useState<boolean>(false);
 
@@ -71,9 +73,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
         <div className="w-10 h-10 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin flex items-center justify-center">
           <Radio className="w-4 h-4 text-amber-400" />
         </div>
-        <div className="text-xs text-slate-300 font-mono-num animate-pulse">
-          Connecting to YouTube Data API & scanning live stream feeds...
-        </div>
+        <div className="text-xs text-slate-300 font-mono-num animate-pulse">{ui(" Connecting to YouTube Data API & scanning live stream feeds... ")}</div>
       </div>
     );
   }
@@ -112,7 +112,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
               </h3>
               <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
                 <span className="text-amber-400 font-semibold flex items-center gap-1">
-                  {stream.channelTitle || channel?.title || 'SM Trading'}
+                  {stream.channelTitle || channel?.title || ui("SM Trading")}
                   <BlueVerifiedBadge size="xs" />
                 </span>
                 {stream.actualStartTime && (
@@ -152,10 +152,10 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition-all cursor-pointer"
-              title="Open YouTube Live Chat"
+              title={ui("Open YouTube Live Chat")}
             >
               <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-              <span>Live Chat</span>
+              <span>{ui("Live Chat")}</span>
             </a>
 
             <a
@@ -189,11 +189,10 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
             <span className="text-slate-300 font-medium">{t('liveStreamAutoUpdate')}</span>
             <span className="hidden md:inline-flex items-center gap-1 text-amber-300/80 pl-2">
               <Volume2 className="w-3 h-3 text-amber-400" />
-              <span>Click speaker icon on video to unmute</span>
+              <span>{ui("Click speaker icon on video to unmute")}</span>
             </span>
           </div>
-          <span className="text-slate-500 font-mono-num">
-            Live Stream Feed • {formattedTime ? `Synced at ${formattedTime}` : 'Real-time sync'}
+          <span className="text-slate-500 font-mono-num">{ui(" Live Stream Feed • ")}{formattedTime ? ui("Synced at {p0}", {p0: formattedTime}) : ui("Real-time sync")}
           </span>
         </div>
       </div>
@@ -225,9 +224,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
                 <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
                   {t('noLiveStream')}
                 </h3>
-                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono-num border border-slate-700">
-                  OFFLINE
-                </span>
+                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono-num border border-slate-700">{ui(" OFFLINE ")}</span>
               </div>
               <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
                 {t('noLiveStreamDesc')}
@@ -240,9 +237,9 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
             <div className="hidden md:flex flex-col items-end rtl:items-start text-[10px] font-mono-num text-slate-500">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-pulse"></span>
-                <span>Auto-scanner active</span>
+                <span>{ui("Auto-scanner active")}</span>
               </span>
-              {formattedTime && <span>Checked: {formattedTime}</span>}
+              {formattedTime && <span>{ui("Checked: ")}{formattedTime}</span>}
             </div>
 
             <button
@@ -251,7 +248,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
-              <span>{isRefreshing ? 'Checking...' : t('liveStreamRefresh')}</span>
+              <span>{isRefreshing ? ui("Checking...") : t('liveStreamRefresh')}</span>
             </button>
           </div>
         </div>
@@ -259,7 +256,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
         {/* Channel & Official Links Bar */}
         <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] text-slate-500">Official Channel:</span>
+            <span className="text-[11px] text-slate-500">{ui("Official Channel:")}</span>
             <a
               href={officialChannelUrl}
               target="_blank"
@@ -282,7 +279,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
               className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 rounded-lg text-xs font-medium transition-colors cursor-pointer"
             >
               <Tv className="w-3.5 h-3.5 text-amber-400" />
-              <span>{showLatestVideo ? 'Hide Video' : 'Watch Channel Overview'}</span>
+              <span>{showLatestVideo ? ui("Hide Video") : ui("Watch Channel Overview")}</span>
             </button>
 
             <a
@@ -311,7 +308,7 @@ export const YouTubeLivePlayer: React.FC<YouTubeLivePlayerProps> = ({
               rel="noopener noreferrer"
               className="text-amber-400 hover:underline flex items-center gap-1 shrink-0 text-[11px]"
             >
-              <span>Open on YouTube</span>
+              <span>{ui("Open on YouTube")}</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>

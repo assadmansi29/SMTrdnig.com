@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../../hooks/useInterfaceText';
 import React from 'react';
 import { SmcLuxAlgoSettings, DEFAULT_SMC_SETTINGS } from './smcLuxAlgoTypes';
 import { X, Sliders, Check, RotateCcw, Activity, ShieldAlert, Layers, TrendingUp, Eye } from 'lucide-react';
@@ -15,6 +16,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
   settings,
   onUpdateSettings,
 }) => {
+  const ui = useInterfaceText();
   if (!isOpen) return null;
 
   const handleChange = <K extends keyof SmcLuxAlgoSettings>(key: K, value: SmcLuxAlgoSettings[K]) => {
@@ -46,14 +48,12 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                  Smart Money Concepts [SMC]
-                </h3>
+                <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">{ui(" Smart Money Concepts [SMC] ")}</h3>
                 <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30">
                   LuxAlgo
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Institutional Order Flow & Market Structure Parameters</p>
+              <p className="text-xs text-slate-400">{ui("Institutional Order Flow & Market Structure Parameters")}</p>
             </div>
           </div>
 
@@ -72,8 +72,8 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
             <div className="flex items-center gap-2.5">
               <Eye className="w-4 h-4 text-sky-400" />
               <div>
-                <span className="text-xs sm:text-sm font-semibold text-white">Enable SMC Indicator</span>
-                <p className="text-[11px] text-slate-400">Display institutional concepts on chart</p>
+                <span className="text-xs sm:text-sm font-semibold text-white">{ui("Enable SMC Indicator")}</span>
+                <p className="text-[11px] text-slate-400">{ui("Display institutional concepts on chart")}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -91,12 +91,12 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono uppercase text-sky-400 font-bold tracking-wider">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>Real-Time Market Structure</span>
+              <span>{ui("Real-Time Market Structure")}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Break of Structure (BOS)</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Break of Structure (BOS)")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showBos}
@@ -106,7 +106,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
               </label>
 
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Change of Character (CHoCH)</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Change of Character (CHoCH)")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showChoch}
@@ -116,7 +116,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
               </label>
 
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Swing Labels (HH, LH, HL, LL)</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Swing Labels (HH, LH, HL, LL)")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showSwingLabels}
@@ -126,7 +126,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
               </label>
 
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Strong / Weak Highs & Lows</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Strong / Weak Highs & Lows")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showStrongWeak}
@@ -139,8 +139,8 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
             {/* Swing Lookback Length */}
             <div className="p-3 rounded-lg bg-[#0E1524] border border-slate-800/80 flex items-center justify-between">
               <div>
-                <span className="text-xs font-medium text-slate-200">Swing Detection Lookback</span>
-                <p className="text-[10px] text-slate-400">Sensitivity for fractal swing highs and lows</p>
+                <span className="text-xs font-medium text-slate-200">{ui("Swing Detection Lookback")}</span>
+                <p className="text-[10px] text-slate-400">{ui("Sensitivity for fractal swing highs and lows")}</p>
               </div>
               <div className="flex items-center gap-1">
                 {[3, 5, 8, 10].map((len) => (
@@ -165,12 +165,12 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono uppercase text-emerald-400 font-bold tracking-wider">
               <Layers className="w-3.5 h-3.5" />
-              <span>Order Blocks (OB)</span>
+              <span>{ui("Order Blocks (OB)")}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Show Order Blocks (+OB / -OB)</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Show Order Blocks (+OB / -OB)")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showOrderBlocks}
@@ -180,7 +180,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
               </label>
 
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Show Mitigated OBs</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Show Mitigated OBs")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showMitigatedOB}
@@ -195,12 +195,12 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono uppercase text-cyan-400 font-bold tracking-wider">
               <Activity className="w-3.5 h-3.5" />
-              <span>Fair Value Gaps (FVG / Imbalances)</span>
+              <span>{ui("Fair Value Gaps (FVG / Imbalances)")}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Show Fair Value Gaps</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Show Fair Value Gaps")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showFvg}
@@ -210,7 +210,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
               </label>
 
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Show Mitigated FVGs</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Show Mitigated FVGs")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showMitigatedFvg}
@@ -225,12 +225,12 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono uppercase text-amber-400 font-bold tracking-wider">
               <ShieldAlert className="w-3.5 h-3.5" />
-              <span>Liquidity Pools & Premium/Discount</span>
+              <span>{ui("Liquidity Pools & Premium/Discount")}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Equal Highs / Lows (EQH/EQL)</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Equal Highs / Lows (EQH/EQL)")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showLiquidity}
@@ -240,7 +240,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
               </label>
 
               <label className="flex items-center justify-between p-2.5 rounded-lg bg-[#0E1524] border border-slate-800/80 cursor-pointer hover:border-slate-700">
-                <span className="text-xs font-medium text-slate-300">Equilibrium 50% & Zones</span>
+                <span className="text-xs font-medium text-slate-300">{ui("Equilibrium 50% & Zones")}</span>
                 <input
                   type="checkbox"
                   checked={settings.showPremiumDiscount}
@@ -260,7 +260,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Defaults</span>
+            <span>{ui("Reset Defaults")}</span>
           </button>
 
           <button
@@ -269,7 +269,7 @@ export const SmcLuxAlgoSettingsModal: React.FC<SmcLuxAlgoSettingsModalProps> = (
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-sky-400 hover:bg-sky-300 transition-all cursor-pointer shadow-sm active:scale-95"
           >
             <Check className="w-4 h-4 stroke-[2.5]" />
-            <span>Apply Settings</span>
+            <span>{ui("Apply Settings")}</span>
           </button>
         </div>
       </div>

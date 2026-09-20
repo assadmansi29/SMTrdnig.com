@@ -125,25 +125,25 @@ export const ReactionZonesLegend: React.FC<ReactionZonesLegendProps> = ({
             {/* Signal Rules Indicator */}
             <div className="mt-1 pt-1.5 border-t border-slate-800/60 text-[10px] space-y-1">
               <div className="flex items-center justify-between text-slate-400">
-                <span className="font-medium text-slate-300">Live Signals (SL: 20-35 pts):</span>
-                <span className="font-mono text-sky-400">TEST &bull; TEST 2</span>
+                <span className="font-medium text-slate-300">{t('reactionLiveSignals')}</span>
+                <span className="font-mono text-sky-400">{t('reactionTest1')} &bull; {t('reactionTest2')}</span>
               </div>
               <div className="grid grid-cols-2 gap-1 text-[9px] font-mono">
                 <div className="bg-red-950/30 border border-red-500/25 rounded px-1.5 py-0.5 text-red-300 flex items-center justify-between">
-                  <span>Up &rarr; Hold</span>
-                  <span className="font-bold text-red-400">&darr; SELL</span>
+                  <span>{t('reactionUpHold')}</span>
+                  <span className="font-bold text-red-400">&darr; {t('reactionSell')}</span>
                 </div>
                 <div className="bg-emerald-950/30 border border-emerald-500/25 rounded px-1.5 py-0.5 text-emerald-300 flex items-center justify-between">
-                  <span>Down &rarr; Hold</span>
-                  <span className="font-bold text-emerald-400">&uarr; BUY</span>
+                  <span>{t('reactionDownHold')}</span>
+                  <span className="font-bold text-emerald-400">&uarr; {t('reactionBuy')}</span>
                 </div>
                 <div className="bg-emerald-950/30 border border-emerald-500/25 rounded px-1.5 py-0.5 text-emerald-300 flex items-center justify-between">
-                  <span>Up &rarr; Break</span>
-                  <span className="font-bold text-emerald-400">&uarr; BUY</span>
+                  <span>{t('reactionUpBreak')}</span>
+                  <span className="font-bold text-emerald-400">&uarr; {t('reactionBuy')}</span>
                 </div>
                 <div className="bg-red-950/30 border border-red-500/25 rounded px-1.5 py-0.5 text-red-300 flex items-center justify-between">
-                  <span>Down &rarr; Break</span>
-                  <span className="font-bold text-red-400">&darr; SELL</span>
+                  <span>{t('reactionDownBreak')}</span>
+                  <span className="font-bold text-red-400">&darr; {t('reactionSell')}</span>
                 </div>
               </div>
             </div>

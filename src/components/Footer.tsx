@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { ShieldCheck, TrendingUp, Sparkles, Mail, Globe, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import { ArticleCategory } from '../types';
@@ -23,6 +24,7 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenCoachingDesk,
   onOpenECommerce
 }) => {
+  const ui = useInterfaceText();
   const { t, isRTL } = useTranslation();
 
   const categoryTranslations: Record<ArticleCategory, string> = {
@@ -79,16 +81,13 @@ export const Footer: React.FC<FooterProps> = ({
                   SMTrading<span className="text-amber-400">.pro</span>
                 </span>
                 <span className="bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 text-amber-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-amber-400/30 flex items-center gap-1">
-                  <span>by ABU ASAD ALMANSI</span>
+                  <span>{ui("by ABU ASAD ALMANSI")}</span>
                   <BlueVerifiedBadge size="xs" />
                 </span>
               </div>
-              <div className="text-[11px] text-slate-300 font-semibold uppercase tracking-wider pt-0.5">
-                Smart Money Trading Intelligence
-              </div>
+              <div className="text-[11px] text-slate-300 font-semibold uppercase tracking-wider pt-0.5">{ui(" Smart Money Trading Intelligence ")}</div>
               <div className="pt-1">
-                <span className="text-[9.5px] sm:text-[10px] font-medium tracking-[0.14em] uppercase text-slate-400/80 leading-none select-none">
-                  Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+                <span className="text-[9.5px] sm:text-[10px] font-medium tracking-[0.14em] uppercase text-slate-400/80 leading-none select-none">{ui(" Powered by ")}<span className="font-semibold text-slate-300">{ui("Modern Era")}</span>
                 </span>
               </div>
             </div>
@@ -102,9 +101,7 @@ export const Footer: React.FC<FooterProps> = ({
             <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-[11px] font-mono-num text-amber-300">
               EST. 2026
             </span>
-            <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-[11px] font-mono-num text-emerald-400">
-              NYSE / CME / EUREX Feeds
-            </span>
+            <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded text-[11px] font-mono-num text-emerald-400">{ui("NYSE / CME / EUREX Feeds")}</span>
           </div>
         </div>
 
@@ -159,14 +156,14 @@ export const Footer: React.FC<FooterProps> = ({
             {onOpenCoachingDesk && (
               <li>
                 <button onClick={onOpenCoachingDesk} className="hover:text-emerald-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
-                  <span>Coaching Desk</span>
+                  <span>{ui("Coaching Desk")}</span>
                 </button>
               </li>
             )}
             {onOpenECommerce && (
               <li>
                 <button onClick={onOpenECommerce} className="hover:text-amber-300 transition-colors text-left rtl:text-right flex items-center gap-1 cursor-pointer">
-                  <span>SMTrading Store</span>
+                  <span>{ui("SMTrading Store")}</span>
                 </button>
               </li>
             )}
@@ -178,14 +175,14 @@ export const Footer: React.FC<FooterProps> = ({
           <h4 className="font-bold text-white uppercase text-xs tracking-wider">{t('footerEditorialTitle')}</h4>
           <ul className="space-y-1.5 text-slate-400">
             <li className="text-amber-300 font-semibold flex items-center gap-1">
-              <span>Abu Asad Almansi (Manager)</span>
+              <span>{ui("Abu Asad Almansi (Manager)")}</span>
               <BlueVerifiedBadge size="xs" />
             </li>
             <li className="text-amber-300 font-semibold flex items-center gap-1">
-              <span>Ahmad Nader Attar (Manager)</span>
+              <span>{ui("Ahmad Nader Attar (Manager)")}</span>
               <BlueVerifiedBadge size="xs" />
             </li>
-            <li>Dr. Sarah Chen (Risk Neuroscience)</li>
+            <li>{ui("Dr. Sarah Chen (Risk Neuroscience)")}</li>
             <li className="pt-2 border-t border-slate-800/80">
               <a 
                 href="mailto:smtradingsupprt@gmail.com?subject=SMTrading%20Support%20Request"

@@ -1,6 +1,8 @@
+import {drawingEvents} from '../services/drawingEvents';
 import { Router, Request, Response } from 'express';
-import { getPool } from '../db';
+import { getPool, isLocalDatabaseReadOnly } from '../db';
 import { authenticateToken, AuthRequest } from '../auth';
+import type { PoolClient } from 'pg';
 
 const router = Router();
 
@@ -10,6 +12,27 @@ function getDbPool() {
     throw new Error('PostgreSQL database pool not available');
   }
   return pool;
+}
+
+// Used only by authenticated, explicit drawing save/delete actions. The pool and
+// every other local database path remain read-only; no startup migrations run.
+async function manualDrawingWrite<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+  if (isLocalDatabaseReadOnly() && process.env.LOCAL_MANUAL_DRAWING_WRITES !== 'true') {
+    throw new Error('Local PostgreSQL is read-only. Manual drawing writes must be explicitly enabled before Save Strategy can persist changes.');
+  }
+  const client = await getDbPool().connect();
+  try {
+    await client.query('BEGIN READ WRITE');
+    const result = await operation(client);
+    await client.query('COMMIT');
+    drawingEvents.emit('saved');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function ensureChartDrawingsTable(): Promise<void> {
@@ -263,22 +286,29 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
     const interval = normalizeInterval(String(req.body.interval || '15'));
     const strategy = normalizeStrategy(req.body.strategy ? String(req.body.strategy) : undefined);
     const rawDrawings = Array.isArray(req.body.drawings) ? req.body.drawings : [];
-    const allowClearAll = req.body.allowClearAll === true;
+    if (req.body.manualSave !== true) {
+      res.status(400).json({ status: 'error', error: 'Drawings are saved only by the manual Save Strategy action.' });
+      return;
+    }
+    const deletedIds = Array.isArray(req.body.deletedDrawingIds)
+      ? [...new Set<string>(req.body.deletedDrawingIds.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))]
+      : [];
     const createdBy = req.user?.username || 'admin';
 
     // Deduplicate drawings by id, keeping the latest valid version
     const drawingMap = new Map<string, any>();
+    let invalidDrawing = false;
     for (const d of rawDrawings) {
-      if (!d) continue;
+      if (!d) { invalidDrawing = true; continue; }
       const id = String(d.id || '').trim();
-      if (!id) continue;
-      if (!Array.isArray(d.anchors) || d.anchors.length === 0) continue;
+      if (!id) { invalidDrawing = true; continue; }
+      if (!Array.isArray(d.anchors) || d.anchors.length === 0) { invalidDrawing = true; continue; }
       const allValid = d.anchors.every((a: any) => {
         const p = typeof a?.price === 'number' ? a.price : parseFloat(a?.price);
         const t = typeof a?.time === 'number' ? a.time : parseFloat(a?.time);
         return !isNaN(p) && isFinite(p) && p > 0 && p < 1e9 && !isNaN(t) && t > 0;
       });
-      if (!allValid) continue;
+      if (!allValid) { invalidDrawing = true; continue; }
       const type = String(d.type || d.options?.type || 'drawing').trim();
       drawingMap.set(id, {
         ...d,
@@ -288,13 +318,16 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
       });
     }
 
+    if (invalidDrawing) {
+      res.status(400).json({ status: 'error', error: 'Invalid drawing payload; saved drawings were not changed.' });
+      return;
+    }
     const validDrawings = Array.from(drawingMap.values());
-    const validIds = Array.from(drawingMap.keys());
 
     // CRITICAL: An empty drawing array such as drawings: [] must NEVER be interpreted as an automatic delete!
     // Empty payloads from initialization, loading, synchronization, or accidental calls are strictly rejected.
-    // Deletion must be MANUAL ONLY via the explicit /delete-strategy endpoint with confirmation.
-    if (validDrawings.length === 0) {
+    // Deletion requires explicit user-deleted IDs, or the confirmed delete-strategy endpoint.
+    if (validDrawings.length === 0 && deletedIds.length === 0) {
       console.warn(`[Chart Drawings API] Rejected batch save with 0 valid drawings for ${symbol} (${strategy}). Manual Save Only policy in effect.`);
       res.status(400).json({
         status: 'ignored',
@@ -304,32 +337,25 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
       return;
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
+    await manualDrawingWrite(async client => {
       const symbolMatches = getAssetSymbolMatches(symbol);
       const baseTicker = symbol.includes(':') ? symbol.split(':')[1] : symbol;
-
-      // 1. Remove drawings for this symbol & strategy that are NOT present in the incoming batch
-      const placeholders = validIds.map((_, i) => `$${i + 4}`).join(', ');
-      await client.query(
-        `DELETE FROM chart_drawings 
-         WHERE (
-           symbol = ANY($1::text[])
-           OR symbol LIKE ('%:' || $2)
-         )
-         AND (
-           strategy = $3 
-           OR ($3 = 'default' AND (strategy IS NULL OR strategy = 'default' OR strategy = ''))
-         )
-         AND id NOT IN (${placeholders})`,
-        [symbolMatches, baseTicker, strategy, ...validIds]
-      );
+      // Missing drawings are never deletions. Only IDs removed by a user action
+      // are eligible, scoped to this asset and strategy.
+      const explicitDeletes = deletedIds.filter(id => !drawingMap.has(id));
+      if (explicitDeletes.length) {
+        await client.query(
+          `DELETE FROM chart_drawings
+           WHERE id = ANY($4::text[])
+             AND (symbol = ANY($1::text[]) OR symbol LIKE ('%:' || $2))
+             AND (strategy = $3 OR ($3 = 'default' AND (strategy IS NULL OR strategy = 'default' OR strategy = '')))`,
+          [symbolMatches, baseTicker, strategy, explicitDeletes]
+        );
+      }
 
       // 2. Upsert each drawing using ON CONFLICT (id) DO UPDATE with strategy
       for (const d of validDrawings) {
-        await client.query(
+        const saved = await client.query(
           `INSERT INTO chart_drawings (id, symbol, interval, strategy, type, data, created_by, updated_at)
            VALUES ($1, $2, 'ALL', $3, $4, $5, $6, NOW())
            ON CONFLICT (id) DO UPDATE 
@@ -339,7 +365,9 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
                type = EXCLUDED.type,
                data = EXCLUDED.data,
                created_by = EXCLUDED.created_by,
-               updated_at = NOW()`,
+               updated_at = NOW()
+           WHERE (chart_drawings.symbol = ANY($7::text[]) OR chart_drawings.symbol LIKE ('%:' || $8))
+             AND (chart_drawings.strategy = EXCLUDED.strategy OR (EXCLUDED.strategy = 'default' AND (chart_drawings.strategy IS NULL OR chart_drawings.strategy = '')))`,
           [
             d.id,
             symbol,
@@ -347,18 +375,14 @@ async function handleBatchSave(req: AuthRequest, res: Response): Promise<void> {
             d.type,
             JSON.stringify(d),
             createdBy,
+            symbolMatches,
+            baseTicker,
           ]
         );
+        if (saved.rowCount !== 1) throw new Error('Drawing ID belongs to another chart view; save cancelled.');
       }
-
-      await client.query('COMMIT');
-      res.json({ status: 'ok', strategy, count: validDrawings.length });
-    } catch (txErr) {
-      await client.query('ROLLBACK');
-      throw txErr;
-    } finally {
-      client.release();
-    }
+    });
+    res.json({ status: 'ok', strategy, count: validDrawings.length });
   } catch (err: any) {
     console.error('[Chart Drawings API] Batch save error:', err.message);
     res.status(500).json({ status: 'error', error: err.message });
@@ -391,7 +415,7 @@ router.post('/delete-strategy', authenticateToken, async (req: AuthRequest, res:
     const symbolMatches = getAssetSymbolMatches(symbol);
     const baseTicker = symbol.includes(':') ? symbol.split(':')[1] : symbol;
 
-    const result = await pool.query(
+    const result = await manualDrawingWrite(client => client.query(
       `DELETE FROM chart_drawings 
        WHERE (
          symbol = ANY($1::text[])
@@ -402,7 +426,7 @@ router.post('/delete-strategy', authenticateToken, async (req: AuthRequest, res:
          OR ($3 = 'default' AND (strategy IS NULL OR strategy = 'default' OR strategy = ''))
        )`,
       [symbolMatches, baseTicker, strategy]
-    );
+    ));
 
     res.json({
       status: 'ok',
@@ -491,7 +515,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     const pool = getDbPool();
     const drawingId = req.params.id;
 
-    await pool.query('DELETE FROM chart_drawings WHERE id = $1', [drawingId]);
+    await manualDrawingWrite(client => client.query('DELETE FROM chart_drawings WHERE id = $1', [drawingId]));
     res.json({ status: 'ok', id: drawingId });
   } catch (err: any) {
     console.error('[Chart Drawings API] DELETE error:', err.message);

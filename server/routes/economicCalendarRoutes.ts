@@ -41,76 +41,17 @@ function resolveCategory(cat: string, evtName: string): 'Central Bank' | 'Inflat
 }
 
 // Impact mapper (1-4 -> Low, Medium, High, Extreme)
-function mapImpact(importance: number, evtName: string): 'Extreme' | 'High' | 'Medium' | 'Low' {
-  const e = (evtName || '').toLowerCase();
-
-  // Tier-1 Catalysts that move global markets significantly -> Extreme
-  const isCentralBankRateOrSpeech = 
-    e.includes('interest rate') || 
-    e.includes('rate decision') || 
-    e.includes('federal funds rate') || 
-    e.includes('fomc') || 
-    e.includes('monetary policy statement') || 
-    e.includes('press conference') || 
-    e.includes('official bank rate') || 
-    e.includes('policy rate') || 
-    e.includes('cash rate') ||
-    e.includes('powell') ||
-    e.includes('lagarde') ||
-    e.includes('bailey') ||
-    e.includes('ueda');
-
-  const isTier1Inflation = 
-    e.includes('cpi') || 
-    e.includes('consumer price') || 
-    e.includes('core pce') || 
-    e.includes('pce price index');
-
-  const isTier1Labor = 
-    e.includes('non-farm') || 
-    e.includes('nonfarm') || 
-    e.includes('unemployment rate') || 
-    (e.includes('employment change') && !e.includes('adp'));
-
-  const isTier1Growth = 
-    (e.includes('retail sales') && !e.includes('redbook')) || 
-    (e.includes('gdp') && (e.includes('advance') || e.includes('prelim') || e.includes('qoq') || e.includes('yoy')));
-
-  if (importance >= 4 || isCentralBankRateOrSpeech || isTier1Inflation || isTier1Labor || isTier1Growth) {
-    return 'Extreme';
-  }
-
-  // Tier-2 / High Market Movers -> High
-  const isHighCatalyst = 
-    importance === 3 || 
-    e.includes('ppi') || 
-    e.includes('producer price') || 
-    e.includes('jobless claims') || 
-    e.includes('pmi') || 
-    e.includes('consumer sentiment') || 
-    e.includes('trade balance') || 
-    e.includes('zew') || 
-    e.includes('crude oil') || 
-    e.includes('industrial production') || 
-    e.includes('ism') ||
-    e.includes('claimant count');
-
-  if (isHighCatalyst) {
-    return 'High';
-  }
-
-  if (importance === 2) {
-    return 'Medium';
-  }
-  return 'Low';
+function mapImpact(importance: number, _evtName: string): 'Extreme' | 'High' | 'Medium' | 'Low' {
+  return importance >= 4 ? 'Extreme' : importance >= 3 ? 'High' : importance >= 2 ? 'Medium' : 'Low';
 }
 
 // Affected assets mapper
 function resolveAffectedAssets(countryCode: string, cat: string, evtName: string): string[] {
   const e = (evtName || '').toLowerCase();
+  if (/crude|oil|eia|petroleum|gasoline/.test(e)) return ['WTI', 'USDCAD', 'USD'];
   if (countryCode === 'US') {
-    if (e.includes('nonfarm') || e.includes('fomc') || e.includes('fed')) return ['USD', 'XAUUSD', 'NAS100', 'US30', 'US10Y'];
-    if (e.includes('cpi') || e.includes('ppi') || e.includes('pce')) return ['USD', 'XAUUSD', 'NAS100', 'US10Y'];
+    if (e.includes('nonfarm') || e.includes('fomc') || e.includes('fed')) return ['USD', 'XAUUSD', 'NAS100', 'US30', 'BTCUSDT', 'US10Y'];
+    if (e.includes('cpi') || e.includes('ppi') || e.includes('pce')) return ['USD', 'XAUUSD', 'NAS100', 'US30', 'BTCUSDT', 'US10Y'];
     if (e.includes('jobless')) return ['USD', 'XAUUSD', 'US30'];
     return ['USD', 'SPX500', 'XAUUSD'];
   }
@@ -164,7 +105,8 @@ function computeRealOutcome(actual?: string, forecast?: string): 'beat' | 'miss'
 
 // In-memory cache with 60-second TTL per query key
 const queryCache = new Map<string, { timestamp: number; data: any[] }>();
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+let livePending: ReturnType<typeof biquoteService.fetchCalendar> | null = null;
+const CACHE_TTL_MS = 30 * 1000; // 60 seconds
 
 /**
  * GET /api/economic-calendar or /api/market/economic-calendar
@@ -212,22 +154,14 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
   }
 
   try {
-    // If real events count is low or forceRefresh, sync with live provider
-    const countCheck = await pool.query("SELECT count(*) as count FROM economic_events WHERE id NOT LIKE 'inst_%';");
-    const totalRealInDb = parseInt(countCheck.rows[0]?.count || '0', 10);
-
-    if (totalRealInDb < 20 || forceRefresh) {
-      try {
-        const start = new Date(Date.now() - daysPast * 24 * 60 * 60 * 1000);
-        const end = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
-        const freshEvents = await biquoteService.fetchCalendar(start, end);
-        for (const ev of freshEvents) {
-          await upsertEconomicEvent(pool, ev);
-        }
-      } catch (fetchErr: any) {
-        console.warn(`[Economic Calendar Route] Provider live fetch notice: ${fetchErr.message}`);
-      }
-    }
+    // Read-through live feed: never write to the database during a GET request.
+    let liveEvents: Awaited<ReturnType<typeof biquoteService.fetchCalendar>> = [];
+    let providerError: string | null = null;
+    try {
+      if (!livePending) livePending = biquoteService.fetchCalendar();
+      liveEvents = await livePending;
+    } catch { providerError = 'Provider unavailable; showing stored events. Release values may be delayed.'; }
+    finally { livePending = null; }
 
     // Query real events chronologically starting from daysPast through daysAhead
     // Focus on major tradable currencies and G7/major market economies
@@ -270,10 +204,11 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
         LIMIT $4;
       `, [onlyUpcoming, daysPast, daysAhead, limit]);
 
-      if (!fallbackResult.rows || fallbackResult.rows.length === 0) {
+      if ((!fallbackResult.rows || fallbackResult.rows.length === 0) && !liveEvents.length) {
         res.json({
           status: 'ok',
           source: 'postgresql',
+          warning: providerError || 'No events available in this window',
           count: 0,
           events: [],
           serverTimeUtc: new Date().toISOString()
@@ -283,15 +218,29 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
       dbResult.rows = fallbackResult.rows;
     }
 
+    const merged = new Map(dbResult.rows.map(row => [row.id, row]));
+    for (const ev of liveEvents) {
+      const time = Date.parse(ev.dateUtc);
+      if (time < Date.now() - daysPast*86400000 || time > Date.now() + daysAhead*86400000 || ev.importance < minImportance || (onlyUpcoming && time < Date.now())) continue;
+      merged.set(ev.id, {id:ev.id, calendar_id:ev.calendarId, date_utc:ev.dateUtc, country:ev.country, currency:ev.currency, event:ev.event, category:ev.category, importance:ev.importance, actual:ev.actual, forecast:ev.forecast, previous:ev.previous, revised:ev.revised, unit:ev.unit, raw_data:ev.rawData, last_updated_utc:new Date()});
+    }
+    const unique = new Map<string, any>();
+    for (const row of merged.values()) {
+      const key = [row.country, row.event.trim().toLowerCase(), new Date(row.date_utc).toISOString()].join('|');
+      const previous = unique.get(key);
+      if (!previous || row.actual != null || previous.actual == null) unique.set(key, row);
+    }
+    dbResult.rows = [...unique.values()].sort((a,b)=>Date.parse(a.date_utc)-Date.parse(b.date_utc)).slice(0,limit);
     // Map rows directly to canonical EconomicEvent frontend schema with exact UTC timestamp
-    const normalizedList = dbResult.rows.map(row => {
+    const normalizedList = dbResult.rows.filter(row=>Number.isFinite(Date.parse(row.date_utc))).map(row => {
       const dateObj = new Date(row.date_utc);
       const utcIso = dateObj.toISOString();
       const epochMs = dateObj.getTime();
       const rawData = typeof row.raw_data === 'string' ? JSON.parse(row.raw_data) : (row.raw_data || {});
       const countryCode = resolveCountryCode(row.country);
       const category = resolveCategory(row.category, row.event);
-      const impact = mapImpact(Number(row.importance), row.event);
+      const providerImportance: Record<string,number> = {low:1,medium:2,high:3,extreme:4,'very high':4};
+      const impact = mapImpact(providerImportance[String(rawData.importance).toLowerCase()] ?? Number(row.importance), row.event);
       const affectedAssets = (Array.isArray(rawData.affectedAssets) && rawData.affectedAssets.length > 0)
         ? rawData.affectedAssets
         : resolveAffectedAssets(countryCode, category, row.event);
@@ -312,6 +261,10 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
         utcIso: utcIso,     // Exact UTC ISO timestamp from provider
         date: utcIso.split('T')[0], // Exact UTC date string
         time: utcIso.split('T')[1].substring(0, 5) + ' UTC', // Exact UTC time string
+        sourceTimeMode: rawData.timeMode || 'exact',
+        sourceUrl: typeof rawData.sourceUrl === 'string' && /^https?:\/\//.test(rawData.sourceUrl) ? rawData.sourceUrl : undefined,
+        sourceNotice: undefined as string | undefined,
+        sourceAgency: rawData.source || 'BiQuote aggregate feed',
         country: row.country,
         countryCode: countryCode,
         currency: row.currency || undefined,
@@ -331,15 +284,20 @@ router.get(['/economic-calendar', '/market/economic-calendar'], async (req: Requ
       };
     });
 
+    for (const event of normalizedList) {
+      const conflicting = normalizedList.some(other => other.id !== event.id && other.country === event.country && other.event.toLowerCase() === event.event.toLowerCase() && other.date === event.date && other.timestamp !== event.timestamp);
+      if (conflicting) event.sourceNotice = 'Sources disagree on the release time; verify with the issuing agency.';
+    }
     // Update query memory cache
-    queryCache.set(cacheKey, {
+    if (!providerError) queryCache.set(cacheKey, {
       timestamp: nowMs,
       data: normalizedList
     });
 
     res.json({
       status: 'ok',
-      source: 'postgresql',
+      source: liveEvents.length ? 'biquote_live' : 'postgresql',
+      warning: providerError,
       count: normalizedList.length,
       events: normalizedList,
       serverTimeUtc: new Date().toISOString()

@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { Article } from '../types';
 import { Clock, Eye, Bookmark, Share2, TrendingUp, Sparkles, User, ArrowUpRight } from 'lucide-react';
@@ -20,6 +21,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   onToggleBookmark,
   onShare
 }) => {
+  const ui = useInterfaceText();
   const { abuAsadAvatar } = useAbuAsadAvatar();
   const { t, isRTL } = useTranslation();
   const avatarSrc = article.author.name.includes('Abu Asad') ? abuAsadAvatar : article.author.avatar;
@@ -141,7 +143,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
               </div>
               <span className="text-[10px] text-amber-400/90 block leading-tight truncate font-mono-num">
                 {article.author.name.includes('Abu Asad') || article.author.name.includes('Ahmad') || article.author.role.includes('Founder')
-                  ? 'Manager'
+                  ? ui("Manager")
                   : article.author.role}
               </span>
             </div>

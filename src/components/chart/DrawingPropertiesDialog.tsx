@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../../hooks/useInterfaceText';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -58,6 +59,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
   onApply,
   onDelete,
 }) => {
+  const ui = useInterfaceText();
   if (!isOpen || !drawing) return null;
 
   // Track active tab: 'style' | 'coordinates' | 'visibility'
@@ -595,10 +597,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
             <span className="w-3 h-3 rounded-full" style={{ backgroundColor: styleState.lineColor }} />
             <div>
               <h3 className="text-sm font-semibold text-white tracking-wide">
-                {toolItem.name} Settings
-              </h3>
+                {ui(toolItem.name)}{ui(" Settings ")}</h3>
               <p className="text-[11px] text-slate-400 capitalize">
-                {toolItem.category} • ID: {drawing.id.slice(0, 8)}
+                {ui(toolItem.category)} • ID: {drawing.id.slice(0, 8)}
               </p>
             </div>
           </div>
@@ -607,7 +608,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
             type="button"
             onClick={handleCancel}
             className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded-md transition-colors"
-            title="Close without saving"
+            title={ui("Close without saving")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -625,9 +626,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Palette className="w-3.5 h-3.5" />
-            Style
-          </button>
+            <Palette className="w-3.5 h-3.5" />{ui(" Style ")}</button>
           <button
             id="tab-coords-btn"
             type="button"
@@ -638,9 +637,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Compass className="w-3.5 h-3.5" />
-            Coordinates
-          </button>
+            <Compass className="w-3.5 h-3.5" />{ui(" Coordinates ")}</button>
           <button
             id="tab-vis-btn"
             type="button"
@@ -651,9 +648,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" />
-            Visibility
-          </button>
+            <Sliders className="w-3.5 h-3.5" />{ui(" Visibility ")}</button>
         </div>
 
         {/* Modal Body */}
@@ -665,7 +660,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
               <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-slate-300">
-                    {hasFill ? 'Border / Outline' : 'Line Color'}
+                    {hasFill ? ui("Border / Outline") : ui("Line Color")}
                   </span>
                   <div className="flex items-center gap-2">
                     <input
@@ -694,14 +689,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           : 'border-transparent hover:scale-110 opacity-80 hover:opacity-100'
                       }`}
                       style={{ backgroundColor: c.hex }}
-                      title={c.name}
+                      title={ui(c.name)}
                     />
                   ))}
                 </div>
 
                 {/* Line Thickness */}
                 <div className="pt-2 border-t border-slate-700/50 flex items-center justify-between">
-                  <span className="text-slate-400">Line Thickness</span>
+                  <span className="text-slate-400">{ui("Line Thickness")}</span>
                   <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-md border border-slate-700/60">
                     {LINE_WIDTHS.map((w) => (
                       <button
@@ -726,7 +721,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
                 {/* Line Style (Solid, Dashed, Dotted) */}
                 <div className="pt-2 border-t border-slate-700/50 flex items-center justify-between">
-                  <span className="text-slate-400">Line Pattern</span>
+                  <span className="text-slate-400">{ui("Line Pattern")}</span>
                   <div className="flex items-center gap-1 bg-slate-900/60 p-1 rounded-md border border-slate-700/60">
                     <button
                       type="button"
@@ -736,9 +731,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           ? 'bg-blue-600 text-white'
                           : 'text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
-                    >
-                      Solid
-                    </button>
+                    >{ui(" Solid ")}</button>
                     <button
                       type="button"
                       onClick={() => updateStyleProp('lineDash', [6, 6])}
@@ -747,9 +740,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           ? 'bg-blue-600 text-white'
                           : 'text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
-                    >
-                      Dashed
-                    </button>
+                    >{ui(" Dashed ")}</button>
                     <button
                       type="button"
                       onClick={() => updateStyleProp('lineDash', [2, 3])}
@@ -758,9 +749,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           ? 'bg-blue-600 text-white'
                           : 'text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
-                    >
-                      Dotted
-                    </button>
+                    >{ui(" Dotted ")}</button>
                   </div>
                 </div>
               </div>
@@ -775,9 +764,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={optionsState.filled !== false}
                         onChange={(e) => updateOptionProp('filled', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-900"
-                      />
-                      Background Fill
-                    </label>
+                      />{ui(" Background Fill ")}</label>
 
                     {optionsState.filled !== false && (
                       <div className="flex items-center gap-2">
@@ -799,7 +786,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                   {optionsState.filled !== false && (
                     <div className="pt-2 border-t border-slate-700/50 space-y-1.5">
                       <div className="flex justify-between text-slate-400 text-[11px]">
-                        <span>Fill Opacity</span>
+                        <span>{ui("Fill Opacity")}</span>
                         <span className="font-mono text-slate-200">
                           {Math.round(styleState.fillOpacity * 100)}%
                         </span>
@@ -822,21 +809,19 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
               {isTextTool && (
                 <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-3">
                   <div className="flex items-center gap-1.5 font-medium text-slate-300">
-                    <Type className="w-3.5 h-3.5 text-blue-400" />
-                    Text Content & Typography
-                  </div>
+                    <Type className="w-3.5 h-3.5 text-blue-400" />{ui(" Text Content & Typography ")}</div>
                   <div>
                     <textarea
                       value={optionsState.text || ''}
                       onChange={(e) => updateOptionProp('text', e.target.value)}
-                      placeholder="Enter label text..."
+                      placeholder={ui("Enter label text...")}
                       rows={2}
                       className="w-full bg-slate-900/80 border border-slate-700 rounded-md p-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none font-sans"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-slate-400">Font Size</span>
+                    <span className="text-slate-400">{ui("Font Size")}</span>
                     <select
                       value={optionsState.fontSize || 14}
                       onChange={(e) => updateOptionProp('fontSize', parseInt(e.target.value, 10))}
@@ -854,9 +839,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
               {/* Tool-Specific Options */}
               <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-2.5">
-                <span className="font-medium text-slate-300 block mb-1">
-                  Feature Settings
-                </span>
+                <span className="font-medium text-slate-300 block mb-1">{ui(" Feature Settings ")}</span>
 
                 {/* Extend Left / Right */}
                 {hasExtendOptions && (
@@ -867,18 +850,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={!!optionsState.extendLeft}
                         onChange={(e) => updateOptionProp('extendLeft', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Extend Left
-                    </label>
+                      />{ui(" Extend Left ")}</label>
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
                         type="checkbox"
                         checked={!!optionsState.extendRight}
                         onChange={(e) => updateOptionProp('extendRight', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Extend Right
-                    </label>
+                      />{ui(" Extend Right ")}</label>
                   </div>
                 )}
 
@@ -890,9 +869,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                       checked={!!optionsState.showAngle}
                       onChange={(e) => updateOptionProp('showAngle', e.target.checked)}
                       className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                    />
-                    Display Slope Angle
-                  </label>
+                    />{ui(" Display Slope Angle ")}</label>
                 )}
 
                 {/* Trend Line specific */}
@@ -904,27 +881,21 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={!!optionsState.showPriceChange}
                         onChange={(e) => updateOptionProp('showPriceChange', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Price Delta
-                    </label>
+                      />{ui(" Price Delta ")}</label>
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
                         type="checkbox"
                         checked={!!optionsState.showPercentChange}
                         onChange={(e) => updateOptionProp('showPercentChange', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      % Delta
-                    </label>
+                      />{ui(" % Delta ")}</label>
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
                         type="checkbox"
                         checked={!!optionsState.showBars}
                         onChange={(e) => updateOptionProp('showBars', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Bar Count
-                    </label>
+                      />{ui(" Bar Count ")}</label>
                   </div>
                 )}
 
@@ -937,9 +908,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={optionsState.showPrice !== false}
                         onChange={(e) => updateOptionProp('showPrice', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Show Price Tag on Axis
-                    </label>
+                      />{ui(" Show Price Tag on Axis ")}</label>
                     <div className="flex items-center gap-2">
                       <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs whitespace-nowrap">
                         <input
@@ -947,14 +916,12 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           checked={!!optionsState.showLabel}
                           onChange={(e) => updateOptionProp('showLabel', e.target.checked)}
                           className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                        />
-                        Label:
-                      </label>
+                        />{ui(" Label: ")}</label>
                       <input
                         type="text"
                         value={optionsState.labelText || ''}
                         onChange={(e) => updateOptionProp('labelText', e.target.value)}
-                        placeholder="e.g. Major Resistance"
+                        placeholder={ui("e.g. Major Resistance")}
                         className="flex-1 bg-slate-900/80 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500"
                       />
                     </div>
@@ -969,9 +936,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                       checked={!!optionsState.showDimensions}
                       onChange={(e) => updateOptionProp('showDimensions', e.target.checked)}
                       className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                    />
-                    Show Dimensions & Price Range
-                  </label>
+                    />{ui(" Show Dimensions & Price Range ")}</label>
                 )}
 
                 {/* Channel specific */}
@@ -983,18 +948,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={optionsState.showMiddleLine !== false}
                         onChange={(e) => updateOptionProp('showMiddleLine', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Show Median (Middle) Line
-                    </label>
+                      />{ui(" Show Median (Middle) Line ")}</label>
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
                         type="checkbox"
                         checked={!!optionsState.extendLines}
                         onChange={(e) => updateOptionProp('extendLines', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Extend Channel Outward
-                    </label>
+                      />{ui(" Extend Channel Outward ")}</label>
                   </div>
                 )}
 
@@ -1008,18 +969,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           checked={optionsState.showPrices !== false}
                           onChange={(e) => updateOptionProp('showPrices', e.target.checked)}
                           className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                        />
-                        Show Prices
-                      </label>
+                        />{ui(" Show Prices ")}</label>
                       <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                         <input
                           type="checkbox"
                           checked={optionsState.showPercentages !== false}
                           onChange={(e) => updateOptionProp('showPercentages', e.target.checked)}
                           className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                        />
-                        Show Percentages
-                      </label>
+                        />{ui(" Show Percentages ")}</label>
                     </div>
                     {optionsState.reverseDirection !== undefined && (
                       <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
@@ -1028,9 +985,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           checked={!!optionsState.reverseDirection}
                           onChange={(e) => updateOptionProp('reverseDirection', e.target.checked)}
                           className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                        />
-                        Reverse Direction (100% & 0%)
-                      </label>
+                        />{ui(" Reverse Direction (100% & 0%) ")}</label>
                     )}
                   </div>
                 )}
@@ -1044,18 +999,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={optionsState.showMedianLine !== false}
                         onChange={(e) => updateOptionProp('showMedianLine', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Show Median Line
-                    </label>
+                      />{ui(" Show Median Line ")}</label>
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
                         type="checkbox"
                         checked={optionsState.showOuterLines !== false}
                         onChange={(e) => updateOptionProp('showOuterLines', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Show Outer Warning Lines
-                    </label>
+                      />{ui(" Show Outer Warning Lines ")}</label>
                   </div>
                 )}
 
@@ -1064,7 +1015,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                   <div className="space-y-4 pt-2 border-t border-slate-700/60">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 uppercase tracking-wider">
                       <Grid className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Gann Box Style Configuration</span>
+                      <span>{ui("Gann Box Style Configuration")}</span>
                     </div>
 
                     {/* Master Toggles: Use One Color, Angels, Reverse, Top/Bottom Labels */}
@@ -1077,7 +1028,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             onChange={(e) => updateOptionProp('useOneColor', e.target.checked)}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span className="font-medium">Use one color</span>
+                          <span className="font-medium">{ui("Use one color")}</span>
                         </label>
 
                         <label className="flex items-center gap-2 cursor-pointer text-slate-200 hover:text-white transition-colors">
@@ -1090,7 +1041,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             }}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span className="font-medium">Angels (Diagonals)</span>
+                          <span className="font-medium">{ui("Angels (Diagonals)")}</span>
                         </label>
 
                         <label className="flex items-center gap-2 cursor-pointer text-slate-200 hover:text-white transition-colors">
@@ -1100,7 +1051,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             onChange={(e) => updateOptionProp('reverse', e.target.checked)}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span className="font-medium">Reverse</span>
+                          <span className="font-medium">{ui("Reverse")}</span>
                         </label>
 
                         <label className="flex items-center gap-2 cursor-pointer text-slate-200 hover:text-white transition-colors">
@@ -1113,7 +1064,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             }}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span className="font-medium">Top labels</span>
+                          <span className="font-medium">{ui("Top labels")}</span>
                         </label>
 
                         <label className="flex items-center gap-2 cursor-pointer text-slate-200 hover:text-white transition-colors">
@@ -1126,7 +1077,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             }}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span className="font-medium">Bottom labels</span>
+                          <span className="font-medium">{ui("Bottom labels")}</span>
                         </label>
                       </div>
                     </div>
@@ -1141,7 +1092,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             onChange={(e) => updateOptionProp('showPriceLevels', e.target.checked)}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span>PRICE LEVELS</span>
+                          <span>{ui("PRICE LEVELS")}</span>
                         </label>
 
                         <div className="flex items-center gap-1 text-[10px]">
@@ -1152,9 +1103,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateOptionProp('activePriceLevels', standard);
                             }}
                             className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                          >
-                            Gann Standard
-                          </button>
+                          >{ui(" Gann Standard ")}</button>
                           <button
                             type="button"
                             onClick={() => {
@@ -1162,9 +1111,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateOptionProp('activePriceLevels', fib);
                             }}
                             className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                          >
-                            Fibonacci
-                          </button>
+                          >{ui(" Fibonacci ")}</button>
                           <button
                             type="button"
                             onClick={() => {
@@ -1173,9 +1120,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateOptionProp('activePriceLevels', all);
                             }}
                             className="px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-300 hover:bg-blue-600/50 transition-colors"
-                          >
-                            All
-                          </button>
+                          >{ui(" All ")}</button>
                         </div>
                       </div>
 
@@ -1243,7 +1188,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             onChange={(e) => updateOptionProp('showTimeLevels', e.target.checked)}
                             className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950"
                           />
-                          <span>TIME LEVELS</span>
+                          <span>{ui("TIME LEVELS")}</span>
                         </label>
 
                         <div className="flex items-center gap-1 text-[10px]">
@@ -1254,9 +1199,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateOptionProp('activeTimeLevels', quarters);
                             }}
                             className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                          >
-                            Quarters (1/4)
-                          </button>
+                          >{ui(" Quarters (1/4) ")}</button>
                           <button
                             type="button"
                             onClick={() => {
@@ -1264,9 +1207,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateOptionProp('activeTimeLevels', thirds);
                             }}
                             className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                          >
-                            Thirds (1/3)
-                          </button>
+                          >{ui(" Thirds (1/3) ")}</button>
                           <button
                             type="button"
                             onClick={() => {
@@ -1275,9 +1216,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateOptionProp('activeTimeLevels', all);
                             }}
                             className="px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-300 hover:bg-blue-600/50 transition-colors"
-                          >
-                            All
-                          </button>
+                          >{ui(" All ")}</button>
                         </div>
                       </div>
 
@@ -1343,9 +1282,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             }}
                             className="rounded border-slate-600 text-amber-500 focus:ring-amber-500 w-4 h-4 bg-slate-950"
                           />
-                          <span className="text-amber-400">GANN ANGLES (ANGELS)</span>
+                          <span className="text-amber-400">{ui("GANN ANGLES (ANGELS)")}</span>
                         </label>
-                        <span className="text-[10px] text-slate-400 font-mono">1x1 Diagonals & Rays</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{ui("1x1 Diagonals & Rays")}</span>
                       </div>
 
                       {optionsState.angles !== false && optionsState.showDiagonals !== false && (
@@ -1358,7 +1297,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                                 onChange={(e) => updateOptionProp('showDownDiagonal', e.target.checked)}
                                 className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 bg-slate-900"
                               />
-                              <span>1x1 Primary Angle</span>
+                              <span>{ui("1x1 Primary Angle")}</span>
                             </label>
 
                             <label className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
@@ -1368,7 +1307,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                                 onChange={(e) => updateOptionProp('showUpDiagonal', e.target.checked)}
                                 className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 bg-slate-900"
                               />
-                              <span>1x1 Counter Angle</span>
+                              <span>{ui("1x1 Counter Angle")}</span>
                             </label>
                           </div>
 
@@ -1383,13 +1322,13 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                                 }}
                                 className="rounded border-slate-700 text-amber-500 focus:ring-amber-500 w-3.5 h-3.5 bg-slate-900"
                               />
-                              <span>Gann Corner Sub-Angles / Rays</span>
+                              <span>{ui("Gann Corner Sub-Angles / Rays")}</span>
                             </label>
                           </div>
 
                           {/* Angles Color Picker */}
                           <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80">
-                            <span className="text-[11px] text-slate-400">Angle Line Color</span>
+                            <span className="text-[11px] text-slate-400">{ui("Angle Line Color")}</span>
                             <div className="flex items-center gap-1.5">
                               {['#F59E0B', '#3B82F6', '#10B981', '#EF4444', '#FFFFFF'].map((c) => (
                                 <button
@@ -1428,21 +1367,19 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           checked={optionsState.showDiagonals !== false}
                           onChange={(e) => updateOptionProp('showDiagonals', e.target.checked)}
                           className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                        />
-                        Show Geometric Diagonals
-                      </label>
+                        />{ui(" Show Geometric Diagonals ")}</label>
                     )}
                     {optionsState.divisions !== undefined && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400">Divisions</span>
+                        <span className="text-slate-400">{ui("Divisions")}</span>
                         <select
                           value={optionsState.divisions}
                           onChange={(e) => updateOptionProp('divisions', parseInt(e.target.value, 10))}
                           className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200"
                         >
-                          <option value={4}>4 Divisions</option>
-                          <option value={8}>8 Divisions</option>
-                          <option value={16}>16 Divisions</option>
+                          <option value={4}>{ui("4 Divisions")}</option>
+                          <option value={8}>{ui("8 Divisions")}</option>
+                          <option value={16}>{ui("16 Divisions")}</option>
                         </select>
                       </div>
                     )}
@@ -1458,18 +1395,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         checked={optionsState.showArc !== false}
                         onChange={(e) => updateOptionProp('showArc', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Show Angular Arc
-                    </label>
+                      />{ui(" Show Angular Arc ")}</label>
                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 text-xs">
                       <input
                         type="checkbox"
                         checked={optionsState.showDegrees !== false}
                         onChange={(e) => updateOptionProp('showDegrees', e.target.checked)}
                         className="rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 bg-slate-900"
-                      />
-                      Show Degrees Text
-                    </label>
+                      />{ui(" Show Degrees Text ")}</label>
                   </div>
                 )}
               </div>
@@ -1481,11 +1414,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
             <div className="space-y-4">
               <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-slate-200 text-xs">
-                    Price & Bar Coordinates
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    Total Candles Loaded: {candles.length}
+                  <span className="font-medium text-slate-200 text-xs">{ui(" Price & Bar Coordinates ")}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{ui(" Total Candles Loaded: ")}{candles.length}
                   </span>
                 </div>
 
@@ -1510,16 +1440,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           {pointTitle}
                         </span>
                         <span className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">
-                          {isPoint1 ? 'Start Anchor' : isPoint2 ? 'Opposite Anchor' : `Anchor ${idx + 1}`}
+                          {isPoint1 ? ui("Start Anchor") : isPoint2 ? ui("Opposite Anchor") : ui("Anchor {p0}", {p0: idx + 1})}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {/* Price input */}
                         <div>
-                          <label className="text-[10px] text-slate-400 font-medium block mb-1">
-                            Price
-                          </label>
+                          <label className="text-[10px] text-slate-400 font-medium block mb-1">{ui(" Price ")}</label>
                           <div className="relative flex items-center">
                             <input
                               type="number"
@@ -1549,9 +1477,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
                         {/* Bar Index input */}
                         <div>
-                          <label className="text-[10px] text-slate-400 font-medium block mb-1">
-                            Bar
-                          </label>
+                          <label className="text-[10px] text-slate-400 font-medium block mb-1">{ui(" Bar ")}</label>
                           <div className="relative flex items-center">
                             <input
                               type="number"
@@ -1587,7 +1513,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
                       {/* Readable timestamp */}
                       <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 bg-slate-950/40 px-2 py-1 rounded border border-slate-800/40">
-                        <span className="text-slate-500">Timestamp:</span>
+                        <span className="text-slate-500">{ui("Timestamp:")}</span>
                         <span className="text-slate-300">
                           {typeof anchor.time === 'number'
                             ? new Date(anchor.time * 1000).toISOString().slice(0, 19).replace('T', ' ') + ' UTC'
@@ -1605,9 +1531,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               updateAnchorBar(idx, baseBar + 144);
                             }}
                             className="text-[10px] font-semibold px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
-                            title="Set Anchor #2 exactly 144 candles into future time (W.D. Gann full 144-candle time cycle)"
+                            title={ui("Set Anchor #2 exactly 144 candles into future time (W.D. Gann full 144-candle time cycle)")}
                           >
-                            <span>⚡ +144 Cycle (Gann 144 Bars into Future)</span>
+                            <span>{ui("⚡ +144 Cycle (Gann 144 Bars into Future)")}</span>
                           </button>
                         </div>
                       )}
@@ -1619,7 +1545,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                 {anchorsState.length >= 2 && (
                   <div className="p-2.5 bg-blue-950/20 border border-blue-800/40 rounded-md flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-blue-300">
                     <div>
-                      <span className="text-blue-400/70">Price Range: </span>
+                      <span className="text-blue-400/70">{ui("Price Range: ")}</span>
                       <span>
                         ${Math.abs(anchorsState[1].price - anchorsState[0].price).toFixed(2)} (
                         {anchorsState[0].price !== 0
@@ -1629,10 +1555,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                       </span>
                     </div>
                     <div>
-                      <span className="text-blue-400/70">Bar Span: </span>
+                      <span className="text-blue-400/70">{ui("Bar Span: ")}</span>
                       <span>
-                        {Math.abs(getBarIndex(anchorsState[1].time) - getBarIndex(anchorsState[0].time))} bars
-                      </span>
+                        {Math.abs(getBarIndex(anchorsState[1].time) - getBarIndex(anchorsState[0].time))}{ui(" bars ")}</span>
                     </div>
                   </div>
                 )}
@@ -1643,9 +1568,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                 <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 font-medium text-slate-300">
-                      <RotateCw className="w-3.5 h-3.5 text-blue-400" />
-                      Slope Angle
-                    </div>
+                      <RotateCw className="w-3.5 h-3.5 text-blue-400" />{ui(" Slope Angle ")}</div>
                     <span className="font-mono text-xs font-semibold text-blue-400">
                       {angleState.toFixed(1)}°
                     </span>
@@ -1682,7 +1605,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                       { label: '90° Vert', angle: 90 },
                     ].map((p) => (
                       <button
-                        key={p.label}
+                        key={ui(p.label)}
                         type="button"
                         onClick={() => handleAngleChange(p.angle)}
                         className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
@@ -1691,7 +1614,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                             : 'bg-slate-900/60 border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                         }`}
                       >
-                        {p.label}
+                        {ui(p.label)}
                       </button>
                     ))}
                   </div>
@@ -1705,9 +1628,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
             <div className="space-y-4">
               {/* Overlay Master & Lock */}
               <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-3">
-                <span className="font-medium text-slate-200 text-xs block mb-1">
-                  General Visibility & Protection
-                </span>
+                <span className="font-medium text-slate-200 text-xs block mb-1">{ui(" General Visibility & Protection ")}</span>
 
                 <div className="flex items-center justify-between p-2.5 rounded-md bg-slate-900/70 border border-slate-700/50">
                   <div className="flex items-center gap-2.5">
@@ -1717,10 +1638,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                       <EyeOff className="w-4 h-4 text-slate-500" />
                     )}
                     <div>
-                      <div className="text-xs font-medium text-slate-200">Visible on Chart</div>
-                      <div className="text-[11px] text-slate-400">
-                        Master render switch for this drawing
-                      </div>
+                      <div className="text-xs font-medium text-slate-200">{ui("Visible on Chart")}</div>
+                      <div className="text-[11px] text-slate-400">{ui(" Master render switch for this drawing ")}</div>
                     </div>
                   </div>
                   <input
@@ -1739,10 +1658,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                       <Unlock className="w-4 h-4 text-slate-500" />
                     )}
                     <div>
-                      <div className="text-xs font-medium text-slate-200">Lock Position</div>
-                      <div className="text-[11px] text-slate-400">
-                        Prevent accidental dragging or coordinate modifications
-                      </div>
+                      <div className="text-xs font-medium text-slate-200">{ui("Lock Position")}</div>
+                      <div className="text-[11px] text-slate-400">{ui(" Prevent accidental dragging or coordinate modifications ")}</div>
                     </div>
                   </div>
                   <input
@@ -1758,12 +1675,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
               <div className="bg-slate-800/40 p-3.5 rounded-lg border border-slate-700/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-medium text-slate-200 text-xs block">
-                      Timeframe Visibility Rules
-                    </span>
-                    <span className="text-[11px] text-slate-400 block">
-                      Select which chart resolution intervals display this drawing
-                    </span>
+                    <span className="font-medium text-slate-200 text-xs block">{ui(" Timeframe Visibility Rules ")}</span>
+                    <span className="text-[11px] text-slate-400 block">{ui(" Select which chart resolution intervals display this drawing ")}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5">
@@ -1783,18 +1696,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                         updateOptionProp('visibility', allOn);
                       }}
                       className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 font-medium transition-colors"
-                    >
-                      Select All
-                    </button>
+                    >{ui(" Select All ")}</button>
                     <button
                       type="button"
                       onClick={() => {
                         updateOptionProp('visibility', { ...DEFAULT_GANN_VISIBILITY });
                       }}
                       className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 font-medium transition-colors"
-                    >
-                      Reset
-                    </button>
+                    >{ui(" Reset ")}</button>
                   </div>
                 </div>
 
@@ -1805,7 +1714,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
 
                   return (
                     <div className="p-2 rounded bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs font-mono">
-                      <span className="text-slate-400">Current Chart Timeframe:</span>
+                      <span className="text-slate-400">{ui("Current Chart Timeframe:")}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/50">
                           {currentInterval}m
@@ -1817,7 +1726,7 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                               : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                           }`}
                         >
-                          {isVisibleOnCurrent ? 'VISIBLE ON ACTIVE CHART' : 'HIDDEN ON ACTIVE CHART'}
+                          {isVisibleOnCurrent ? ui("VISIBLE ON ACTIVE CHART") : ui("HIDDEN ON ACTIVE CHART")}
                         </span>
                       </div>
                     </div>
@@ -1855,8 +1764,8 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
                           className="mt-0.5 rounded border-slate-600 text-blue-600 focus:ring-blue-500 w-4 h-4 bg-slate-950 shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-semibold text-slate-200">{item.label}</div>
-                          <div className="text-[10px] text-slate-400 truncate">{item.desc}</div>
+                          <div className="text-xs font-semibold text-slate-200">{ui(item.label)}</div>
+                          <div className="text-[10px] text-slate-400 truncate">{ui(item.desc)}</div>
                         </div>
                       </label>
                     );
@@ -1877,11 +1786,9 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
               onClose();
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
-            title="Delete this drawing permanently"
+            title={ui("Delete this drawing permanently")}
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
+            <Trash2 className="w-3.5 h-3.5" />{ui(" Delete ")}</button>
 
           <div className="flex items-center gap-2">
             <button
@@ -1889,18 +1796,14 @@ export const DrawingPropertiesDialog: React.FC<DrawingPropertiesDialogProps> = (
               type="button"
               onClick={handleCancel}
               className="px-4 py-1.5 rounded-md text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
-            >
-              Cancel
-            </button>
+            >{ui(" Cancel ")}</button>
             <button
               id="properties-apply-btn"
               type="button"
               onClick={handleApply}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors"
             >
-              <Check className="w-3.5 h-3.5" />
-              Apply
-            </button>
+              <Check className="w-3.5 h-3.5" />{ui(" Apply ")}</button>
           </div>
         </div>
       </div>

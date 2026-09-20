@@ -1,0 +1,47 @@
+import type {ReactionTrade} from '../../../server/services/reactionTradeEngine';
+import type {LineEvaluationResult} from './reactionZoneSignalCalculator';
+import {observeServerTime,synchronizeServerClock} from '../../services/serverClock';
+import {resolveRealtimeTvSymbol} from '../../../server/services/marketProviders';
+export type {ReactionTrade};
+let trades:ReactionTrade[]=[];
+let evaluations:Record<string,LineEvaluationResult|null>={};
+let epoch='', sequence=-1;
+const listeners=new Set<()=>void>();
+export const subscribeReactionTrades=(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};};
+export const getReactionTrades=()=>trades;
+export function canonicalReactionSymbol(symbol:string) {
+  try{return resolveRealtimeTvSymbol(symbol);}catch{return symbol;}
+}
+export function getReactionEvaluation(symbol:string,strategy:string,id:string) {
+  return evaluations[JSON.stringify([canonicalReactionSymbol(symbol),strategy,id])]||null;
+}
+export function receiveReactionSnapshot(state:any) {
+  if(!state||typeof state.epoch!=='string'||!Number.isInteger(state.sequence)||!Array.isArray(state.trades)||!state.evaluations)return;
+  observeServerTime(state.serverTime);
+  if(state.epoch===epoch&&state.sequence<=sequence)return;
+  epoch=state.epoch;sequence=state.sequence;trades=state.trades;evaluations=state.evaluations;
+  listeners.forEach(fn=>fn());
+}
+let subscribers=0, stream:EventSource|null=null, timer:ReturnType<typeof setInterval>|null=null;
+const resync=()=>{void synchronizeServerClock();};
+export function connectReactionAuthority() {
+  if(++subscribers===1) {
+    resync();timer=setInterval(resync,30000);
+    document.addEventListener('visibilitychange',resync);
+    stream=new EventSource('/api/reactions/stream');
+    stream.onmessage=e=>{try{receiveReactionSnapshot(JSON.parse(e.data));}catch{}};
+    stream.onopen=resync;
+  }
+  return()=>{
+    if(--subscribers===0) {
+      stream?.close();stream=null;if(timer)clearInterval(timer);timer=null;
+      document.removeEventListener('visibilitychange',resync);
+    }
+  };
+}
+export async function clearReactionTrade(id:string) {
+  const token=localStorage.getItem('smtrading_token');
+  const response=await fetch('/api/reactions/clear',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({id})});
+  if(!response.ok)console.warn('[Reaction trade] Clear rejected by server:',response.status);
+}
+export function reactionTradePoints(t:ReactionTrade) {return (t.direction==='buy'?t.current-t.entry:t.entry-t.current)/t.unit;}

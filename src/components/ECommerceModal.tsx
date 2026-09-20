@@ -1,3 +1,5 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
+import { LiveTrainingNotice } from './PurchaseNotices';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -34,6 +36,7 @@ interface ECommerceModalProps {
 }
 
 export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose }) => {
+  const ui = useInterfaceText();
   const { t, isRTL, language } = useTranslation();
   const { user, token } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('Education & Masterclass');
@@ -234,8 +237,8 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               type="button"
               onClick={onClose}
               className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-              title="Close Store"
-              aria-label="Close Store"
+              title={ui("Close Store")}
+              aria-label={ui("Close Store")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -261,7 +264,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               <div className="bg-[#070A10] p-4 rounded-xl border border-slate-800 text-left rtl:text-right text-xs font-mono-num space-y-1.5">
                 <div className="flex justify-between text-slate-400">
                   <span>{t('ecomTxHash')}:</span>
-                  <span className="text-emerald-400 font-bold">#{confirmedOrderId || `SMT-${Math.floor(100000 + Math.random() * 900000)}`}</span>
+                  <span className="text-emerald-400 font-bold">#{confirmedOrderId || ui("SMT-{p0}", {p0: Math.floor(100000 + Math.random() * 900000)})}</span>
                 </div>
                 <div className="flex justify-between text-slate-400">
                   <span>{t('ecomLicenseTier')}:</span>
@@ -294,7 +297,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="font-extrabold text-lg text-white flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-emerald-400" />
-                  {t('ecomYourCart')} ({totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'})
+                  {t('ecomYourCart')} ({totalItemsCount} {totalItemsCount === 1 ? ui("item") : ui("items")})
                 </h3>
                 <button
                   onClick={() => setIsCartView(false)}
@@ -350,6 +353,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                             <h4 className="font-bold text-xs sm:text-sm text-white line-clamp-1">
                               {currentProd.name}
                             </h4>
+                            <LiveTrainingNotice />
                             <div className="text-xs font-mono-num font-bold text-amber-300">
                               ${currentProd.price} USD
                             </div>
@@ -383,7 +387,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                           <button
                             onClick={() => handleRemoveFromCart(product.id)}
                             className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
-                            title="Remove item"
+                            title={ui("Remove item")}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -451,7 +455,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                     >
                       <Lock className="w-4 h-4" />
                       <span>
-                        {checkingOut ? 'Processing Purchase...' : `${t('ecomCompleteCheckout')} ($${grandTotal.toFixed(2)})`}
+                        {checkingOut ? ui("Processing Purchase...") : `${t('ecomCompleteCheckout')} ($${grandTotal.toFixed(2)})`}
                       </span>
                     </button>
 
@@ -544,6 +548,7 @@ export const ECommerceModal: React.FC<ECommerceModalProps> = ({ isOpen, onClose 
                             {product.description}
                           </p>
 
+                          <LiveTrainingNotice />
                           {/* Key Feature Bullets */}
                           <div className="space-y-1 pt-1 border-t border-slate-800/80">
                             {product.features.slice(0, 2).map((feat, i) => (

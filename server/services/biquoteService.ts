@@ -155,7 +155,7 @@ export class BiquoteService {
           headers: { Accept: 'application/json', 'User-Agent': 'SMTradingPro-BiQuoteClient/1.0' },
           signal: AbortSignal.timeout(12000),
         }),
-      ]);
+      ].map(request => request.catch(() => new Response(null, {status:503}))));
 
       const eventsMap = new Map<string, RawBiquoteEvent>();
 
@@ -190,13 +190,15 @@ export class BiquoteService {
         }
       }
 
+      if (!eventsMap.size) throw new Error('No valid calendar response from provider');
       const rawList = Array.from(eventsMap.values());
       console.log(`[BiQuote] Received ${rawList.length} unique raw events from BiQuote.`);
 
       const normalized = rawList
-        .filter(raw => Boolean(raw.id && raw.name && raw.time))
+        .filter(raw => Boolean(raw.id && raw.name && raw.time && /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw.time) && Number.isFinite(Date.parse(raw.time))))
         .map(this.normalizeEvent);
 
+      if (!normalized.length) throw new Error('Provider returned no valid timestamped events');
       // Filter by window if requested
       const startMs = startDate ? startDate.getTime() : null;
       const endMs = endDate ? endDate.getTime() : null;
@@ -238,7 +240,7 @@ export class BiquoteService {
       if (!Array.isArray(rawEvents)) return [];
 
       return rawEvents
-        .filter(raw => Boolean(raw.id && raw.name && raw.time))
+        .filter(raw => Boolean(raw.id && raw.name && raw.time && /(?:Z|[+-]\d{2}:?\d{2})$/.test(raw.time) && Number.isFinite(Date.parse(raw.time))))
         .map(this.normalizeEvent);
     } catch (err: any) {
       console.warn(`[BiQuote Live Updates Warning] ${err.message}`);
@@ -269,40 +271,14 @@ export class BiquoteService {
       dateUtc = new Date().toISOString();
     }
 
-    // Map importance: 4 -> Very High, 3 -> High, 2 -> Medium, 1 -> Low
-    let importance = 1;
+    // Preserve the provider's importance classification; never promote by name.
     const impStr = String(raw.importance || '').toLowerCase().trim();
-    const eventNameLower = String(raw.name || '').toLowerCase();
-    const isTier1Macro =
-      eventNameLower.includes('cpi') ||
-      eventNameLower.includes('consumer price') ||
-      eventNameLower.includes('nonfarm') ||
-      eventNameLower.includes('non-farm') ||
-      eventNameLower.includes('interest rate') ||
-      eventNameLower.includes('fomc') ||
-      eventNameLower.includes('gdp') ||
-      eventNameLower.includes('unemployment rate');
-
-    if (
-      impStr === 'very high' ||
-      impStr === 'extreme' ||
-      impStr === 'critical' ||
-      impStr === '4' ||
-      (impStr === 'high' && isTier1Macro)
-    ) {
-      importance = 4; // VERY HIGH (عالية جداً)
-    } else if (impStr === 'high' || impStr === '3' || isTier1Macro) {
-      importance = 3; // HIGH (عالية)
-    } else if (impStr === 'medium' || impStr === '2' || impStr.includes('moderate')) {
-      importance = 2; // MEDIUM (متوسطة)
-    } else {
-      importance = 1; // LOW (منخفضة)
-    }
+    const importance = ['4','very high','extreme','critical'].includes(impStr) ? 4 : ['3','high'].includes(impStr) ? 3 : ['2','medium','moderate'].includes(impStr) ? 2 : 1;
 
     // Country name and currency
     const code = (raw.countryCode || '').trim().toUpperCase();
     const country = ISO_COUNTRY_NAMES[code] || code || 'Global';
-    const currency = (raw.currency || 'USD').trim().toUpperCase();
+    const currency = (raw.currency || '').trim().toUpperCase();
 
     // Format actual, forecast, previous, revised with proper units/multipliers
     const actualStr = formatBiquoteNumericValue(raw.actual, raw.multiplier, raw.unit, raw.digits);

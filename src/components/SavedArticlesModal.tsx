@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Bookmark, Trash2, ArrowRight, BookOpen } from 'lucide-react';
@@ -19,6 +20,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
   onSelectArticle,
   onRemoveBookmark
 }) => {
+  const ui = useInterfaceText();
   const { t, isRTL } = useTranslation();
 
   // Lock body scroll and listen for Escape key
@@ -73,7 +75,7 @@ export const SavedArticlesModal: React.FC<SavedArticlesModalProps> = ({
             type="button"
             onClick={onClose}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-            aria-label="Close saved articles"
+            aria-label={ui("Close saved articles")}
           >
             <X className="w-5 h-5" />
           </button>

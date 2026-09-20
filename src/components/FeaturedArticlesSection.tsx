@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { Article, TradeSetup } from '../types';
 import { 
@@ -22,11 +23,12 @@ interface FeaturedArticlesSectionProps {
 export const FeaturedArticlesSection: React.FC<FeaturedArticlesSectionProps> = ({
   onOpenCalculatorWithSetup
 }) => {
+  const ui = useInterfaceText();
   const { abuAsadAvatar } = useAbuAsadAvatar();
   const { t, isRTL } = useTranslation();
 
   return (
-    <section aria-label="Institutional Trading Academy" className="space-y-6">
+    <section aria-label={ui("Institutional Trading Academy")} className="space-y-6">
       {/* Section Header */}
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div className="space-y-1.5">

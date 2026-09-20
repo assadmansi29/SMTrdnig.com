@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState } from 'react';
 import { Crown, ShieldCheck, Camera, User as UserIcon } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
@@ -46,6 +47,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   onEditClick,
   alt,
 }) => {
+  const ui = useInterfaceText();
   const [imageError, setImageError] = useState(false);
 
   const username = user?.username || 'user';
@@ -111,13 +113,11 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         {isEditable && (
           <div
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-amber-400"
-            title="Upload new profile picture"
+            title={ui("Upload new profile picture")}
           >
             <Camera className="w-1/3 h-1/3 min-w-3.5 min-h-3.5 text-amber-300 drop-shadow" />
             {(size === '2xl' || size === '3xl') && (
-              <span className="text-[10px] font-sans font-bold text-white mt-1 drop-shadow">
-                Change
-              </span>
+              <span className="text-[10px] font-sans font-bold text-white mt-1 drop-shadow">{ui(" Change ")}</span>
             )}
           </div>
         )}
@@ -127,7 +127,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       {showRoleBadge && (role === 'admin' || role === 'super_admin' || isAbuAsad) && (
         <div
           className={`absolute rounded-full bg-amber-500 text-slate-950 border border-amber-300 flex items-center justify-center shadow-md ${badgeClass}`}
-          title="Master Admin"
+          title={ui("Master Admin")}
         >
           <Crown className="w-full h-full" />
         </div>
@@ -136,7 +136,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       {showRoleBadge && role === 'employee' && (
         <div
           className={`absolute rounded-full bg-blue-500 text-white border border-blue-300 flex items-center justify-center shadow-md ${badgeClass}`}
-          title="Staff Member"
+          title={ui("Staff Member")}
         >
           <ShieldCheck className="w-full h-full" />
         </div>

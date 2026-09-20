@@ -1,3 +1,5 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
+import { LiveTrainingNotice, MonthlyPromotionNotice } from './PurchaseNotices';
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
@@ -39,6 +41,7 @@ import { SubscriptionCheckoutModal } from './SubscriptionCheckoutModal';
 import { MemberLoginModal } from './MemberLoginModal';
 
 export const PublicLandingPage: React.FC = () => {
+  const ui = useInterfaceText();
   const { t, isRTL } = useTranslation();
 
   // Live Alpha Feed Market Prices State with real-time micro-ticks
@@ -139,13 +142,10 @@ export const PublicLandingPage: React.FC = () => {
                 <BlueVerifiedBadge size="sm" />
               </div>
               <div className="flex items-center justify-start ltr:justify-start rtl:justify-start pt-0.5">
-                <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">
-                  Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+                <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">{ui(" Powered by ")}<span className="font-semibold text-slate-300">{ui("Modern Era")}</span>
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium truncate hidden lg:block pt-0.5">
-                Institutional Trading Platform • Quantitative SMC Network
-              </p>
+              <p className="text-[11px] text-slate-400 font-medium truncate hidden lg:block pt-0.5">{ui(" Institutional Trading Platform • Quantitative SMC Network ")}</p>
             </div>
           </div>
 
@@ -219,7 +219,7 @@ export const PublicLandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-6 text-xs whitespace-nowrap min-w-max">
           <div className="flex items-center gap-2 text-emerald-400 font-bold font-mono">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>INSTITUTIONAL LIQUIDITY FEED:</span>
+            <span>{ui("INSTITUTIONAL LIQUIDITY FEED:")}</span>
           </div>
 
           <div className="flex items-center gap-6 font-mono text-[11px] text-slate-300">
@@ -249,7 +249,7 @@ export const PublicLandingPage: React.FC = () => {
 
           <div className="flex items-center gap-2 text-slate-400 text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span>Settlement: <strong>100% USDT</strong></span>
+            <span>{ui("Settlement: ")}<strong>{ui("100% USDT")}</strong></span>
           </div>
         </div>
       </div>
@@ -544,7 +544,7 @@ export const PublicLandingPage: React.FC = () => {
               <div className="rounded-2xl bg-gradient-to-br from-amber-500/20 via-slate-800/40 to-slate-900 border border-slate-700/80 p-2 sm:p-3 shadow-2xl overflow-hidden">
                 <img
                   src="/trade_smc_chart.jpg"
-                  alt="SM Trading Pro Professional Strategy Chart"
+                  alt={ui("SM Trading Pro Professional Strategy Chart")}
                   className="w-full h-auto rounded-xl object-cover shadow-inner"
                   onError={(e) => {
                     // Fallback to stylized SVG card if image not found
@@ -595,25 +595,10 @@ export const PublicLandingPage: React.FC = () => {
               </p>
               <div className="text-xs text-amber-400/90 font-medium">
                 {t('landingCourse1Include')}
+                <LiveTrainingNotice />
               </div>
             </div>
 
-            {/* Course 2: Strategy 144 */}
-            <div className="p-6 bg-[#0D1424] border border-slate-800 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
-                  {t('landingCourse2Badge')}
-                </span>
-                <span className="text-xs font-mono text-slate-400">{t('landingCourse2Meta')}</span>
-              </div>
-              <h3 className="text-lg font-bold text-white">{t('landingCourse2Title')}</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {t('landingCourse2Desc')}
-              </p>
-              <div className="text-xs text-amber-400/90 font-medium">
-                {t('landingCourse2Include')}
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -758,7 +743,7 @@ export const PublicLandingPage: React.FC = () => {
                       </span>
                       <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>PUBLIC & VERIFIED</span>
+                        <span>{ui("PUBLIC & VERIFIED")}</span>
                       </span>
                     </div>
 
@@ -770,7 +755,7 @@ export const PublicLandingPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-                      <span>Handle:</span>
+                      <span>{ui("Handle:")}</span>
                       <a 
                         href="https://t.me/smtradingpro" 
                         target="_blank" 
@@ -794,7 +779,7 @@ export const PublicLandingPage: React.FC = () => {
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
                     <div className="text-xs">
                       <strong className="text-white block font-semibold">{t('landingResultsPillar1Title')}</strong>
-                      <span className="text-slate-400">Timestamped entries & profit levels</span>
+                      <span className="text-slate-400">{ui("Timestamped entries & profit levels")}</span>
                     </div>
                   </div>
 
@@ -802,7 +787,7 @@ export const PublicLandingPage: React.FC = () => {
                     <TrendingUp className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
                     <div className="text-xs">
                       <strong className="text-white block font-semibold">{t('landingResultsPillar2Title')}</strong>
-                      <span className="text-slate-400">Transparent weekly PnL audits</span>
+                      <span className="text-slate-400">{ui("Transparent weekly PnL audits")}</span>
                     </div>
                   </div>
 
@@ -810,7 +795,7 @@ export const PublicLandingPage: React.FC = () => {
                     <LineChart className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
                     <div className="text-xs">
                       <strong className="text-white block font-semibold">{t('landingResultsPillar3Title')}</strong>
-                      <span className="text-slate-400">Before & after charting setups</span>
+                      <span className="text-slate-400">{ui("Before & after charting setups")}</span>
                     </div>
                   </div>
 
@@ -818,7 +803,7 @@ export const PublicLandingPage: React.FC = () => {
                     <Users className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
                     <div className="text-xs">
                       <strong className="text-white block font-semibold">{t('landingResultsPillar4Title')}</strong>
-                      <span className="text-slate-400">Active trader results & feedback</span>
+                      <span className="text-slate-400">{ui("Active trader results & feedback")}</span>
                     </div>
                   </div>
                 </div>
@@ -837,27 +822,23 @@ export const PublicLandingPage: React.FC = () => {
                         {t('landingResultsLiveStatus')}
                       </span>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
-                      FREE OPEN ACCESS
-                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">{ui(" FREE OPEN ACCESS ")}</span>
                   </div>
 
                   {/* Summary Metric Callouts */}
                   <div className="space-y-3">
                     <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/70 flex items-center justify-between">
                       <div className="text-xs text-slate-300">
-                        <span className="text-slate-400 block text-[10px] uppercase font-mono">Channel Destination</span>
-                        <span className="font-bold text-white">t.me/smtradingpro</span>
+                        <span className="text-slate-400 block text-[10px] uppercase font-mono">{ui("Channel Destination")}</span>
+                        <span className="font-bold text-white">{ui("t.me/smtradingpro")}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-[#24A1DE]/20 text-[#45B7EE] text-xs font-mono font-bold">
-                        OFFICIAL
-                      </span>
+                      <span className="px-2 py-0.5 rounded bg-[#24A1DE]/20 text-[#45B7EE] text-xs font-mono font-bold">{ui(" OFFICIAL ")}</span>
                     </div>
 
                     <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/70 flex items-center justify-between">
                       <div className="text-xs text-slate-300">
-                        <span className="text-slate-400 block text-[10px] uppercase font-mono">Verification Standard</span>
-                        <span className="font-bold text-emerald-400">Audited PnL & Real Charts</span>
+                        <span className="text-slate-400 block text-[10px] uppercase font-mono">{ui("Verification Standard")}</span>
+                        <span className="font-bold text-emerald-400">{ui("Audited PnL & Real Charts")}</span>
                       </div>
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     </div>
@@ -885,12 +866,12 @@ export const PublicLandingPage: React.FC = () => {
                       {channelHandleCopied ? (
                         <>
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400 font-bold">Link Copied (t.me/smtradingpro)</span>
+                          <span className="text-emerald-400 font-bold">{ui("Link Copied (t.me/smtradingpro)")}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Copy Channel Link (t.me/smtradingpro)</span>
+                          <span>{ui("Copy Channel Link (t.me/smtradingpro)")}</span>
                         </>
                       )}
                     </button>
@@ -1022,10 +1003,11 @@ export const PublicLandingPage: React.FC = () => {
                           {plan.priceDisplay}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
-                          {t(planBillingKey)} • USDT
-                        </div>
+                          {t(planBillingKey)}{ui(" • USDT ")}</div>
                       </div>
 
+                      {plan.id === 'monthly' && <MonthlyPromotionNotice />}
+                      <LiveTrainingNotice />
                       {/* Inclusions */}
                       <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
                         <span className="text-xs font-bold text-slate-300 block">{t('landingPlanIncludes')}</span>
@@ -1108,6 +1090,7 @@ export const PublicLandingPage: React.FC = () => {
                     {t('landingAllInclusiveDesc')}
                   </p>
 
+                  <LiveTrainingNotice />
                   {/* Included Courses Box */}
                   <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
                     <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
@@ -1118,10 +1101,6 @@ export const PublicLandingPage: React.FC = () => {
                       <li className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
                         <span>{t('landingAllInclusiveCourse1')}</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span>{t('landingAllInclusiveCourse2')}</span>
                       </li>
                     </ul>
                   </div>
@@ -1208,7 +1187,7 @@ export const PublicLandingPage: React.FC = () => {
                 <span>{t('landingSupportVerified')}</span>
               </div>
               <p className="text-xs text-slate-400">
-                {t('landingSupportUsernameLabel')} <strong className="text-white font-mono">@SMTrading_SUPPORT</strong> • {t('landingSupportNetworkLabel')} <strong className="text-emerald-400 font-mono">TRC20 ONLY</strong>
+                {t('landingSupportUsernameLabel')} <strong className="text-white font-mono">@SMTrading_SUPPORT</strong> • {t('landingSupportNetworkLabel')} <strong className="text-emerald-400 font-mono">{ui("TRC20 ONLY")}</strong>
               </p>
             </div>
 
@@ -1216,7 +1195,7 @@ export const PublicLandingPage: React.FC = () => {
               <div className="bg-white p-2 rounded-2xl shadow-lg border border-slate-200">
                 <img
                   src="/telegram_support_qr.png"
-                  alt="Official Telegram Support QR Code"
+                  alt={ui("Official Telegram Support QR Code")}
                   className="w-28 h-28 object-contain"
                 />
               </div>
@@ -1296,8 +1275,7 @@ export const PublicLandingPage: React.FC = () => {
             </div>
             <div>
               <div className="font-bold text-white text-sm">SMTrading<span className="text-amber-400">.pro</span></div>
-              <div className="text-[9px] font-medium tracking-[0.14em] uppercase text-slate-400/80 pt-0.5 select-none">
-                Powered by <span className="font-semibold text-slate-300">Modern Era</span>
+              <div className="text-[9px] font-medium tracking-[0.14em] uppercase text-slate-400/80 pt-0.5 select-none">{ui(" Powered by ")}<span className="font-semibold text-slate-300">{ui("Modern Era")}</span>
               </div>
             </div>
           </div>

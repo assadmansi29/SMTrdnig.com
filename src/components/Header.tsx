@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { ArticleCategory } from '../types';
 import { 
@@ -31,8 +32,8 @@ interface HeaderProps {
   onOpenSearchModal: () => void;
   onOpenCalculator: () => void;
   onOpenCalendar: () => void;
+  onOpenLiquidity: () => void;
   onOpenChart: () => void;
-  onOpenAiCopilot?: () => void;
   onOpenNewsletter: () => void;
   onOpenECommerce: () => void;
   onOpenCoachingDesk: () => void;
@@ -68,14 +69,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearchModal,
   onOpenCalculator,
   onOpenCalendar,
+  onOpenLiquidity,
   onOpenChart,
-  onOpenAiCopilot,
   onOpenNewsletter,
   onOpenECommerce,
   onOpenCoachingDesk,
   onOpenProfile,
   onOpenAdmin
 }) => {
+  const ui = useInterfaceText();
   const { t } = useTranslation();
   const { user } = useAuth();
   const { isLive: isLiveStreamActive } = useYouTubeLive();
@@ -116,8 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center justify-start ltr:justify-start rtl:justify-start pt-0.5">
-                    <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 group-hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">
-                      Powered by <span className="font-semibold text-slate-300 group-hover:text-amber-200 transition-colors">Modern Era</span>
+                    <span className="text-[8px] sm:text-[9.5px] font-medium tracking-[0.14em] uppercase text-slate-400/80 group-hover:text-amber-300/85 transition-colors whitespace-nowrap leading-none select-none">{ui(" Powered by ")}<span className="font-semibold text-slate-300 group-hover:text-amber-200 transition-colors">{ui("Modern Era")}</span>
                     </span>
                   </div>
                 </div>
@@ -161,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
                         ? 'bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/60 text-blue-300'
                         : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/60 text-purple-300'
                     }`}
-                    title={user.role === 'super_admin' ? 'Super Admin Desk' : user.role === 'coach' ? 'Master Coaching Desk' : user.role === 'employee' ? 'Operations Desk' : 'Admin Desk'}
+                    title={user.role === 'super_admin' ? ui("Super Admin Desk") : user.role === 'coach' ? ui("Master Coaching Desk") : user.role === 'employee' ? ui("Operations Desk") : ui("Admin Desk")}
                   >
                     {user.role === 'super_admin' ? (
                       <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -173,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                     )}
                     <span>
-                      {user.role === 'super_admin' ? 'Super Admin' : user.role === 'coach' ? 'Coaching Desk' : user.role === 'employee' ? 'Operations' : 'Admin Desk'}
+                      {user.role === 'super_admin' ? ui("Super Admin") : user.role === 'coach' ? ui("Coaching Desk") : user.role === 'employee' ? ui("Operations") : ui("Admin Desk")}
                     </span>
                   </button>
                 )}
@@ -183,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     onClick={onOpenProfile}
                     className="flex items-center gap-2 bg-slate-900/95 hover:bg-slate-850 text-slate-200 border border-slate-700/90 hover:border-amber-400/60 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group shrink-0 shadow-xs"
-                    title="View Profile & Account Settings"
+                    title={ui("View Profile & Account Settings")}
                   >
                     <UserAvatar
                       user={user}
@@ -203,12 +204,11 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="h-4 w-px bg-slate-800 mx-0.5" />
 
-                {/* 5. Tools Dropdown (Chart, AI Copilot, Calculator, Calendar, Coaching Desk, Store) */}
+                {/* 5. Tools Dropdown (Chart, Calculator, Calendar, Coaching Desk, Store) */}
                 <TradingToolsMenu
                   onOpenChart={onOpenChart}
                   onOpenCalculator={onOpenCalculator}
                   onOpenCalendar={onOpenCalendar}
-                  onOpenAiCopilot={onOpenAiCopilot}
                   onOpenCoachingDesk={onOpenCoachingDesk}
                   onOpenECommerce={onOpenECommerce}
                 />
@@ -246,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => onOpenAdmin(user.role === 'coach' ? 'coaching' : user.role === 'employee' ? 'operations' : 'users')}
                   className="p-1.5 bg-amber-500/20 border border-amber-400/60 text-amber-300 rounded-lg text-xs font-bold cursor-pointer"
-                  title="Staff Management Desk"
+                  title={ui("Staff Management Desk")}
                 >
                   {user.role === 'super_admin' ? (
                     <Crown className="w-4 h-4 text-amber-400" />
@@ -264,7 +264,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={onOpenProfile}
                   className="p-1 rounded-lg border border-slate-700 hover:border-amber-400/60 bg-slate-900 cursor-pointer transition-colors"
-                  title="Profile"
+                  title={ui("Profile")}
                 >
                   <UserAvatar
                     user={user}
@@ -309,7 +309,6 @@ export const Header: React.FC<HeaderProps> = ({
               onOpenChart={onOpenChart}
               onOpenCalculator={onOpenCalculator}
               onOpenCalendar={onOpenCalendar}
-              onOpenAiCopilot={onOpenAiCopilot}
               onOpenCoachingDesk={onOpenCoachingDesk}
               onOpenECommerce={onOpenECommerce}
               compact={true}
@@ -320,10 +319,10 @@ export const Header: React.FC<HeaderProps> = ({
             id="mobile-nav-coaching-desk"
             onClick={onOpenCoachingDesk}
             className="w-full flex items-center justify-center gap-1 bg-[#0E1726] hover:bg-[#132035] text-emerald-300 border border-emerald-500/30 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap cursor-pointer"
-            title="Coaching Desk"
+            title={ui("Coaching Desk")}
           >
             <GraduationCap className="w-3 h-3 text-emerald-400 shrink-0" />
-            <span className="truncate">Coaching</span>
+            <span className="truncate">{ui("Coaching")}</span>
           </button>
 
           <button
@@ -333,7 +332,7 @@ export const Header: React.FC<HeaderProps> = ({
             title={t('navEcommerce')}
           >
             <ShoppingBag className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="truncate">Store</span>
+            <span className="truncate">{ui("Store")}</span>
           </button>
         </div>
       </div>
@@ -382,6 +381,7 @@ export const Header: React.FC<HeaderProps> = ({
               const isLiveTab = cat === 'LIVE Trade';
               const isSupportTab = cat === 'Support';
               return (
+                <React.Fragment key={cat}>
                 <button
                   key={cat}
                   id={isSupportTab ? 'nav-support-btn' : undefined}
@@ -415,9 +415,7 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
                   <span>{label}</span>
                   {isLiveTab && isLiveStreamActive && (
-                    <span className="text-[9px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded font-mono tracking-wider shadow-sm">
-                      LIVE
-                    </span>
+                    <span className="text-[9px] bg-rose-600 text-white font-black px-1.5 py-0.5 rounded font-mono tracking-wider shadow-sm">{ui(" LIVE ")}</span>
                   )}
                   {isSupportTab && (
                     <span
@@ -431,7 +429,7 @@ export const Header: React.FC<HeaderProps> = ({
                         a.click();
                         document.body.removeChild(a);
                       }}
-                      title="Direct Telegram Support: @SMTrading_support (https://t.me/SMTrading_support)"
+                      title={ui("Direct Telegram Support: @SMTrading_support (https://t.me/SMTrading_support)")}
                       className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded transition-all cursor-pointer ${
                         isActive
                           ? 'bg-slate-950/20 text-slate-950 hover:bg-slate-950/35 border border-slate-950/30'
@@ -443,6 +441,9 @@ export const Header: React.FC<HeaderProps> = ({
                     </span>
                   )}
                 </button>
+                {cat === 'BookMap' && <button onClick={onOpenLiquidity} className="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">{t('liquidityReader')}</button>}
+                {cat === 'VIP Signals' && <button onClick={onOpenCalendar} className="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">{ui("Calendar")}</button>}
+                </React.Fragment>
               );
             })}
           </div>

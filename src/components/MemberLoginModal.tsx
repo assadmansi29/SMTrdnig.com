@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState } from 'react';
 import { 
   X, 
@@ -26,6 +27,7 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
   onClose,
   onSubscribeClick,
 }) => {
+  const ui = useInterfaceText();
   const { login } = useAuth();
   const { t, isRTL } = useTranslation();
   
@@ -90,14 +92,10 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
           </div>
           <div>
             <div className="flex items-center justify-center gap-1.5">
-              <h3 className="text-xl font-black text-white tracking-tight">
-                Client Portal Login
-              </h3>
+              <h3 className="text-xl font-black text-white tracking-tight">{ui(" Client Portal Login ")}</h3>
               <BlueVerifiedBadge size="sm" />
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Sign in with your active subscription credentials
-            </p>
+            <p className="text-xs text-slate-400 mt-1">{ui(" Sign in with your active subscription credentials ")}</p>
           </div>
         </div>
 
@@ -105,7 +103,7 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
         {errorMsg && (
           <div className="mb-4 p-3 bg-rose-950/60 border border-rose-800 text-rose-200 text-xs rounded-xl flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
+            <span>{ui(errorMsg)}</span>
           </div>
         )}
 
@@ -162,10 +160,10 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
             className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 active:to-amber-700 text-slate-950 font-black rounded-xl text-xs sm:text-sm tracking-wide transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
           >
             {isSubmitting ? (
-              <span>Authenticating...</span>
+              <span>{ui("Authenticating...")}</span>
             ) : (
               <>
-                <span>Sign In to Trading Terminal</span>
+                <span>{ui("Sign In to Trading Terminal")}</span>
                 <ArrowRight className="w-4 h-4 rtl:rotate-180" />
               </>
             )}
@@ -174,9 +172,7 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
 
         {/* Support Direct Assistance Note */}
         <div className="mt-6 pt-5 border-t border-slate-800 text-center space-y-3">
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Need credentials or assistance activating your membership?
-          </p>
+          <p className="text-xs text-slate-400 leading-relaxed">{ui(" Need credentials or assistance activating your membership? ")}</p>
           <a
             href="https://t.me/SMTrading_SUPPORT"
             target="_blank"
@@ -184,7 +180,7 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
             className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-bold transition-colors"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Contact Support: @SMTrading_SUPPORT</span>
+            <span>{ui("Contact Support: @SMTrading_SUPPORT")}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
 
@@ -197,9 +193,7 @@ export const MemberLoginModal: React.FC<MemberLoginModalProps> = ({
                   onSubscribeClick();
                 }}
                 className="text-xs text-amber-400 hover:text-amber-300 font-bold transition-colors underline cursor-pointer"
-              >
-                Not a subscriber yet? View Subscription Packages
-              </button>
+              >{ui(" Not a subscriber yet? View Subscription Packages ")}</button>
             </div>
           )}
         </div>

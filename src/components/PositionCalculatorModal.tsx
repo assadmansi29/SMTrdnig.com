@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, ShieldAlert, ArrowRight, DollarSign, Percent, TrendingUp } from 'lucide-react';
 import { TradeSetup } from '../types';
@@ -14,6 +15,7 @@ export const PositionCalculatorModal: React.FC<PositionCalculatorModalProps> = (
   onClose,
   initialSetup
 }) => {
+  const ui = useInterfaceText();
   const { t, isRTL } = useTranslation();
   const [accountBalance, setAccountBalance] = useState<number>(50000);
   const [riskPercent, setRiskPercent] = useState<number>(1.5);
@@ -72,7 +74,7 @@ export const PositionCalculatorModal: React.FC<PositionCalculatorModalProps> = (
             type="button"
             onClick={onClose}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-            aria-label="Close calculator"
+            aria-label={ui("Close calculator")}
           >
             <X className="w-5 h-5" />
           </button>

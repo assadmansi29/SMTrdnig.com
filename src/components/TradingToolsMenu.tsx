@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
@@ -18,7 +19,6 @@ interface TradingToolsMenuProps {
   onOpenChart: () => void;
   onOpenCalculator: () => void;
   onOpenCalendar: () => void;
-  onOpenAiCopilot?: () => void;
   onOpenCoachingDesk?: () => void;
   onOpenECommerce?: () => void;
   compact?: boolean;
@@ -29,12 +29,12 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
   onOpenChart,
   onOpenCalculator,
   onOpenCalendar,
-  onOpenAiCopilot,
   onOpenCoachingDesk,
   onOpenECommerce,
   compact = false,
   className = ''
 }) => {
+  const ui = useInterfaceText();
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,7 +97,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
               <h3 className="text-base font-bold text-white tracking-tight truncate">
                 {t('navTradingTools')}
               </h3>
-              <p className="text-xs text-slate-400 font-mono truncate">Institutional Trading Suite</p>
+              <p className="text-xs text-slate-400 font-mono truncate">{ui("Institutional Trading Suite")}</p>
             </div>
           </div>
 
@@ -105,7 +105,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
             type="button"
             onClick={() => setIsOpen(false)}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-            aria-label="Close tools menu"
+            aria-label={ui("Close tools menu")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -128,9 +128,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                   {t('navChartStudio')}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono-num">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  LIVE
-                </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>{ui(" LIVE ")}</span>
               </div>
               <p className="text-xs text-slate-400 leading-snug mt-1">
                 {t('navTradingToolsStudioDesc')}
@@ -139,32 +137,6 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
             <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
           </button>
 
-          {/* Option: AI Trading Copilot */}
-          {onOpenAiCopilot && (
-            <button
-              type="button"
-              onClick={() => handleSelect(onOpenAiCopilot)}
-              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#121626] hover:bg-[#182038] active:bg-[#1e2848] border border-amber-500/30 hover:border-amber-400/60 text-left rtl:text-right transition-all group cursor-pointer shadow-sm"
-            >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 group-hover:from-amber-500/30 group-hover:to-orange-500/30 transition-all">
-                <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-sm font-bold text-white group-hover:text-amber-300">
-                    AI Trading Copilot
-                  </span>
-                  <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">
-                    GEMINI AI
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 leading-snug mt-1">
-                  Real-time SMC analysis, reaction zone setups & 20-30 pts risk plans
-                </p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
-            </button>
-          )}
 
           {/* Option 2: Position & Risk Calculator */}
           <button
@@ -180,9 +152,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                 <span className="text-sm font-bold text-white group-hover:text-amber-300">
                   {t('navRiskCalculator')}
                 </span>
-                <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-mono-num">
-                  LOT RISK
-                </span>
+                <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-mono-num">{ui(" LOT RISK ")}</span>
               </div>
               <p className="text-xs text-slate-400 leading-snug mt-1">
                 {t('navTradingToolsCalcDesc')}
@@ -205,9 +175,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                 <span className="text-sm font-bold text-white group-hover:text-emerald-300">
                   {t('navCalendar')}
                 </span>
-                <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono-num">
-                  MACRO
-                </span>
+                <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono-num">{ui(" MACRO ")}</span>
               </div>
               <p className="text-xs text-slate-400 leading-snug mt-1">
                 {t('navTradingToolsCalDesc')}
@@ -228,16 +196,10 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-sm font-bold text-white group-hover:text-emerald-300">
-                    Coaching Desk
-                  </span>
-                  <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40 font-mono-num">
-                    MENTOR
-                  </span>
+                  <span className="text-sm font-bold text-white group-hover:text-emerald-300">{ui(" Coaching Desk ")}</span>
+                  <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40 font-mono-num">{ui(" MENTOR ")}</span>
                 </div>
-                <p className="text-xs text-slate-400 leading-snug mt-1">
-                  Student curriculum milestones, mentor notes & 1-on-1 reviews
-                </p>
+                <p className="text-xs text-slate-400 leading-snug mt-1">{ui(" Student curriculum milestones, mentor notes & 1-on-1 reviews ")}</p>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
             </button>
@@ -255,16 +217,10 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-sm font-bold text-white group-hover:text-amber-300">
-                    SMTrading Store
-                  </span>
-                  <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">
-                    STORE
-                  </span>
+                  <span className="text-sm font-bold text-white group-hover:text-amber-300">{ui(" SMTrading Store ")}</span>
+                  <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">{ui(" STORE ")}</span>
                 </div>
-                <p className="text-xs text-slate-400 leading-snug mt-1">
-                  Institutional indicators, algorithmic suites & trading playbooks
-                </p>
+                <p className="text-xs text-slate-400 leading-snug mt-1">{ui(" Institutional indicators, algorithmic suites & trading playbooks ")}</p>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
             </button>
@@ -272,9 +228,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
         </div>
 
         {/* Footer info note */}
-        <div className="pt-2 text-center text-[11px] text-slate-400">
-          Tap any tool to open interactive workspace
-        </div>
+        <div className="pt-2 text-center text-[11px] text-slate-400">{ui(" Tap any tool to open interactive workspace ")}</div>
       </div>
     </div>
   ) : null;
@@ -331,7 +285,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                   {t('navTradingTools')}
                 </span>
               </div>
-              <span className="text-[10px] font-mono-num text-slate-400">Institutional Suite</span>
+              <span className="text-[10px] font-mono-num text-slate-400">{ui("Institutional Suite")}</span>
             </div>
 
             <div className="p-1 space-y-1 mt-1">
@@ -350,9 +304,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                       {t('navChartStudio')}
                     </span>
                     <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono-num">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      LIVE
-                    </span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>{ui(" LIVE ")}</span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
                     {t('navTradingToolsStudioDesc')}
@@ -361,32 +313,6 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                 <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
               </button>
 
-              {/* AI Trading Copilot */}
-              {onOpenAiCopilot && (
-                <button
-                  id="btn-tool-ai-copilot"
-                  onClick={() => handleSelect(onOpenAiCopilot)}
-                  className="w-full text-left rtl:text-right p-2.5 rounded-xl bg-amber-500/5 hover:bg-amber-500/10 transition-all group flex items-start gap-3 cursor-pointer border border-amber-500/20 hover:border-amber-400/50"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5 group-hover:from-amber-500/30 group-hover:to-orange-500/30 transition-all">
-                    <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors">
-                        AI Trading Copilot
-                      </span>
-                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">
-                        GEMINI AI
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
-                      SMC reaction setups & 20-30 pts SL risk plans
-                    </p>
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-amber-400/60 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
-                </button>
-              )}
 
               {/* 2. Risk Calculator */}
               <button
@@ -402,9 +328,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                     <span className="text-xs font-bold text-slate-200 group-hover:text-amber-300 transition-colors">
                       {t('navRiskCalculator')}
                     </span>
-                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-mono-num">
-                      LOT RISK
-                    </span>
+                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-mono-num">{ui(" LOT RISK ")}</span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
                     {t('navTradingToolsCalcDesc')}
@@ -427,9 +351,7 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                     <span className="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">
                       {t('navCalendar')}
                     </span>
-                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono-num">
-                      MACRO
-                    </span>
+                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono-num">{ui(" MACRO ")}</span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
                     {t('navTradingToolsCalDesc')}
@@ -450,16 +372,10 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">
-                        Coaching Desk
-                      </span>
-                      <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40 font-mono-num">
-                        MENTOR
-                      </span>
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-emerald-300 transition-colors">{ui(" Coaching Desk ")}</span>
+                      <span className="text-[9px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/40 font-mono-num">{ui(" MENTOR ")}</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
-                      Student curriculum milestones & 1-on-1 reviews
-                    </p>
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">{ui(" Student curriculum milestones & 1-on-1 reviews ")}</p>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
                 </button>
@@ -477,16 +393,10 @@ export const TradingToolsMenu: React.FC<TradingToolsMenuProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold text-slate-200 group-hover:text-amber-300 transition-colors">
-                        SMTrading Store
-                      </span>
-                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">
-                        STORE
-                      </span>
+                      <span className="text-xs font-bold text-slate-200 group-hover:text-amber-300 transition-colors">{ui(" SMTrading Store ")}</span>
+                      <span className="text-[9px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 font-mono-num">{ui(" STORE ")}</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">
-                      Institutional indicators & trading strategies
-                    </p>
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-1">{ui(" Institutional indicators & trading strategies ")}</p>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 rtl:rotate-180 transition-all shrink-0 self-center" />
                 </button>

@@ -1,3 +1,6 @@
+import {liveCandleTime} from '../../src/utils/liveCandleTime';
+import { resolveRealtimeTvSymbol } from './marketProviders';
+export { resolveRealtimeTvSymbol } from './marketProviders';
 import { Server as HttpServer } from 'http';
 import { Request, Response } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -10,6 +13,8 @@ export interface PriceTick {
   ask?: number;
   time: number; // Unix timestamp in seconds
   source: string;
+  serverTime?: number;
+  authoritative?: boolean;
 }
 
 export interface BarUpdate {
@@ -42,92 +47,6 @@ export function getIntervalDurationSeconds(interval: string): number {
   return isNaN(parsed) ? 900 : parsed * 60;
 }
 
-// Map user symbol to exact TradingView symbol across all brokers
-export function resolveRealtimeTvSymbol(symbol: string): string {
-  const trimmed = (symbol || 'OANDA:XAUUSD').trim();
-  const upper = trimmed.toUpperCase();
-
-  // 1. Gold across all brokers (OANDA, FOREX.com, Pepperstone, FXCM, Capital.com, IC Markets, Saxo, TVC, BlackBull)
-  if (
-    upper.includes('XAUUSD') ||
-    upper.includes('GOLD') ||
-    upper === 'XAU/USD' ||
-    upper.endsWith(':GOLD') ||
-    upper.endsWith(':XAUUSD')
-  ) {
-    return 'OANDA:XAUUSD';
-  }
-
-  // 2. Nasdaq 100 across all brokers
-  if (
-    upper.includes('NAS100') ||
-    upper.includes('US100') ||
-    upper.includes('USTEC') ||
-    upper === 'NQ' ||
-    upper === 'NQ (NASDAQ)' ||
-    upper === 'NASDAQ' ||
-    upper === 'NASDAQ 100' ||
-    upper === 'NASDAQ100'
-  ) {
-    return 'OANDA:NAS100USD';
-  }
-
-  // 3. Dow Jones 30 across all brokers
-  if (
-    upper.includes('US30') ||
-    upper.includes('US3O') ||
-    upper.includes('DJ30') ||
-    upper.includes('WALLSTREET') ||
-    upper.includes('DOW')
-  ) {
-    return 'OANDA:US30USD';
-  }
-
-  // 4. DAX 40 across all brokers
-  if (
-    upper.includes('GER40') ||
-    upper.includes('DE30') ||
-    upper.includes('DE40') ||
-    upper.includes('DAX') ||
-    upper.includes('GERMANY40')
-  ) {
-    return 'OANDA:DE30EUR';
-  }
-
-  // 5. Forex EUR/USD across all brokers
-  if (upper.includes('EURUSD') || upper.includes('EUR/USD')) {
-    return 'OANDA:EURUSD';
-  }
-
-  // 6. Forex GBP/USD across all brokers
-  if (upper.includes('GBPUSD') || upper.includes('GBP/USD')) {
-    return 'OANDA:GBPUSD';
-  }
-
-  // 7. Crypto Bitcoin across all brokers (Binance, Bybit, etc.)
-  if (upper.includes('BTCUSD') || upper.includes('BTCUSDT') || upper.includes('BITCOIN')) {
-    return 'BINANCE:BTCUSDT';
-  }
-
-  // 8. Crypto Ethereum across all brokers
-  if (upper.includes('ETHUSD') || upper.includes('ETHUSDT') || upper.includes('ETHEREUM')) {
-    return 'BINANCE:ETHUSDT';
-  }
-
-  // 9. Futures
-  if (upper.includes('ES1!') || upper.includes('SPX') || upper.includes('US500') || upper.includes('SP500')) return 'CME_MINI:ES1!';
-  if (upper.includes('NQ1!')) return 'CME_MINI:NQ1!';
-
-  // 10. Equities & Macro
-  if (upper.includes('NVDA')) return 'NASDAQ:NVDA';
-  if (upper.includes('DXY') || upper.includes('USDX')) return 'CAPITALCOM:DXY';
-
-  if (trimmed.includes(':')) {
-    return trimmed;
-  }
-  return `OANDA:${upper}`;
-}
-
 interface SymbolSubscription {
   tvSymbol: string;
   rawSymbol: string;
@@ -140,6 +59,20 @@ interface SymbolSubscription {
 }
 
 class MarketStreamManager {
+  private recentBars=new Map<string,BarUpdate['bar'][]>();
+  private tickListeners=new Set<(symbol:string,bar:BarUpdate['bar'],time:number)=>void>();
+  public onFiveMinuteBar(fn:(symbol:string,bar:BarUpdate['bar'],time:number)=>void) {
+    this.tickListeners.add(fn);return()=>{this.tickListeners.delete(fn);};
+  }
+  public getCurrentBar(rawSymbol:string,interval:string) {
+    return this.subscriptions.get(resolveRealtimeTvSymbol(rawSymbol))?.activeBars.get(interval);
+  }
+  public mergeCurrentBars(rawSymbol:string,interval:string,candles:BarUpdate['bar'][]) {
+    const key=JSON.stringify([resolveRealtimeTvSymbol(rawSymbol),interval]);
+    const byTime=new Map(candles.map(c=>[c.time,c]));
+    for(const bar of this.recentBars.get(key)||[])byTime.set(bar.time,bar);
+    return [...byTime.values()].sort((a,b)=>a.time-b.time);
+  }
   private tvClient: ReturnType<typeof tv> | null = null;
   private subscriptions = new Map<string, SymbolSubscription>(); // tvSymbol -> SymbolSubscription
   private sseClients = new Set<{ res: Response; rawSymbol: string; tvSymbol: string; interval: string }>();
@@ -150,7 +83,7 @@ class MarketStreamManager {
     // Keep alive broadcast / heartbeat every 15s to keep connections alive through proxies
     setInterval(() => {
       this.sendHeartbeats();
-    }, 15000);
+    }, 15000).unref();
   }
 
   public getTvClient() {
@@ -180,7 +113,13 @@ class MarketStreamManager {
       const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
       const rawSymbol = url.searchParams.get('symbol') || 'OANDA:XAUUSD';
       const interval = url.searchParams.get('interval') || '15';
-      const tvSymbol = resolveRealtimeTvSymbol(rawSymbol);
+      let tvSymbol: string;
+      try {
+        tvSymbol = resolveRealtimeTvSymbol(rawSymbol);
+      } catch {
+        ws.close(1008, 'Only OANDA and Binance Bitcoin are supported.');
+        return;
+      }
 
       const clientEntry = { ws, rawSymbol, tvSymbol, interval };
       this.wsClients.add(clientEntry);
@@ -188,7 +127,7 @@ class MarketStreamManager {
 
       // Send initial connected confirmation
       try {
-        ws.send(JSON.stringify({ type: 'connected', symbol: rawSymbol, tvSymbol, time: Date.now() }));
+        ws.send(JSON.stringify({ type: 'connected', symbol: rawSymbol, tvSymbol, time: Date.now(), serverTime: Date.now() }));
       } catch {}
 
       // Send immediate last known state if available
@@ -198,7 +137,7 @@ class MarketStreamManager {
           ws.send(JSON.stringify({ type: 'tick', ...sub.lastTick }));
           const currentBar = sub.activeBars.get(interval);
           if (currentBar) {
-            ws.send(JSON.stringify({ type: 'bar', symbol: rawSymbol, interval, bar: currentBar }));
+            ws.send(JSON.stringify({ type: 'bar', symbol: rawSymbol, interval, bar: currentBar, authoritative:true, serverTime:Date.now() }));
           }
         } catch {}
       }
@@ -208,8 +147,9 @@ class MarketStreamManager {
           const parsed = JSON.parse(message.toString());
           if (parsed.type === 'subscribe' && parsed.symbol) {
             const oldTv = clientEntry.tvSymbol;
+            const nextTvSymbol = resolveRealtimeTvSymbol(parsed.symbol);
             clientEntry.rawSymbol = parsed.symbol;
-            clientEntry.tvSymbol = resolveRealtimeTvSymbol(parsed.symbol);
+            clientEntry.tvSymbol = nextTvSymbol;
             if (parsed.interval) clientEntry.interval = parsed.interval;
 
             if (oldTv !== clientEntry.tvSymbol) {
@@ -221,20 +161,21 @@ class MarketStreamManager {
             const newSub = this.subscriptions.get(clientEntry.tvSymbol);
             if (newSub?.lastTick) {
               ws.send(JSON.stringify({ type: 'tick', ...newSub.lastTick }));
+              const bar=newSub.activeBars.get(clientEntry.interval);
+              if(bar)ws.send(JSON.stringify({type:'bar',symbol:clientEntry.rawSymbol,interval:clientEntry.interval,bar,authoritative:true,serverTime:Date.now()}));
             }
           }
-        } catch {}
+        } catch {
+          ws.send(JSON.stringify({ type: 'error', error: 'Only OANDA and Binance Bitcoin are supported.' }));
+        }
       });
 
-      ws.on('close', () => {
-        this.wsClients.delete(clientEntry);
-        this.unsubscribeSymbol(tvSymbol);
-      });
+      const release=()=>{
+        if(this.wsClients.delete(clientEntry))this.unsubscribeSymbol(clientEntry.tvSymbol);
+      };
+      ws.on('close',release);
+      ws.on('error',release);
 
-      ws.on('error', () => {
-        this.wsClients.delete(clientEntry);
-        this.unsubscribeSymbol(tvSymbol);
-      });
     });
 
     console.log('[MarketStream] WebSocket server mounted on /api/market/ws');
@@ -260,7 +201,7 @@ class MarketStreamManager {
     this.subscribeSymbol(tvSymbol, rawSymbol);
 
     // Send initial connected confirmation
-    res.write(`data: ${JSON.stringify({ type: 'connected', symbol: rawSymbol, tvSymbol, time: Date.now() })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'connected', symbol: rawSymbol, tvSymbol, time: Date.now(), serverTime: Date.now() })}\n\n`);
 
     // Send latest available tick immediately
     const sub = this.subscriptions.get(tvSymbol);
@@ -268,7 +209,7 @@ class MarketStreamManager {
       res.write(`data: ${JSON.stringify({ type: 'tick', ...sub.lastTick })}\n\n`);
       const currentBar = sub.activeBars.get(interval);
       if (currentBar) {
-        res.write(`data: ${JSON.stringify({ type: 'bar', symbol: rawSymbol, interval, bar: currentBar })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'bar', symbol: rawSymbol, interval, bar: currentBar, authoritative:true, serverTime:Date.now() })}\n\n`);
       }
     }
 
@@ -279,6 +220,7 @@ class MarketStreamManager {
   }
 
   public subscribeSymbol(tvSymbol: string, rawSymbol: string) {
+    resolveRealtimeTvSymbol(tvSymbol);
     let sub = this.subscriptions.get(tvSymbol);
     if (!sub) {
       sub = {
@@ -316,12 +258,12 @@ class MarketStreamManager {
   }
 
   private startUpstreamStream(sub: SymbolSubscription) {
-    // 1. If Crypto (e.g. BTCUSDT), we also attach direct Binance WebSocket for ultra-high-frequency millisecond ticks
-    if (sub.tvSymbol.includes('BTCUSDT') || sub.rawSymbol.includes('BTC')) {
+    // Direct Binance ticks are only enabled for Bitcoin.
+    if (sub.tvSymbol === 'BINANCE:BTCUSDT') {
       this.startBinanceStream(sub);
     }
 
-    // 2. Primary TradingView Stream for Forex, Gold (OANDA:XAUUSD), Indices, and Futures
+    // TradingView transports the selected OANDA or Binance feed.
     this.startTradingViewStream(sub);
   }
 
@@ -459,7 +401,23 @@ class MarketStreamManager {
   }
 
   private handleIncomingTick(sub: SymbolSubscription, tick: PriceTick) {
+    if(this.subscriptions.get(sub.tvSymbol)!==sub)return;
+    const now=Date.now();
+    if(!Number.isFinite(tick.time)||tick.time>now/1000+60 || tick.time<(sub.lastTick?.time||0))return;
+    if(sub.lastTick?.time===tick.time&&sub.lastTick.price===tick.price)return;
+    tick={...tick,serverTime:now,authoritative:true};
     sub.lastTick = tick;
+    // Aggregate once, preserving the provider's historical/session bucket alignment.
+    for(const [interval,last] of sub.activeBars) {
+      if(tick.time<last.time)continue;
+      const time=liveCandleTime(tick.time,last.time,getIntervalDurationSeconds(interval));
+      const bar=time===last.time
+        ? {...last,high:Math.max(last.high,tick.price),low:Math.min(last.low,tick.price),close:tick.price}
+        : {time,open:tick.price,high:tick.price,low:tick.price,close:tick.price,volume:0};
+      sub.activeBars.set(interval,bar);
+      this.broadcastBar(sub.tvSymbol,interval,bar,now);
+      if(interval==='5')for(const fn of this.tickListeners)fn(sub.tvSymbol,bar,now);
+    }
 
     // 1. Dispatch to SSE clients
     for (const client of this.sseClients) {
@@ -469,6 +427,7 @@ class MarketStreamManager {
         this.isMatchingSymbol(client.rawSymbol, sub.rawSymbol, sub.tvSymbol)
       ) {
         try {
+          if(client.res.writableLength>262144){client.res.destroy();continue;}
           const clientTickMsg = JSON.stringify({
             type: 'tick',
             ...tick,
@@ -491,6 +450,7 @@ class MarketStreamManager {
       ) {
         try {
           if (client.ws.readyState === WebSocket.OPEN) {
+            if(client.ws.bufferedAmount>262144){client.ws.close(1013,'Reconnect for current state');continue;}
             const clientTickMsg = JSON.stringify({
               type: 'tick',
               ...tick,
@@ -509,16 +469,27 @@ class MarketStreamManager {
   public updateLiveCandleInCache(rawSymbol: string, interval: string, bar: BarUpdate['bar']) {
     const tvSymbol = resolveRealtimeTvSymbol(rawSymbol);
     const sub = this.subscriptions.get(tvSymbol);
-    if (sub) {
-      sub.activeBars.set(interval, bar);
-    }
+    if(!sub)return;
+    const current=sub.activeBars.get(interval);
+    // A background history response must never overwrite a live bucket.
+    if(current && current.time>=bar.time)return;
+    sub.activeBars.set(interval,{...bar});
+    this.broadcastBar(tvSymbol,interval,bar,Date.now());
+  }
 
-    // Broadcast bar update to all clients
-    const barMsg = JSON.stringify({ type: 'bar', symbol: rawSymbol, interval, bar });
+  private broadcastBar(tvSymbol:string,interval:string,bar:BarUpdate['bar'],serverTime:number) {
+    const rawSymbol=tvSymbol;
+    const key=JSON.stringify([tvSymbol,interval]);
+    const history=this.recentBars.get(key)||[];
+    if(history.at(-1)?.time===bar.time)history[history.length-1]={...bar};
+    else if(!history.length||history.at(-1)!.time<bar.time)history.push({...bar});
+    this.recentBars.set(key,history.slice(-500));
+    const barMsg=JSON.stringify({type:'bar',symbol:tvSymbol,tvSymbol,interval,bar,serverTime,authoritative:true});
 
     for (const client of this.sseClients) {
       if ((client.tvSymbol === tvSymbol || client.rawSymbol === rawSymbol) && client.interval === interval) {
         try {
+          if(client.res.writableLength>262144){client.res.destroy();continue;}
           client.res.write(`data: ${barMsg}\n\n`);
         } catch {
           this.sseClients.delete(client);
@@ -530,6 +501,7 @@ class MarketStreamManager {
       if ((client.tvSymbol === tvSymbol || client.rawSymbol === rawSymbol) && client.interval === interval) {
         try {
           if (client.ws.readyState === WebSocket.OPEN) {
+            if(client.ws.bufferedAmount>262144){client.ws.close(1013,'Reconnect for current state');continue;}
             client.ws.send(barMsg);
           }
         } catch {
@@ -548,7 +520,7 @@ class MarketStreamManager {
     // Keep-alive comments for SSE
     for (const client of this.sseClients) {
       try {
-        client.res.write(`: ping ${Date.now()}\n\n`);
+        client.res.write(`data: ${JSON.stringify({type:'clock',serverTime:Date.now()})}\n\n`);
       } catch {
         this.sseClients.delete(client);
       }
@@ -558,6 +530,7 @@ class MarketStreamManager {
     for (const client of this.wsClients) {
       try {
         if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(JSON.stringify({type:'clock',serverTime:Date.now()}));
           client.ws.ping();
         }
       } catch {

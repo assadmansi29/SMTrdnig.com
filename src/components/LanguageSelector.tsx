@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Globe, ChevronDown, Check, X } from 'lucide-react';
@@ -5,6 +6,7 @@ import { useTranslation } from '../context/LanguageContext';
 import { LanguageCode } from '../locales';
 
 export const LanguageSelector: React.FC = () => {
+  const ui = useInterfaceText();
   const { language, setLanguage, availableLanguages, currentLanguage, isRTL } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -57,15 +59,15 @@ export const LanguageSelector: React.FC = () => {
               <Globe className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-white truncate">Select Language / اختر اللغة</h3>
-              <p className="text-xs text-slate-400 font-mono truncate">SMTrading International Desk</p>
+              <h3 className="text-base font-bold text-white truncate">{ui("Select Language / اختر اللغة")}</h3>
+              <p className="text-xs text-slate-400 font-mono truncate">{ui("SMTrading International Desk")}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setIsOpen(false)}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-            aria-label="Close language selector"
+            aria-label={ui("Close language selector")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -123,7 +125,7 @@ export const LanguageSelector: React.FC = () => {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         aria-haspopup="true"
-        aria-label="Select language"
+        aria-label={ui("Select language")}
         className="w-full flex items-center justify-between gap-1 sm:gap-1.5 h-[30px] sm:h-9 sm:min-h-[36px] px-1.5 sm:px-2 bg-[#090D17] hover:bg-slate-800 text-slate-200 hover:text-amber-400 border border-slate-700/80 hover:border-amber-400/40 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold transition-all shadow-xs sm:shadow-sm cursor-pointer whitespace-nowrap active:scale-[0.97]"
       >
         <span className="flex items-center gap-1 sm:gap-1.5 min-w-0">

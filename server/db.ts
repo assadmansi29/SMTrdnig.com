@@ -255,6 +255,20 @@ let pool: PgPool | null = null;
 let initPromise: Promise<boolean> | null = null;
 let isPostgresHealthy = false;
 
+export function isLocalDatabaseReadOnly(): boolean {
+  return process.env.LOCAL_DATABASE_READ_ONLY === 'true'
+    && process.env.RENDER !== 'true'
+    && process.env.NODE_ENV !== 'production';
+}
+
+function localConnectionString(connectionString: string): string {
+  if (!isLocalDatabaseReadOnly()) return connectionString;
+  const url = new URL(connectionString);
+  // Apply to every pooled connection before any SQL can run.
+  url.searchParams.set('options', '-c default_transaction_read_only=on');
+  return url.toString();
+}
+
 export function isDatabaseHealthy(): boolean {
   return isPostgresHealthy;
 }
@@ -347,7 +361,7 @@ export function getPool(): PgPool | null {
   if (cachedResolvedConfig) {
     try {
       const config: PoolConfig = {
-        connectionString: cachedResolvedConfig.connectionString,
+        connectionString: localConnectionString(cachedResolvedConfig.connectionString),
         ssl: cachedResolvedConfig.ssl,
         max: parseInt(process.env.DB_POOL_MAX || '20', 10),
         min: parseInt(process.env.DB_POOL_MIN || '0', 10),
@@ -377,7 +391,7 @@ export function getPool(): PgPool | null {
     const isRenderEnv = process.env.RENDER === 'true';
 
     const config: PoolConfig = {
-      connectionString: rawConnectionString,
+      connectionString: localConnectionString(rawConnectionString),
       ssl: (isInternal && isRenderEnv) ? false : (hostname === 'localhost' || hostname === '127.0.0.1' ? false : { rejectUnauthorized: false }),
       max: parseInt(process.env.DB_POOL_MAX || '20', 10),
       min: parseInt(process.env.DB_POOL_MIN || '0', 10),
@@ -490,6 +504,16 @@ export async function isPostgresReady(): Promise<boolean> {
       if (!p) return false;
       const client = await p.connect();
       try {
+        if (isLocalDatabaseReadOnly()) {
+          const mode = await client.query('SHOW transaction_read_only');
+          if (mode.rows[0]?.transaction_read_only !== 'on') {
+            throw new Error('Local database connection must be read-only.');
+          }
+          await client.query('SELECT id FROM users LIMIT 0');
+          isPostgresHealthy = true;
+          console.log('[PostgreSQL] Local read-only connection ready; migrations skipped.');
+          return true;
+        }
         // Ensure user timezone and notification preference columns exist in PostgreSQL
         await client.query(`
           ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(100);

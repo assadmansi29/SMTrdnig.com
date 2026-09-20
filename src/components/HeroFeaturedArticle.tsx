@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { Article } from '../types';
 import { Clock, Eye, Bookmark, ArrowRight, Sparkles, TrendingUp, ShieldCheck, Flame } from 'lucide-react';
@@ -18,6 +19,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
   isBookmarked,
   onToggleBookmark
 }) => {
+  const ui = useInterfaceText();
   const { abuAsadAvatar } = useAbuAsadAvatar();
   const avatarSrc = article.author.name.includes('Abu Asad') ? abuAsadAvatar : article.author.avatar;
   return (
@@ -31,9 +33,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
           {/* Top badges */}
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-amber-400/20">
-              <Flame className="w-3.5 h-3.5" />
-              Lead Quantitative Deep-Dive
-            </span>
+              <Flame className="w-3.5 h-3.5" />{ui(" Lead Quantitative Deep-Dive ")}</span>
             <span className="bg-slate-900/90 text-amber-300 text-xs font-semibold px-3 py-1 rounded-full border border-amber-400/30">
               {article.category}
             </span>
@@ -59,8 +59,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
           {article.summary[0] && (
             <div className="p-3.5 bg-[#070A10]/90 border border-slate-800 rounded-xl space-y-1 text-xs">
               <span className="text-amber-400 font-bold flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
-                <Sparkles className="w-3.5 h-3.5" /> Executive Takeaway
-              </span>
+                <Sparkles className="w-3.5 h-3.5" />{ui(" Executive Takeaway ")}</span>
               <p className="text-slate-300 leading-relaxed">{article.summary[0]}</p>
             </div>
           )}
@@ -86,9 +85,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
                     <span className="text-xs font-extrabold text-white">Abu Asad Almansi</span>
                     <BlueVerifiedBadge size="sm" />
                   </div>
-                  <span className="text-[11px] text-amber-300/90 font-medium">
-                    Manager
-                  </span>
+                  <span className="text-[11px] text-amber-300/90 font-medium">{ui(" Manager ")}</span>
                 </div>
               </div>
 
@@ -130,7 +127,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
                     ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-md'
                     : 'bg-slate-900 text-slate-300 hover:text-white border-slate-800'
                 }`}
-                title="Save Article"
+                title={ui("Save Article")}
               >
                 <Bookmark className="w-4 h-4" fill={isBookmarked ? 'currentColor' : 'none'} />
               </button>
@@ -139,7 +136,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
                 onClick={() => onSelectArticle(article)}
                 className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/20 group-hover:translate-x-0.5 cursor-pointer"
               >
-                <span>Read Full Research</span>
+                <span>{ui("Read Full Research")}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -162,7 +159,7 @@ export const HeroFeaturedArticle: React.FC<HeroFeaturedArticleProps> = ({
             {article.tradeSetup && (
               <div className="absolute bottom-3 left-3 right-3 bg-[#0B0F19]/95 backdrop-blur-md p-3 rounded-xl border border-emerald-500/40 flex items-center justify-between text-xs font-mono-num">
                 <div>
-                  <span className="text-emerald-400 font-bold block text-[10px]">SMTrading Active Setup</span>
+                  <span className="text-emerald-400 font-bold block text-[10px]">{ui("SMTrading Active Setup")}</span>
                   <span className="text-white font-bold">{article.tradeSetup.asset} ({article.tradeSetup.direction})</span>
                 </div>
                 <span className="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-1 rounded">

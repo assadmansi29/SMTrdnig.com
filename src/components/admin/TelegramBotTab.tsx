@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../../hooks/useInterfaceText';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Send, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Clock, Globe, ShieldCheck, Zap, Bell, Check, Sparkles, Database, Terminal, ArrowRight } from 'lucide-react';
 
@@ -62,6 +63,7 @@ const COMMON_TIMEZONES = [
 ];
 
 export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
+  const ui = useInterfaceText();
   const [loading, setLoading] = useState(true);
   const [scheduler, setScheduler] = useState<SchedulerStatus | null>(null);
   const [stats, setStats] = useState<EconomicStats | null>(null);
@@ -292,14 +294,10 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
         <div>
           <div className="flex items-center gap-2">
             <Send className="w-5 h-5 text-sky-400" />
-            <h3 className="text-base font-bold text-white">News & Economic Events Telegram Bot</h3>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              Arabic Alerts 🇸🇦
-            </span>
+            <h3 className="text-base font-bold text-white">{ui("News & Economic Events Telegram Bot")}</h3>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">{ui(" Arabic Alerts 🇸🇦 ")}</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time event detector and professional Arabic reminder engine (60m, 30m, 5m + Live Releases) powered by BiQuote & PostgreSQL.
-          </p>
+          <p className="text-xs text-slate-400 mt-1">{ui(" Real-time event detector and professional Arabic reminder engine (60m, 30m, 5m + Live Releases) powered by BiQuote & PostgreSQL. ")}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -308,10 +306,10 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             onClick={fetchStatusAndEvents}
             disabled={loading}
             className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Refresh Status"
+            title={ui("Refresh Status")}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{ui("Refresh")}</span>
           </button>
 
           <button
@@ -319,10 +317,10 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             onClick={handleCleanCalendarDb}
             disabled={cleanLoading}
             className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Purge stale Sept 4 events & resync fresh live calendar"
+            title={ui("Purge stale Sept 4 events & resync fresh live calendar")}
           >
             <Database className={`w-3.5 h-3.5 ${cleanLoading ? 'animate-spin' : ''}`} />
-            <span>{cleanLoading ? 'Cleaning DB...' : 'Clean Calendar DB'}</span>
+            <span>{cleanLoading ? ui("Cleaning DB...") : ui("Clean Calendar DB")}</span>
           </button>
 
           <button
@@ -330,10 +328,10 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             onClick={handleDebugPipeline}
             disabled={debugLoading}
             className="px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Trace API -> Backend -> DB -> Client Pipeline"
+            title={ui("Trace API -> Backend -> DB -> Client Pipeline")}
           >
             <Terminal className={`w-3.5 h-3.5 ${debugLoading ? 'animate-spin' : ''}`} />
-            <span>{debugLoading ? 'Tracing...' : 'Debug API Pipeline'}</span>
+            <span>{debugLoading ? ui("Tracing...") : ui("Debug API Pipeline")}</span>
           </button>
 
           <button
@@ -343,7 +341,7 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <Zap className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
-            <span>{syncLoading ? 'Syncing...' : 'Sync Calendar Now'}</span>
+            <span>{syncLoading ? ui("Syncing...") : ui("Sync Calendar Now")}</span>
           </button>
 
           <button
@@ -353,7 +351,7 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-sky-500/20"
           >
             <Send className={`w-3.5 h-3.5 ${testLoading ? 'animate-spin' : ''}`} />
-            <span>{testLoading ? 'Dispatching...' : 'Send Arabic Test Alert'}</span>
+            <span>{testLoading ? ui("Dispatching...") : ui("Send Arabic Test Alert")}</span>
           </button>
         </div>
       </div>
@@ -364,7 +362,7 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
           <div className="flex items-center justify-between border-b border-violet-500/20 pb-3">
             <div className="flex items-center gap-2">
               <Terminal className="w-5 h-5 text-violet-400" />
-              <h4 className="text-sm font-black text-white uppercase tracking-wider">Live Economic Calendar Pipeline Trace</h4>
+              <h4 className="text-sm font-black text-white uppercase tracking-wider">{ui("Live Economic Calendar Pipeline Trace")}</h4>
               <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                 debugData.diagnosis?.overallStatus === 'HEALTHY_AND_CURRENT'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
@@ -376,22 +374,20 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             <button
               onClick={() => setShowDebugModal(false)}
               className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800"
-            >
-              Close Trace
-            </button>
+            >{ui(" Close Trace ")}</button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
             {/* Step 1 */}
             <div className="bg-[#070A12] p-3.5 rounded-xl border border-slate-800 space-y-2">
               <div className="font-bold text-slate-300 flex items-center justify-between">
-                <span>1. External API (BiQuote)</span>
+                <span>{ui("1. External API (BiQuote)")}</span>
                 <span className="text-emerald-400">{debugData.steps?.step1_externalApi?.status}</span>
               </div>
               <p className="text-[11px] text-slate-400 font-mono truncate">{debugData.steps?.step1_externalApi?.url}</p>
               <div className="text-[11px] text-slate-300 space-y-1">
-                <div>Latency: <span className="text-sky-300 font-mono">{debugData.steps?.step1_externalApi?.latencyMs}ms</span></div>
-                <div className="text-[10px] text-slate-400">Sample verified upcoming:</div>
+                <div>{ui("Latency: ")}<span className="text-sky-300 font-mono">{debugData.steps?.step1_externalApi?.latencyMs}ms</span></div>
+                <div className="text-[10px] text-slate-400">{ui("Sample verified upcoming:")}</div>
                 {debugData.steps?.step1_externalApi?.sampleRawUpcoming?.map((item: any) => (
                   <div key={item.id} className="truncate bg-slate-900/80 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-300">
                     {item.time?.split('T')[0]} {item.name} ({item.country})
@@ -403,14 +399,14 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             {/* Step 2 */}
             <div className="bg-[#070A12] p-3.5 rounded-xl border border-slate-800 space-y-2">
               <div className="font-bold text-slate-300 flex items-center justify-between">
-                <span>2. PostgreSQL DB</span>
-                <span className="text-emerald-400">Connected</span>
+                <span>{ui("2. PostgreSQL DB")}</span>
+                <span className="text-emerald-400">{ui("Connected")}</span>
               </div>
               <div className="space-y-1 text-[11px] text-slate-300">
-                <div>Total Events in DB: <span className="font-mono font-bold text-white">{debugData.steps?.step2_postgresqlDb?.totalRecordsInDb}</span></div>
-                <div>Stale Sept 4 Records: <span className={`font-mono font-bold ${debugData.steps?.step2_postgresqlDb?.staleSept4RecordsCount === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{debugData.steps?.step2_postgresqlDb?.staleSept4RecordsCount}</span></div>
-                <div>Today (Sept 11) Records: <span className="font-mono font-bold text-emerald-400">{debugData.steps?.step2_postgresqlDb?.todaySept11RecordsCount}</span></div>
-                <div className="text-[10px] text-slate-400 pt-1">Active dates in DB:</div>
+                <div>{ui("Total Events in DB: ")}<span className="font-mono font-bold text-white">{debugData.steps?.step2_postgresqlDb?.totalRecordsInDb}</span></div>
+                <div>{ui("Stale Sept 4 Records: ")}<span className={`font-mono font-bold ${debugData.steps?.step2_postgresqlDb?.staleSept4RecordsCount === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{debugData.steps?.step2_postgresqlDb?.staleSept4RecordsCount}</span></div>
+                <div>{ui("Today (Sept 11) Records: ")}<span className="font-mono font-bold text-emerald-400">{debugData.steps?.step2_postgresqlDb?.todaySept11RecordsCount}</span></div>
+                <div className="text-[10px] text-slate-400 pt-1">{ui("Active dates in DB:")}</div>
                 <div className="flex flex-wrap gap-1">
                   {debugData.steps?.step2_postgresqlDb?.datesBreakdown?.map((d: any) => (
                     <span key={d.day} className="px-1.5 py-0.5 bg-slate-800 rounded text-[9px] font-mono text-cyan-300">
@@ -424,10 +420,10 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
             {/* Step 3 */}
             <div className="bg-[#070A12] p-3.5 rounded-xl border border-slate-800 space-y-2">
               <div className="font-bold text-slate-300 flex items-center justify-between">
-                <span>3. Client API Response</span>
-                <span className="text-emerald-400">Live Active</span>
+                <span>{ui("3. Client API Response")}</span>
+                <span className="text-emerald-400">{ui("Live Active")}</span>
               </div>
-              <div className="text-[10px] text-slate-400">First items in /api/economic-calendar:</div>
+              <div className="text-[10px] text-slate-400">{ui("First items in /api/economic-calendar:")}</div>
               <div className="space-y-1">
                 {debugData.steps?.step3_apiResponsePreview?.sampleTopEvents?.map((item: any) => (
                   <div key={item.id} className="bg-slate-900/80 px-1.5 py-1 rounded text-[10px] font-mono text-slate-200">
@@ -466,14 +462,12 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white">Telegram Broadcast Timezone</span>
+              <span className="text-sm font-bold text-white">{ui("Telegram Broadcast Timezone")}</span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
                 {selectedTimezone}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              All UTC event times will be converted and displayed according to this timezone in Arabic Telegram reminders.
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{ui(" All UTC event times will be converted and displayed according to this timezone in Arabic Telegram reminders. ")}</p>
           </div>
         </div>
 
@@ -499,57 +493,47 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
         {/* Telegram Configuration */}
         <div className="p-4 bg-[#070A11] border border-slate-800 rounded-2xl space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Telegram Channel</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{ui("Telegram Channel")}</span>
             {scheduler?.telegramConfigured ? (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Connected
-              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{ui(" Connected ")}</span>
             ) : (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Awaiting Credentials
-              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">{ui(" Awaiting Credentials ")}</span>
             )}
           </div>
           <div className="text-xs space-y-1 font-mono-num text-slate-300">
-            <div>Channel: <span className="text-white font-bold">{scheduler?.telegramDetails?.channelId || 'Not set'}</span></div>
-            <div>Bot Token: <span className="text-slate-400">{scheduler?.telegramDetails?.tokenMasked || 'Not set'}</span></div>
-            <div>Alert Language: <span className="text-amber-400 font-bold">Arabic (العربية)</span></div>
+            <div>{ui("Channel: ")}<span className="text-white font-bold">{scheduler?.telegramDetails?.channelId || ui("Not set")}</span></div>
+            <div>{ui("Bot Token: ")}<span className="text-slate-400">{scheduler?.telegramDetails?.tokenMasked || ui("Not set")}</span></div>
+            <div>{ui("Alert Language: ")}<span className="text-amber-400 font-bold">{ui("Arabic (العربية)")}</span></div>
           </div>
         </div>
 
         {/* Data Provider: BiQuote */}
         <div className="p-4 bg-[#070A11] border border-slate-800 rounded-2xl space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">BiQuote Market Feed</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{ui("BiQuote Market Feed")}</span>
             {scheduler?.biquoteConfigured ? (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Active & Verified
-              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{ui(" Active & Verified ")}</span>
             ) : (
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Offline
-              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">{ui(" Offline ")}</span>
             )}
           </div>
           <div className="text-xs space-y-1 font-mono-num text-slate-300">
-            <div>Provider: <span className="text-white font-bold">{scheduler?.biquoteUrl || 'biquote.io'}</span></div>
-            <div>Calendar Sync: <span className="text-amber-300 font-bold">Every 15 Minutes</span></div>
-            <div>Live Actuals: <span className="text-cyan-300 font-bold">Every 25s (Active Windows)</span></div>
+            <div>{ui("Provider: ")}<span className="text-white font-bold">{scheduler?.biquoteUrl || ui("biquote.io")}</span></div>
+            <div>{ui("Calendar Sync: ")}<span className="text-amber-300 font-bold">{ui("Every 15 Minutes")}</span></div>
+            <div>{ui("Live Actuals: ")}<span className="text-cyan-300 font-bold">{ui("Every 25s (Active Windows)")}</span></div>
           </div>
         </div>
 
         {/* PostgreSQL Database & Deduplication */}
         <div className="p-4 bg-[#070A11] border border-slate-800 rounded-2xl space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">PostgreSQL Persistence</span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              Zero Duplicates Guaranteed
-            </span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{ui("PostgreSQL Persistence")}</span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">{ui(" Zero Duplicates Guaranteed ")}</span>
           </div>
           <div className="text-xs space-y-1 font-mono-num text-slate-300">
-            <div>Constraint: <span className="text-purple-300">UNIQUE(event_id, type)</span></div>
-            <div>Survives Restarts: <span className="text-emerald-400 font-bold">Yes (Persistent DB)</span></div>
-            <div>Time Storage: <span className="text-white font-bold">TIMESTAMPTZ (UTC)</span></div>
+            <div>{ui("Constraint: ")}<span className="text-purple-300">UNIQUE(event_id, type)</span></div>
+            <div>{ui("Survives Restarts: ")}<span className="text-emerald-400 font-bold">{ui("Yes (Persistent DB)")}</span></div>
+            <div>{ui("Time Storage: ")}<span className="text-white font-bold">TIMESTAMPTZ (UTC)</span></div>
           </div>
         </div>
       </div>
@@ -557,23 +541,23 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="p-3 bg-[#080C14] border border-slate-800 rounded-xl text-center">
-          <span className="text-[10px] uppercase font-bold text-slate-500 block">Events Stored</span>
+          <span className="text-[10px] uppercase font-bold text-slate-500 block">{ui("Events Stored")}</span>
           <span className="text-lg font-black text-white font-mono-num">{stats?.totalEventsTracked ?? 0}</span>
         </div>
         <div className="p-3 bg-[#080C14] border border-slate-800 rounded-xl text-center">
-          <span className="text-[10px] uppercase font-bold text-amber-400 block">High & Very High</span>
+          <span className="text-[10px] uppercase font-bold text-amber-400 block">{ui("High & Very High")}</span>
           <span className="text-lg font-black text-amber-300 font-mono-num">{stats?.highImpactCount ?? 0}</span>
         </div>
         <div className="p-3 bg-[#080C14] border border-slate-800 rounded-xl text-center">
-          <span className="text-[10px] uppercase font-bold text-emerald-400 block">Sent Alerts</span>
+          <span className="text-[10px] uppercase font-bold text-emerald-400 block">{ui("Sent Alerts")}</span>
           <span className="text-lg font-black text-emerald-300 font-mono-num">{stats?.notificationsSent ?? 0}</span>
         </div>
         <div className="p-3 bg-[#080C14] border border-slate-800 rounded-xl text-center">
-          <span className="text-[10px] uppercase font-bold text-sky-400 block">Pending Queue</span>
+          <span className="text-[10px] uppercase font-bold text-sky-400 block">{ui("Pending Queue")}</span>
           <span className="text-lg font-black text-sky-300 font-mono-num">{stats?.notificationsPending ?? 0}</span>
         </div>
         <div className="p-3 bg-[#080C14] border border-slate-800 rounded-xl text-center">
-          <span className="text-[10px] uppercase font-bold text-rose-400 block">Failed / Retried</span>
+          <span className="text-[10px] uppercase font-bold text-rose-400 block">{ui("Failed / Retried")}</span>
           <span className="text-lg font-black text-rose-300 font-mono-num">{stats?.notificationsFailed ?? 0}</span>
         </div>
       </div>
@@ -583,9 +567,7 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              قوالب التنبيهات الاحترافية المعتمدة (Telegram Alert Preview)
-            </h4>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">{ui(" قوالب التنبيهات الاحترافية المعتمدة (Telegram Alert Preview) ")}</h4>
           </div>
 
           <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
@@ -595,26 +577,22 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 previewTab === 'reminder' ? 'bg-sky-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
               }`}
-            >
-              تنبيه تذكيري مسبق (Reminder)
-            </button>
+            >{ui(" تنبيه تذكيري مسبق (Reminder) ")}</button>
             <button
               type="button"
               onClick={() => setPreviewTab('release')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 previewTab === 'release' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
               }`}
-            >
-              تنبيه صدور الخبر (Live Actual)
-            </button>
+            >{ui(" تنبيه صدور الخبر (Live Actual) ")}</button>
           </div>
         </div>
 
         {/* Telegram Message Mockup Card */}
         <div className="max-w-lg mx-auto bg-[#0E1626] border border-slate-700/80 rounded-2xl p-5 shadow-2xl text-right font-sans" dir="rtl">
           <div className="flex items-center justify-between border-b border-slate-700/60 pb-2.5 mb-3 text-xs text-slate-400">
-            <span className="font-bold text-sky-400">SMTrading.pro Bot</span>
-            <span className="font-mono text-[10px]">HTML Mode • {selectedTimezone}</span>
+            <span className="font-bold text-sky-400">{ui("SMTrading.pro Bot")}</span>
+            <span className="font-mono text-[10px]">{ui("HTML Mode •")}{selectedTimezone}</span>
           </div>
 
           {previewTab === 'reminder' ? (
@@ -622,9 +600,9 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
               <div className="text-base font-black text-rose-400">🚨 تنبيه اقتصادي مهم جداً</div>
               <div className="text-slate-400">━━━━━━━━━━━━━━━━━━━</div>
               <div>🇺🇸 <b>الدولة:</b> الولايات المتحدة</div>
-              <div>📊 <b>الحدث:</b> مؤشر أسعار المستهلك (CPI)</div>
+              <div>📊 <b>الحدث:</b>{ui(" مؤشر أسعار المستهلك (CPI)")}</div>
               <div>💱 <b>العملة:</b> <span className="text-amber-300 font-bold font-mono">USD</span></div>
-              <div>🔴 <b>الأهمية:</b> <span className="text-rose-400 font-bold">عالية جداً (Very High)</span></div>
+              <div>🔴 <b>الأهمية:</b> <span className="text-rose-400 font-bold">{ui("عالية جداً (Very High)")}</span></div>
               <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 font-bold">
                 ⏰ <b>متبقي ساعة على صدور الخبر</b>
               </div>
@@ -632,25 +610,25 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
               <div>📈 <b>المتوقع:</b> <span className="font-mono font-bold text-white">2.8%</span></div>
               <div>📉 <b>السابق:</b> <span className="font-mono text-slate-300">2.9%</span></div>
               <div className="text-slate-400">━━━━━━━━━━━━━━━━━━━</div>
-              <div className="text-[11px] text-sky-400">🔗 منصة SMTrading.pro للتحليل المؤسسي</div>
+              <div className="text-[11px] text-sky-400">{ui("🔗 منصة SMTrading.pro للتحليل المؤسسي")}</div>
             </div>
           ) : (
             <div className="space-y-2 text-sm leading-relaxed text-slate-200">
-              <div className="text-base font-black text-emerald-400">📢 صدور البيانات الاقتصادية فوراً (Live Actual)</div>
+              <div className="text-base font-black text-emerald-400">{ui("📢 صدور البيانات الاقتصادية فوراً (Live Actual)")}</div>
               <div className="text-slate-400">━━━━━━━━━━━━━━━━━━━</div>
               <div>🇺🇸 <b>الدولة:</b> الولايات المتحدة</div>
-              <div>📊 <b>الحدث:</b> مؤشر أسعار المستهلك (CPI)</div>
+              <div>📊 <b>الحدث:</b>{ui(" مؤشر أسعار المستهلك (CPI)")}</div>
               <div>💱 <b>العملة:</b> <span className="text-amber-300 font-bold font-mono">USD</span></div>
-              <div>🔴 <b>الأهمية:</b> <span className="text-rose-400 font-bold">عالية جداً (Very High)</span></div>
+              <div>🔴 <b>الأهمية:</b> <span className="text-rose-400 font-bold">{ui("عالية جداً (Very High)")}</span></div>
               <div className="p-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300 font-bold">
                 🎯 <b>النتيجة:</b> إيجابي للدولار الأمريكي 🟢 (أعلى من التوقعات)
               </div>
-              <div>⚡ <b>الفعلي (Actual):</b> <span className="font-mono font-black text-emerald-400 text-base">3.1%</span></div>
-              <div>📈 <b>المتوقع (Forecast):</b> <span className="font-mono text-slate-300">2.8%</span></div>
-              <div>📉 <b>السابق (Previous):</b> <span className="font-mono text-slate-400">2.9%</span></div>
+              <div>⚡ <b>{ui("الفعلي (Actual):")}</b> <span className="font-mono font-black text-emerald-400 text-base">3.1%</span></div>
+              <div>📈 <b>{ui("المتوقع (Forecast):")}</b> <span className="font-mono text-slate-300">2.8%</span></div>
+              <div>📉 <b>{ui("السابق (Previous):")}</b> <span className="font-mono text-slate-400">2.9%</span></div>
               <div>🕐 <b>وقت الصدور:</b> <span className="font-mono text-slate-300">15:30</span> بتوقيت ({selectedTimezone})</div>
               <div className="text-slate-400">━━━━━━━━━━━━━━━━━━━</div>
-              <div className="text-[11px] text-sky-400">🔗 منصة SMTrading.pro للتحليل المؤسسي</div>
+              <div className="text-[11px] text-sky-400">{ui("🔗 منصة SMTrading.pro للتحليل المؤسسي")}</div>
             </div>
           )}
         </div>
@@ -672,9 +650,7 @@ export const TelegramBotTab: React.FC<TelegramBotTabProps> = ({ token }) => {
         </div>
 
         {events.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            لا توجد أحداث مسجلة حالياً في قاعدة البيانات. اضغط "Sync Calendar Now" لجلب الأحداث من BiQuote.
-          </div>
+          <div className="p-8 text-center text-xs text-slate-500">{ui(" لا توجد أحداث مسجلة حالياً في قاعدة البيانات. اضغط \"Sync Calendar Now\" لجلب الأحداث من BiQuote. ")}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

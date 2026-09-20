@@ -99,6 +99,9 @@ export interface EconomicEvent {
   utcIso?: string; // ISO 8601 UTC string e.g. "2026-09-04T12:30:00.000Z"
   sourceTimezone?: string; // Original IANA timezone e.g. "America/New_York", "Europe/Frankfurt"
   sourceLocalTime?: string; // Original source local release time e.g. "08:30"
+  sourceTimeMode?: string;
+  sourceNotice?: string;
+  sourceUrl?: string;
   sourceAgency?: string; // Verifying authority / agency
   date: string;
   time: string;

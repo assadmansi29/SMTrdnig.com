@@ -8,16 +8,20 @@ import {
   Viewport,
   Point,
 } from 'lightweight-charts-drawing';
-import { IPrimitivePaneView, IPrimitivePaneRenderer } from 'lightweight-charts';
+import { IChartApi, IPrimitivePaneView, IPrimitivePaneRenderer } from 'lightweight-charts';
 import { getTranslation, LanguageCode } from '../../locales';
 import {
   CandleData,
-  evaluateReactionZoneSignals,
-  calculateReactionZoneSignals,
+
+  LineEvaluationResult,
   calculateAverageCandleRange,
   computeZoneTolerances,
   ReactionZoneSignal,
+
+
+
 } from './reactionZoneSignalCalculator';
+import {getReactionEvaluation, subscribeReactionTrades} from './reactionZoneTrades';
 import { timeToLogicalIndex } from './drawingDirectionEnhancer';
 
 export type ReactionZoneType = 'strong' | 'weak';
@@ -58,53 +62,70 @@ export interface ReactionZoneOptions extends DrawingOptions {
 }
 
 // Active market data cache for Reaction Zone 5m calculations
-let _activeCandles: CandleData[] = [];
-let _activeInterval: string = '15';
-let _activeSymbol: string = '';
+interface ReactionMarketContext {
+  candles: CandleData[];
+  interval: string;
+  symbol: string;
+  activeDrawingId: string | null;
+  strategy: string;
+  liveObservation: boolean;
+}
+const newContext = (): ReactionMarketContext => ({ candles: [], interval: '15', symbol: '', activeDrawingId: null, strategy:'default', liveObservation:false });
+const defaultContext = newContext();
+const chartContexts = new WeakMap<IChartApi, ReactionMarketContext>();
+function contextFor(chart?: IChartApi | null): ReactionMarketContext {
+  if (!chart) return defaultContext;
+  let context = chartContexts.get(chart);
+  if (!context) { context = newContext(); chartContexts.set(chart, context); }
+  return context;
+}
+
 const activeReactionDrawings = new Set<ReactionZoneDrawing>();
+subscribeReactionTrades(()=>{
+  activeReactionDrawings.forEach(d=>{d.updateSignals();d.requestUpdate();});
+});
 
 /**
  * Completely clears all cached reaction zone drawings.
  */
-export function clearReactionZoneDrawings(): void {
-  activeReactionDrawings.clear();
+export function clearReactionZoneDrawings(chart?: IChartApi | null): void {
+  const context = contextFor(chart);
+  activeReactionDrawings.forEach(d => {
+    if (d.marketContext !== context) return;
+    d.resetSignals();
+    activeReactionDrawings.delete(d);
+  });
+  context.activeDrawingId = null;
 }
 
 /**
  * Updates the market data context used by Reaction Zones.
  */
-export function setReactionZoneMarketData(candles: CandleData[], interval: string, symbol?: string): void {
-  const invStr = interval ? String(interval) : _activeInterval;
-  const symStr = symbol ? String(symbol) : _activeSymbol;
-
-  if (Array.isArray(candles)) {
-    _activeCandles = candles;
-  }
-  if (interval) {
-    _activeInterval = invStr;
-  }
-  if (symbol) {
-    _activeSymbol = symStr;
-  }
+export function setReactionZoneMarketData(candles: CandleData[], interval: string, symbol?: string, chart?: IChartApi | null, strategy?: string | null, liveObservation=false): void {
+  const context = contextFor(chart);
+  const invStr = interval ? String(interval) : context.interval;
+  const symStr = symbol ? String(symbol) : context.symbol;
+  const strategyKey=strategy || 'default';
+  const changed = invStr !== context.interval || symStr !== context.symbol || strategyKey !== context.strategy;
+  context.candles = Array.isArray(candles) ? candles : context.candles;
+  context.interval = invStr;
+  context.symbol = symStr;
+  context.strategy = strategyKey;
+  context.liveObservation = liveObservation;
 
   // Trigger immediate repaints on all active reaction zone drawings
   activeReactionDrawings.forEach((d) => {
-    try {
-      (d as any)._currentChartInterval = _activeInterval;
-      d.requestUpdate?.();
-    } catch {}
+    if (d.marketContext !== context) return;
+    if (changed) d.resetSignals();
+    (d as any)._currentChartInterval = context.interval;
+    d.updateSignals();
+    d.requestUpdate();
   });
 }
 
-export function getReactionZoneCandles(): CandleData[] {
-  if (_activeCandles && _activeCandles.length > 0) return _activeCandles;
-  if (typeof window !== 'undefined' && Array.isArray((window as any).__chartCandles)) {
-    return (window as any).__chartCandles;
-  }
-  return [];
+export function getReactionZoneCandles(drawing?: ReactionZoneDrawing): CandleData[] {
+  return (drawing?.marketContext || defaultContext).candles;
 }
-
-let _currentActiveDrawingId: string | null = null;
 
 /**
  * Identifies the single reaction zone drawing that is currently active and interacting with price.
@@ -114,9 +135,10 @@ let _currentActiveDrawingId: string | null = null;
  * 3. If price moves away from a zone, it is automatically deactivated.
  * 4. Hysteresis ensures smooth activation/deactivation without jitter or flickering.
  */
-export function getActiveLiveReactionDrawing(candles: CandleData[]): ReactionZoneDrawing | null {
+export function getActiveLiveReactionDrawing(candles: CandleData[], drawing?: ReactionZoneDrawing): ReactionZoneDrawing | null {
+  const context = drawing?.marketContext || defaultContext;
   if (!candles || candles.length === 0 || activeReactionDrawings.size === 0) {
-    _currentActiveDrawingId = null;
+    context.activeDrawingId = null;
     return null;
   }
 
@@ -132,27 +154,24 @@ export function getActiveLiveReactionDrawing(candles: CandleData[]): ReactionZon
   }[] = [];
 
   activeReactionDrawings.forEach((d) => {
+    if (d.marketContext !== context) return;
     if (!d.options?.visible || !d.isValid()) return;
     const price = d.anchors?.[0]?.price;
     if (typeof price === 'number' && !isNaN(price) && price > 0) {
-      // Distance from line to live candle (close, high, or low wick interaction)
-      const dist = Math.min(
-        Math.abs(currentPrice - price),
-        Math.abs(lastCandle.high - price),
-        Math.abs(lastCandle.low - price)
-      );
+      // A stale wick must not keep a distant zone active after price has left.
+      const dist = Math.abs(currentPrice - price);
       const tolerances = computeZoneTolerances(price, avgRange);
       candidates.push({
         drawing: d,
         price,
         distance: dist,
-        nearThreshold: tolerances.nearThreshold,
+        nearThreshold: Math.max(tolerances.touchTolerance * 3, avgRange),
       });
     }
   });
 
   if (candidates.length === 0) {
-    _currentActiveDrawingId = null;
+    context.activeDrawingId = null;
     return null;
   }
 
@@ -161,16 +180,16 @@ export function getActiveLiveReactionDrawing(candles: CandleData[]): ReactionZon
   const closest = candidates[0];
 
   // Hysteresis: if this drawing is already active, grant a 20% margin to prevent edge fluttering
-  const isAlreadyActive = (closest.drawing as any).id === _currentActiveDrawingId;
+  const isAlreadyActive = (closest.drawing as any).id === context.activeDrawingId;
   const threshold = isAlreadyActive ? closest.nearThreshold * 1.2 : closest.nearThreshold;
 
   if (closest.distance <= threshold) {
-    _currentActiveDrawingId = (closest.drawing as any).id || null;
+    context.activeDrawingId = (closest.drawing as any).id || null;
     return closest.drawing;
   }
 
   // Live price has moved away from all reaction zones -> completely deactivate
-  _currentActiveDrawingId = null;
+  context.activeDrawingId = null;
   return null;
 }
 
@@ -178,11 +197,7 @@ export function getReactionZoneInterval(drawing?: ReactionZoneDrawing): string {
   if (drawing && (drawing as any)._currentChartInterval) {
     return String((drawing as any)._currentChartInterval);
   }
-  if (_activeInterval) return _activeInterval;
-  if (typeof window !== 'undefined' && (window as any).__chartInterval) {
-    return String((window as any).__chartInterval);
-  }
-  return '15';
+  return (drawing?.marketContext || defaultContext).interval;
 }
 
 /**
@@ -265,8 +280,8 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
     const pr = pixelRatio || 1;
 
     // Determine if THIS Reaction Zone is the single active zone interacting with live price
-    const candles = getReactionZoneCandles();
-    const activeDrawing = getActiveLiveReactionDrawing(candles);
+    const candles = getReactionZoneCandles(this._drawing);
+    const activeDrawing = getActiveLiveReactionDrawing(candles, this._drawing);
     const isCurrentActive = activeDrawing === this._drawing;
 
     ctx.save();
@@ -427,58 +442,57 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
     }
 
     // 5. LIVE REACTION ZONE SIGNALS & RISK CONTAINMENT (20 - 35 PTS STOP LOSS)
-    // STRICT CONTEXT-AWARE RULES:
-    // - ONLY the single active Reaction Zone line currently interacting with live price evaluates and renders signals.
-    // - Inactive zones NEVER display signals, labels, markers, or stop loss.
-    // - Signal markers are NEVER placed on candles; they are strictly anchored to the Reaction Zone line.
-    if (isCurrentActive && candles.length >= 3) {
-      const evalResult = evaluateReactionZoneSignals(anchor.price, candles, this._drawing.zoneType);
-      const activeSignal = evalResult.activeSignal;
+    // State is advanced by market updates, independently of paint/visibility.
+    // Only the zone currently interacting with live price may display a signal.
+    const evalResult = this._drawing.signalEvaluation;
+    const activeSignal = evalResult?.activeSignal;
 
-      if (activeSignal && (evalResult.isPriceNear || evalResult.hasRecentInteraction)) {
-        let statusText = activeSignal.label;
+    if (activeSignal) {
+        const text = (key: Parameters<typeof getTranslation>[1]) => getTranslation(activeLang, key);
+        let statusText = activeSignal.type === 'break' ? `● ${text('reactionBreak')}` : activeSignal.type === 'retest' ? `● ${text('reactionRetest')}` : activeSignal.label;
         let statusColor = '#38BDF8';
         let statusBg = 'rgba(15, 23, 42, 0.96)';
 
         if (activeSignal.type === 'test') {
-          statusText = '● TEST';
+          statusText = `● ${text('reactionTest1')}`;
           statusColor = '#38BDF8';
           statusBg = 'rgba(15, 23, 42, 0.96)';
         } else if (activeSignal.type === 'test2') {
-          statusText = '● TEST 2';
+          statusText = `● ${text('reactionTest2')}`;
           statusColor = '#F59E0B';
           statusBg = 'rgba(26, 18, 8, 0.96)';
         } else if (activeSignal.type === 'sell_rejection') {
           statusText = activeSignal.formattedSlPrice
-            ? `▼ SELL (SL: ${activeSignal.formattedSlPrice})`
-            : `▼ SELL (SL: 20-35 pts)`;
+            ? `▼ ${text('reactionSell')} (${text('reactionSlShort')}: ${activeSignal.formattedSlPrice})`
+            : `▼ ${text('reactionSell')} (${text('reactionSlShort')}: 20-35 ${text('reactionPoints')})`;
           statusColor = '#EF4444';
           statusBg = 'rgba(45, 10, 18, 0.96)';
         } else if (activeSignal.type === 'buy_bounce') {
           statusText = activeSignal.formattedSlPrice
-            ? `▲ BUY (SL: ${activeSignal.formattedSlPrice})`
-            : `▲ BUY (SL: 20-35 pts)`;
+            ? `▲ ${text('reactionBuy')} (${text('reactionSlShort')}: ${activeSignal.formattedSlPrice})`
+            : `▲ ${text('reactionBuy')} (${text('reactionSlShort')}: 20-35 ${text('reactionPoints')})`;
           statusColor = '#22C55E';
           statusBg = 'rgba(6, 40, 25, 0.96)';
         } else if (activeSignal.type === 'buy_breakout') {
           statusText = activeSignal.formattedSlPrice
-            ? `▲ BUY BREAK (SL: ${activeSignal.formattedSlPrice})`
-            : '▲ BUY (BREAK)';
+            ? `▲ ${text('reactionBuyBreak')} (${text('reactionSlShort')}: ${activeSignal.formattedSlPrice})`
+            : `▲ ${text('reactionBuyBreak')}`;
           statusColor = '#10B981';
           statusBg = 'rgba(6, 40, 25, 0.96)';
         } else if (activeSignal.type === 'sell_breakdown') {
           statusText = activeSignal.formattedSlPrice
-            ? `▼ SELL BREAK (SL: ${activeSignal.formattedSlPrice})`
-            : '▼ SELL (BREAK)';
+            ? `▼ ${text('reactionSellBreak')} (${text('reactionSlShort')}: ${activeSignal.formattedSlPrice})`
+            : `▼ ${text('reactionSellBreak')}`;
           statusColor = '#F43F5E';
           statusBg = 'rgba(45, 10, 18, 0.96)';
         }
 
-        ctx.font = 'bold 10px "JetBrains Mono", Menlo, Consolas, sans-serif';
+        ctx.font = isArabic ? 'bold 10px "Cairo", "Segoe UI", sans-serif' : 'bold 10px "JetBrains Mono", Menlo, Consolas, sans-serif';
+        ctx.direction = isArabic ? 'rtl' : 'ltr';
         const statusMetrics = ctx.measureText(statusText);
         const statusW = statusMetrics.width + 16;
         const statusH = 20;
-        const statusX = isArabic ? pillX - statusW - 8 : pillX + pillW + 8;
+        const statusX = pillX + pillW + 8;
         const statusY = y - (statusH / 2);
 
         // 5A. Active Signal Status Pill directly ON the horizontal line
@@ -527,7 +541,7 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
             ctx.setLineDash([]);
 
             // SL Badge Tag showing Stop Loss 20 - 35 points
-            const slTagText = `SL (20-35 pts): ${activeSignal.formattedSlPrice}`;
+            const slTagText = `SL (20-35 ${text('reactionPoints')}): ${activeSignal.formattedSlPrice}`;
             ctx.font = 'bold 10px "JetBrains Mono", Menlo, monospace';
             const slMetrics = ctx.measureText(slTagText);
             const slTagW = slMetrics.width + 16;
@@ -592,7 +606,6 @@ class ReactionZoneRenderer implements IPrimitivePaneRenderer {
 
           ctx.restore();
         }
-      }
     }
 
     // 6. Visual handles when line is selected or being dragged by Administrator
@@ -632,8 +645,8 @@ class ReactionZonePaneView implements IPrimitivePaneView {
   }
 
   zOrder(): 'bottom' | 'normal' | 'top' {
-    const candles = getReactionZoneCandles();
-    const activeDrawing = getActiveLiveReactionDrawing(candles);
+    const candles = getReactionZoneCandles(this._drawing);
+    const activeDrawing = getActiveLiveReactionDrawing(candles, this._drawing);
     return activeDrawing === this._drawing ? 'top' : 'normal';
   }
 
@@ -652,6 +665,32 @@ class ReactionZonePaneView implements IPrimitivePaneView {
 export class ReactionZoneDrawing extends HorizontalLine {
   public readonly zoneType: ReactionZoneType;
   private _rzOptions: ReactionZoneOptions;
+
+  public signalEvaluation: LineEvaluationResult | null = null;
+
+  get marketContext(): ReactionMarketContext { return contextFor(this._chart); }
+
+  resetSignals(): void {
+
+    this.signalEvaluation = null;
+  }
+
+  updateSignals(): void {
+    const context=this.marketContext;
+    this.signalEvaluation=context.interval==='5' ? getReactionEvaluation(context.symbol,context.strategy,this.id) : null;
+  }
+
+  override attached(params: Parameters<HorizontalLine['attached']>[0]): void {
+    super.attached(params);
+    activeReactionDrawings.add(this);
+    this.updateSignals();
+  }
+
+  override detached(): void {
+    activeReactionDrawings.delete(this);
+    this.resetSignals();
+    super.detached();
+  }
 
   constructor(
     id: string,
@@ -689,7 +728,6 @@ export class ReactionZoneDrawing extends HorizontalLine {
     super(id, anchors, mergedStyle, mergedOptions);
     this.zoneType = zType;
     this._rzOptions = { ...this.options, ...mergedOptions };
-    activeReactionDrawings.add(this);
   }
 
   override paneViews(): IPrimitivePaneView[] {

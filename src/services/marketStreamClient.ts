@@ -1,3 +1,4 @@
+import {observeServerTime} from './serverClock';
 /**
  * MarketStreamClient
  * High-performance, persistent real-time market data streaming client.
@@ -106,6 +107,7 @@ export class MarketStreamClient {
       this.ws = socket;
 
       const connectionTimeout = setTimeout(() => {
+        if (this.isDestroyed || this.ws !== socket) return;
         if (socket.readyState !== WebSocket.OPEN) {
           console.warn('[MarketStream] WebSocket connect timed out, falling back to SSE');
           this.fallbackToSse = true;
@@ -125,6 +127,7 @@ export class MarketStreamClient {
         if (this.ws !== socket) return;
         try {
           const payload = JSON.parse(event.data);
+          observeServerTime(payload.serverTime);
           if (payload.type === 'tick' || payload.type === 'bar') {
             this.onData(payload);
           }
@@ -133,6 +136,7 @@ export class MarketStreamClient {
 
       socket.onerror = (err) => {
         clearTimeout(connectionTimeout);
+        if (this.isDestroyed || this.ws !== socket) return;
         console.warn('[MarketStream] WebSocket encountered error, switching to SSE stream fallback');
         this.fallbackToSse = true;
         this.cleanupConnection();
@@ -141,7 +145,7 @@ export class MarketStreamClient {
 
       socket.onclose = () => {
         clearTimeout(connectionTimeout);
-        if (this.isDestroyed) return;
+        if (this.isDestroyed || this.ws !== socket) return;
         if (!this.fallbackToSse) {
           this.scheduleReconnect();
         }
@@ -153,6 +157,7 @@ export class MarketStreamClient {
   }
 
   private connectSSE() {
+    if (this.isDestroyed) return;
     try {
       const sseUrl = `/api/market/stream?symbol=${encodeURIComponent(
         this.activeSymbol
@@ -171,6 +176,7 @@ export class MarketStreamClient {
         if (this.sse !== es) return;
         try {
           const payload = JSON.parse(event.data);
+          observeServerTime(payload.serverTime);
           if (payload.type === 'tick' || payload.type === 'bar') {
             this.onData(payload);
           }
@@ -178,7 +184,7 @@ export class MarketStreamClient {
       };
 
       es.onerror = () => {
-        if (this.isDestroyed) return;
+        if (this.isDestroyed || this.sse !== es) return;
         this.onStatus?.('reconnecting');
         this.scheduleReconnect();
       };

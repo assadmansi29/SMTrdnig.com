@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -80,6 +81,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
   onOpenMasterDesk,
   onOpenAuth,
 }) => {
+  const ui = useInterfaceText();
   const { user, token } = useAuth();
   const { t } = useTranslation();
 
@@ -387,16 +389,14 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-xl font-black text-white tracking-tight truncate">
-                  SMTrading <span className="text-emerald-400">Coaching Desk</span>
+                  SMTrading <span className="text-emerald-400">{ui("Coaching Desk")}</span>
                 </h2>
                 <span className="hidden sm:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
                   <ShieldCheck className="w-3 h-3" />
-                  <span>Institutional Mentorship</span>
+                  <span>{ui("Institutional Mentorship")}</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-400 truncate">
-                Student curriculum milestones, order flow progress, mentor notes & 1-on-1 reviews
-              </p>
+              <p className="text-xs text-slate-400 truncate">{ui(" Student curriculum milestones, order flow progress, mentor notes & 1-on-1 reviews ")}</p>
             </div>
           </div>
 
@@ -410,10 +410,10 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                   onOpenMasterDesk();
                 }}
                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
-                title="Open Full Master Administration Suite"
+                title={ui("Open Full Master Administration Suite")}
               >
                 <Award className="w-3.5 h-3.5 text-amber-400" />
-                <span>Admin Suite</span>
+                <span>{ui("Admin Suite")}</span>
               </button>
             )}
 
@@ -421,8 +421,8 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
               type="button"
               onClick={onClose}
               className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-              title="Close Coaching Desk"
-              aria-label="Close Coaching Desk"
+              title={ui("Close Coaching Desk")}
+              aria-label={ui("Close Coaching Desk")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -443,7 +443,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                 }`}
               >
                 <Users className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Master Coach Roster</span>
+                <span>{ui("Master Coach Roster")}</span>
                 <span className="ml-1 px-1.5 py-0.2 bg-emerald-500/30 text-emerald-300 rounded text-[10px] font-mono">
                   {coachingStudents.length}
                 </span>
@@ -459,7 +459,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                <span>Student Syllabus View</span>
+                <span>{ui("Student Syllabus View")}</span>
               </button>
             </div>
 
@@ -467,7 +467,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
               type="button"
               onClick={fetchCoachingStudents}
               className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-emerald-400 transition-colors"
-              title="Refresh Roster"
+              title={ui("Refresh Roster")}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingStudents ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
@@ -486,14 +486,10 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Award className="w-4 h-4 text-emerald-400" />
-                    <span className="font-bold text-white text-sm">Master Coach & Student Progress Desk</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">
-                      STAFF PRIVILEGE
-                    </span>
+                    <span className="font-bold text-white text-sm">{ui("Master Coach & Student Progress Desk")}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono">{ui(" STAFF PRIVILEGE ")}</span>
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Grade students, update completed lessons in the 5 SMC phases, and write direct 1-on-1 feedback notes.
-                  </p>
+                  <p className="text-xs text-slate-400">{ui(" Grade students, update completed lessons in the 5 SMC phases, and write direct 1-on-1 feedback notes. ")}</p>
                 </div>
               </div>
 
@@ -501,7 +497,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {coachingStudents.length === 0 ? (
                   <div className="col-span-2 p-8 text-center text-slate-500 bg-[#0C1220] border border-slate-800 rounded-2xl">
-                    {loadingStudents ? 'Loading student roster...' : 'No students currently enrolled in the coaching roster.'}
+                    {loadingStudents ? ui("Loading student roster...") : ui("No students currently enrolled in the coaching roster.")}
                   </div>
                 ) : (
                   coachingStudents.map((student) => (
@@ -529,7 +525,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                       <div className="space-y-2 pt-2 border-t border-slate-800/80 text-xs">
                         <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                           <BookOpen className="w-3 h-3 text-emerald-400" />
-                          <span>Curriculum Milestones</span>
+                          <span>{ui("Curriculum Milestones")}</span>
                         </span>
                         {student.trainingProgress?.map((m, idx) => {
                           const total = m.totalLessons || 1;
@@ -538,20 +534,20 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                           return (
                             <div key={m.id || idx} className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/70 space-y-1.5">
                               <div className="flex items-center justify-between text-[11px]">
-                                <span className="font-semibold text-slate-200 truncate pr-2">{m.courseName || `Phase ${idx + 1}`}</span>
+                                <span className="font-semibold text-slate-200 truncate pr-2">{(m.courseName ? ui(m.courseName) : null) || ui("Phase {p0}", {p0: idx + 1})}</span>
                                 <span className="font-mono text-emerald-400 font-bold shrink-0">{completed}/{total} ({pct}%)</span>
                               </div>
                               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                 <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
                               </div>
                               <div className="flex items-center justify-between text-[10px] pt-0.5">
-                                <span className="text-slate-400">Lesson Progress</span>
+                                <span className="text-slate-400">{ui("Lesson Progress")}</span>
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateMilestone(student.id, idx, Math.max(0, completed - 1))}
                                     className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-white rounded font-bold cursor-pointer transition-colors"
-                                    title="Decrement lesson"
+                                    title={ui("Decrement lesson")}
                                   >
                                     -
                                   </button>
@@ -559,10 +555,8 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                                     type="button"
                                     onClick={() => handleUpdateMilestone(student.id, idx, Math.min(total, completed + 1))}
                                     className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold cursor-pointer transition-colors"
-                                    title="Add completed lesson"
-                                  >
-                                    +1 Lesson
-                                  </button>
+                                    title={ui("Add completed lesson")}
+                                  >{ui(" +1 Lesson ")}</button>
                                 </div>
                               </div>
                             </div>
@@ -572,8 +566,8 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
 
                       {/* Coach Notes & Action */}
                       <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                        <div className="text-[11px] text-slate-400 truncate max-w-[200px]" title={student.coachingNotes || 'No review notes yet.'}>
-                          {student.coachingNotes ? `Note: ${student.coachingNotes}` : 'No review notes yet.'}
+                        <div className="text-[11px] text-slate-400 truncate max-w-[200px]" title={student.coachingNotes || ui("No review notes yet.")}>
+                          {student.coachingNotes ? ui("Note: {p0}", {p0: student.coachingNotes}) : ui("No review notes yet.")}
                         </div>
                         <button
                           type="button"
@@ -585,7 +579,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                           className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
                         >
                           <Edit className="w-3 h-3" />
-                          <span>Edit Notes & Status</span>
+                          <span>{ui("Edit Notes & Status")}</span>
                         </button>
                       </div>
                     </div>
@@ -606,11 +600,9 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-emerald-400" />
-                      <span className="font-bold text-white text-sm">Join the Elite SMC Mentorship Program</span>
+                      <span className="font-bold text-white text-sm">{ui("Join the Elite SMC Mentorship Program")}</span>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Log in to track your individualized curriculum, receive 1-on-1 chart reviews by Abu Asad Almansi, and earn institutional certification.
-                    </p>
+                    <p className="text-xs text-slate-400">{ui(" Log in to track your individualized curriculum, receive 1-on-1 chart reviews by Abu Asad Almansi, and earn institutional certification. ")}</p>
                   </div>
                   {onOpenAuth && (
                     <button
@@ -619,9 +611,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                         onOpenAuth();
                       }}
                       className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer shrink-0 shadow-md shadow-emerald-500/20"
-                    >
-                      Sign In / Enroll Now
-                    </button>
+                    >{ui(" Sign In / Enroll Now ")}</button>
                   )}
                 </div>
               )}
@@ -631,13 +621,13 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                 {/* Overall Progress Box */}
                 <div className="p-4 rounded-2xl bg-[#0C1220] border border-slate-800/80 flex flex-col justify-between space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Curriculum Progress</span>
-                    <span className="text-xs font-mono font-bold text-emerald-400">{completedLessons}/{totalLessons} Lessons</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{ui("Curriculum Progress")}</span>
+                    <span className="text-xs font-mono font-bold text-emerald-400">{completedLessons}/{totalLessons}{ui(" Lessons")}</span>
                   </div>
                   <div>
                     <div className="flex items-baseline gap-2 mb-1.5">
                       <span className="text-3xl font-black text-white font-mono-num">{overallPercentage}%</span>
-                      <span className="text-xs text-emerald-400 font-semibold">Institutional Mastery</span>
+                      <span className="text-xs text-emerald-400 font-semibold">{ui("Institutional Mastery")}</span>
                     </div>
                     <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                       <div
@@ -647,7 +637,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
-                    <span>Training Status</span>
+                    <span>{ui("Training Status")}</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                       {(trainingStatus || 'active_training').replace(/_/g, ' ')}
                     </span>
@@ -657,11 +647,9 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                 {/* Assigned Coach Box */}
                 <div className="p-4 rounded-2xl bg-[#0C1220] border border-slate-800/80 flex flex-col justify-between space-y-3 md:col-span-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assigned Senior Mentor</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{ui("Assigned Senior Mentor")}</span>
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Active Direct Line
-                    </span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />{ui(" Active Direct Line ")}</span>
                   </div>
 
                   <div className="flex items-center gap-3.5">
@@ -685,11 +673,9 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                         {assignedCoach?.fullName || 'Abu Asad Almansi'}
                       </h4>
                       <p className="text-xs text-emerald-400/90 font-medium truncate">
-                        {assignedCoach?.specialty || 'Chief Quantitative & Institutional SMC Mentor'}
+                        {assignedCoach?.specialty || ui("Chief Quantitative & Institutional SMC Mentor")}
                       </p>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                        Order Flow Footprint, CME Futures & Prop Firm Certification
-                      </p>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{ui(" Order Flow Footprint, CME Futures & Prop Firm Certification ")}</p>
                     </div>
                   </div>
 
@@ -697,10 +683,10 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                   <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
                     <div className="flex items-center gap-1.5 text-amber-400 font-semibold mb-1">
                       <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Mentor Review Note:</span>
+                      <span>{ui("Mentor Review Note:")}</span>
                     </div>
                     <p className="text-slate-300 italic text-[11px] leading-relaxed">
-                      "{coachingNotes || 'Excellent progress on structural liquidity sweeps. Focus next on CME futures volume profiles before scheduling your live desk mock evaluation.'}"
+                      "{coachingNotes || ui("Excellent progress on structural liquidity sweeps. Focus next on CME futures volume profiles before scheduling your live desk mock evaluation.")}"
                     </p>
                   </div>
                 </div>
@@ -711,9 +697,9 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-emerald-400" />
-                    <span>SMC Institutional Curriculum Milestones</span>
+                    <span>{ui("SMC Institutional Curriculum Milestones")}</span>
                   </h3>
-                  <span className="text-xs text-slate-400">Step-by-step institutional mastery</span>
+                  <span className="text-xs text-slate-400">{ui("Step-by-step institutional mastery")}</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5">
@@ -735,7 +721,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                             {isComplete ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-xs font-bold font-mono">{idx + 1}</span>}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-xs font-bold text-slate-200 block">{m.courseName}</span>
+                            <span className="text-xs font-bold text-slate-200 block">{ui(m.courseName)}</span>
                             <div className="flex items-center gap-3 mt-1.5">
                               <div className="w-36 bg-slate-800 h-1.5 rounded-full overflow-hidden shrink-0">
                                 <div
@@ -743,7 +729,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
-                              <span className="text-[11px] font-mono text-emerald-400 font-bold">{m.completedLessons}/{m.totalLessons} lessons ({pct}%)</span>
+                              <span className="text-[11px] font-mono text-emerald-400 font-bold">{m.completedLessons}/{m.totalLessons}{ui(" lessons (")}{pct}%)</span>
                             </div>
                           </div>
                         </div>
@@ -752,7 +738,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             isComplete ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
                           }`}>
-                            {isComplete ? 'Completed' : 'In Progress'}
+                            {isComplete ? ui("Completed") : ui("In Progress")}
                           </span>
                         </div>
                       </div>
@@ -767,18 +753,16 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-amber-400" />
-                      <span>Request 1-on-1 Review or Submit Setup</span>
+                      <span>{ui("Request 1-on-1 Review or Submit Setup")}</span>
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Submit a trade journal entry, order flow homework, or request a live 1-on-1 Zoom coaching session.
-                    </p>
+                    <p className="text-xs text-slate-400">{ui(" Submit a trade journal entry, order flow homework, or request a live 1-on-1 Zoom coaching session. ")}</p>
                   </div>
                 </div>
 
                 {submitSuccess && (
                   <div className="p-3 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Your coaching review request has been submitted to your mentor. You will receive review notes shortly.</span>
+                    <span>{ui("Your coaching review request has been submitted to your mentor. You will receive review notes shortly.")}</span>
                   </div>
                 )}
 
@@ -802,22 +786,18 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-                        Topic / Currency Pair
-                      </label>
+                      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">{ui(" Topic / Currency Pair ")}</label>
                       <input
                         type="text"
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
-                        placeholder="e.g., Gold XAUUSD FVG mitigation, CME ES order flow"
+                        placeholder={ui("e.g., Gold XAUUSD FVG mitigation, CME ES order flow")}
                         className="w-full bg-[#080C14] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-                        TradingView / Chart Screenshot Link (Optional)
-                      </label>
+                      <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">{ui(" TradingView / Chart Screenshot Link (Optional) ")}</label>
                       <input
                         type="url"
                         value={chartUrl}
@@ -829,14 +809,12 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-                      Notes & Questions for Your Mentor
-                    </label>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">{ui(" Notes & Questions for Your Mentor ")}</label>
                     <textarea
                       rows={3}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Explain your trade thesis, entry reason, risk parameters, or questions on liquidity sweeps..."
+                      placeholder={ui("Explain your trade thesis, entry reason, risk parameters, or questions on liquidity sweeps...")}
                       className="w-full bg-[#080C14] border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500"
                       required
                     />
@@ -849,7 +827,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                       className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-emerald-500/20 disabled:opacity-50"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>{submitting ? 'Submitting to Mentor...' : 'Submit to Coaching Desk'}</span>
+                      <span>{submitting ? ui("Submitting to Mentor...") : ui("Submit to Coaching Desk")}</span>
                     </button>
                   </div>
                 </form>
@@ -866,8 +844,7 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Edit className="w-4 h-4 text-emerald-400" />
-                  <span className="font-bold text-white text-sm">
-                    Coaching Feedback for {selectedStudentForNote.fullName}
+                  <span className="font-bold text-white text-sm">{ui(" Coaching Feedback for ")}{selectedStudentForNote.fullName}
                   </span>
                 </div>
                 <button
@@ -886,30 +863,26 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
 
               <form onSubmit={handleSaveStudentNote} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-                    Student Training Status
-                  </label>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">{ui(" Student Training Status ")}</label>
                   <select
                     value={studentStatusDraft}
                     onChange={(e) => setStudentStatusDraft(e.target.value)}
                     className="w-full bg-[#080C14] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="active_training">Active Training</option>
-                    <option value="mentorship_pending">Mentorship Pending</option>
-                    <option value="graduated">Graduated / Certified</option>
-                    <option value="paused">Paused</option>
+                    <option value="active_training">{ui("Active Training")}</option>
+                    <option value="mentorship_pending">{ui("Mentorship Pending")}</option>
+                    <option value="graduated">{ui("Graduated / Certified")}</option>
+                    <option value="paused">{ui("Paused")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-                    Coach Review Notes & Recommendations
-                  </label>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">{ui(" Coach Review Notes & Recommendations ")}</label>
                   <textarea
                     rows={4}
                     value={studentNoteDraft}
                     onChange={(e) => setStudentNoteDraft(e.target.value)}
-                    placeholder="Enter student review notes, chart analysis feedback, or recommendations..."
+                    placeholder={ui("Enter student review notes, chart analysis feedback, or recommendations...")}
                     className="w-full bg-[#080C14] border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -919,16 +892,14 @@ export const StudentCoachingModal: React.FC<StudentCoachingModalProps> = ({
                     type="button"
                     onClick={() => setSelectedStudentForNote(null)}
                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
+                  >{ui(" Cancel ")}</button>
                   <button
                     type="submit"
                     disabled={savingNote}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>{savingNote ? 'Saving...' : 'Save Coaching Feedback'}</span>
+                    <span>{savingNote ? ui("Saving...") : ui("Save Coaching Feedback")}</span>
                   </button>
                 </div>
               </form>

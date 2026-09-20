@@ -1,3 +1,6 @@
+import reactionRoutes from './server/routes/reactionRoutes';
+import {startReactionRuntime} from './server/services/reactionRuntime';
+import liquidityRoutes from './server/routes/liquidityRoutes';
 import "dotenv/config";
 import express from "express";
 import http from "http";
@@ -5,7 +8,7 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import compression from "compression";
 import { createServer as createViteServer } from "vite";
-import { initPostgres, getPool, isDatabaseHealthy } from './server/db';
+import { initPostgres, getPool, isDatabaseHealthy, isLocalDatabaseReadOnly } from './server/db';
 import { requireDatabaseReady } from './server/middleware/dbGuard';
 import authRoutes from './server/routes/authRoutes';
 import userRoutes from './server/routes/userRoutes';
@@ -17,7 +20,6 @@ import tradingviewStorageRoutes, { ensureTradingViewStorageTable } from './serve
 import chartDrawingsRoutes, { ensureChartDrawingsTable } from './server/routes/chartDrawingsRoutes';
 import marketRoutes from './server/routes/marketRoutes';
 import economicCalendarRoutes from './server/routes/economicCalendarRoutes';
-import aiRoutes from './server/routes/aiRoutes';
 import { ensureChartAnalysisTable } from './server/db/chartAnalysisDb';
 import { economicScheduler } from './server/services/economicScheduler';
 import { marketStreamManager } from './server/services/marketStreamService';
@@ -38,8 +40,9 @@ async function startServer() {
     initPostgres()
       .then(() => {
         console.log("[Database] Connected to PostgreSQL successfully.");
+        startReactionRuntime();
         const p = getPool();
-        if (p) {
+        if (p && !isLocalDatabaseReadOnly()) {
           ensureChartAnalysisTable(p).catch((err: any) => {
             console.error("[Chart Analysis] Table ensure notice:", err.message);
           });
@@ -66,7 +69,7 @@ async function startServer() {
     level: 6,
     threshold: 1024, // only compress responses larger than 1KB
     filter: (req, res) => {
-      if (req.headers['x-no-compression']) return false;
+      if (req.headers['x-no-compression'] || String(res.getHeader('Content-Type')||'').includes('text/event-stream')) return false;
       return compression.filter(req, res);
     }
   }));
@@ -104,9 +107,10 @@ async function startServer() {
   app.use('/api/tradingview-storage', requireDatabaseReady, tradingviewStorageRoutes);
   app.use('/api/chart-drawings', requireDatabaseReady, chartDrawingsRoutes);
   app.use('/api', requireDatabaseReady, economicCalendarRoutes);
+  app.use('/api/liquidity', liquidityRoutes);
+  app.use('/api/reactions', reactionRoutes);
   app.use('/api/market', marketRoutes);
   app.use('/api/chart', marketRoutes);
-  app.use('/api/ai', aiRoutes);
   app.use('/api', marketRoutes);
 
   // Health and Readiness Probe for Container Orchestrators (Cloud Run / K8s / ECS)

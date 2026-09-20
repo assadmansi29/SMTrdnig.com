@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
@@ -55,8 +56,9 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
   onClose,
   events: propEvents
 }) => {
+  const ui = useInterfaceText();
   const { t, isRTL, language } = useTranslation();
-  const { events: contextEvents, isLoading, isRefreshing, refresh } = useEconomicCalendar();
+  const { events: contextEvents, isLoading, isRefreshing, refresh, error, lastRefreshedAt } = useEconomicCalendar();
   const allEvents = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
 
   const intlLocale = useMemo(() => {
@@ -67,6 +69,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
   }, [language]);
 
   // Active View Tab: 'upcoming' vs 'released'
+  const [period, setPeriod] = useState<'all' | 'today' | 'tomorrow' | 'week'>('all');
   const [activeTab, setActiveTab] = useState<'upcoming' | 'released'>('upcoming');
   const [activeImpactFilter, setActiveImpactFilter] = useState<'All' | 'High' | 'Medium' | 'Low'>('High');
   const [selectedCurrency, setSelectedCurrency] = useState<string>('All');
@@ -97,14 +100,29 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
     setIsTzPickerOpen(false);
   };
 
+  const formattedTimes = useMemo(() => new Map(allEvents.map(ev=>[ev.id,formatEventInTimezone(ev.timestamp,effectiveTz,intlLocale)])),[allEvents,effectiveTz,intlLocale]);
+  const localDates = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat('en-CA', {timeZone:effectiveTz, year:'numeric',month:'2-digit',day:'2-digit'});
+    return new Map(allEvents.map(ev=>[ev.id,formatter.format(new Date(ev.timestamp))]));
+  }, [allEvents,effectiveTz]);
   // Base list depending on active tab
   const baseList = useMemo(() => {
+    if (period !== 'all') {
+      const today = formatEventInTimezone(now, effectiveTz, 'en-US').isoDateLocal;
+      const shift = (days:number) => new Date(Date.parse(today+'T12:00:00Z')+days*86400000).toISOString().slice(0,10);
+      return allEvents.filter(ev => {
+        const date = localDates.get(ev.id) || ''; 
+        const impact = normalizeImpact(ev.impact);
+        const matchesImpact = activeImpactFilter === 'All' || (activeImpactFilter === 'High' ? impact === 'High' : impact === activeImpactFilter);
+        return matchesImpact && (period === 'today' ? date === today : period === 'tomorrow' ? date === shift(1) : date >= today && date <= shift(6));
+      }).sort((a,b)=>a.timestamp-b.timestamp);
+    }
     if (activeTab === 'upcoming') {
       return filterGenuinelyUpcomingEvents(allEvents, now, activeImpactFilter);
     } else {
       return filterPastReleasedEvents(allEvents, now, activeImpactFilter);
     }
-  }, [allEvents, activeTab, now, activeImpactFilter]);
+  }, [allEvents, activeTab, now, activeImpactFilter, period, effectiveTz, localDates]);
 
   // Apply currency and search query filters
   const filteredEvents = useMemo(() => {
@@ -132,7 +150,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
     const groupMap = new Map<string, EconomicEvent[]>();
 
     for (const ev of filteredEvents) {
-      const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz, intlLocale);
+      const timeInfo = formattedTimes.get(ev.id)!;
       const dateKey = timeInfo.isoDateLocal || 'other';
       if (!groupMap.has(dateKey)) {
         groupMap.set(dateKey, []);
@@ -142,7 +160,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
 
     groupMap.forEach((evList, dateKey) => {
       if (evList.length > 0) {
-        const sampleTime = formatEventInTimezone(evList[0].timestamp, effectiveTz, intlLocale);
+        const sampleTime = formattedTimes.get(evList[0].id)!;
         let dateTitle = sampleTime.dateFormatted;
         if (sampleTime.isToday) {
           dateTitle = `${t('calendarTodayPrefix')} • ${sampleTime.dateFormatted}`;
@@ -154,14 +172,14 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
     });
 
     return groups;
-  }, [filteredEvents, effectiveTz, intlLocale, t]);
+  }, [filteredEvents, effectiveTz, intlLocale, t, formattedTimes]);
 
   const majorCurrencies = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'NZD', 'CNY'];
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div 
         id="economic-calendar-modal-content"
         className="bg-[#0A0E17] border border-slate-800 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-200"
@@ -179,7 +197,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                 </h2>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  {t('calendarRealTimeFeedBadge')}
+                  {error ? ui("Feed delayed") : ui("Economic releases · 30s polling")}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -259,7 +277,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               id="tab-upcoming-events"
-              onClick={() => setActiveTab('upcoming')}
+              onClick={() => {setPeriod('all'); setActiveTab('upcoming');}}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'upcoming'
                   ? 'bg-blue-600 text-white shadow-md'
@@ -272,7 +290,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
 
             <button
               id="tab-released-events"
-              onClick={() => setActiveTab('released')}
+              onClick={() => {setPeriod('all'); setActiveTab('released');}}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 activeTab === 'released'
                   ? 'bg-blue-600 text-white shadow-md'
@@ -305,6 +323,11 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           </div>
         </div>
 
+        <div className="px-4 py-3 border-b border-slate-800 text-xs text-slate-400">
+          <div className="flex gap-2 flex-wrap mb-2">{(['all','today','tomorrow','week'] as const).map(value=><button key={value} aria-pressed={period===value} onClick={()=>setPeriod(value)} className={`px-3 py-1.5 rounded-lg border capitalize ${period===value?'border-blue-500 text-blue-300 bg-blue-500/10':'border-slate-700'}`}>{value==='all'?ui("All dates"):value==='week'?ui("Week (next 7 days)"):value}</button>)}</div>
+          <p>{ui("BiQuote aggregate feed · Source impact classification · Updated ")}{new Date(lastRefreshedAt).toLocaleTimeString()}{ui(" · Times in ")}{effectiveTz}</p>
+          {error && <p role="alert" className="text-amber-300 mt-2">{error}</p>}
+        </div>
         {/* Filter Pills Bar: Impact & Currency */}
         <div className="px-4 sm:px-6 py-2.5 bg-[#080B12] border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
           {/* Impact filters */}
@@ -396,7 +419,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                     const isExpanded = expandedEventId === ev.id;
                     const normImp = normalizeImpact(ev.impact, ev.event);
                     const impStyle = getImpactStyle(normImp);
-                    const timeInfo = formatEventInTimezone(ev.timestamp, effectiveTz, intlLocale);
+                    const timeInfo = formattedTimes.get(ev.id)!;
                     const countdown = calculateLiveCountdown(ev.timestamp, now);
                     const localizedTitle = translateEconomicEvent(ev.event, language);
                     const localizedCountry = translateEconomicCountry(ev.country, language);
@@ -445,7 +468,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                             {/* Local Time badge */}
                             <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 flex-shrink-0 min-w-[70px]">
                               <span className="text-xs font-mono font-bold text-white tracking-tight">
-                                {timeInfo.timeFormatted}
+                                {ev.sourceTimeMode && ev.sourceTimeMode !== 'exact' ? (ev.sourceTimeMode === 'date' ? 'All day' : 'Time tentative') : timeInfo.timeFormatted}
                               </span>
                               <span className="text-[9px] font-mono text-slate-500 mt-0.5">
                                 {tzMeta.offsetString}
@@ -470,13 +493,16 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                               </div>
                               <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 flex-wrap">
                                 <span>{localizedCountry}</span>
+                                <span className="text-slate-500">{ev.sourceAgency}</span>
+                                {ev.sourceUrl && <a href={ev.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} className="text-blue-400">{ui("Source")}</a>}
+                                {ev.sourceNotice && <span className="text-amber-300">{ev.sourceNotice}</span>}
                                 {ev.category && (
                                   <>
                                     <span className="text-slate-600">•</span>
                                     <span className="text-slate-500">{ev.category}</span>
                                   </>
                                 )}
-                                {ev.utcIso && (
+                                {ev.utcIso && (!ev.sourceTimeMode || ev.sourceTimeMode === 'exact') && (
                                   <>
                                     <span className="text-slate-600">•</span>
                                     <span className="text-slate-500 font-mono text-[10px]" title={t('calendarUtcTooltip')}>

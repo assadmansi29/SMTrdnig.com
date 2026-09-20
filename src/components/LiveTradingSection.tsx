@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState } from 'react';
 import { Activity, Maximize2, Sparkles, TrendingUp, BarChart2, Calendar, ChevronRight, Calculator, ArrowRight, Radio, Tv } from 'lucide-react';
 import { TradingViewWidget } from './TradingViewWidget';
@@ -75,6 +76,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
   onOpenAdminModal,
   activeCategory = 'All'
 }) => {
+  const ui = useInterfaceText();
   const { t, language } = useTranslation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
@@ -150,9 +152,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
                   {t('terminalLiveBadge')}
                 </span>
               </div>
-              <span className="text-xs text-slate-400 hidden sm:inline">
-                Real-Time {brokerName} Market Feed
-              </span>
+              <span className="text-xs text-slate-400 hidden sm:inline">{ui(" Real-Time ")}{brokerName}{ui(" Market Feed ")}</span>
             </div>
 
             {/* Fullscreen TradingView Studio Modal */}
@@ -189,7 +189,7 @@ export const LiveTradingSection: React.FC<LiveTradingSectionProps> = ({
                   <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'}`} />
                   <span className="font-mono font-bold">{inst.ticker}</span>
                   <span className="text-[10px] text-slate-400 hidden xs:inline">
-                    {inst.id === 'gold' ? 'Gold' : inst.id === 'nasdaq' ? 'Nasdaq 100' : inst.id === 'dow' ? 'Dow 30' : 'DAX 40'}
+                    {inst.id === 'gold' ? ui("Gold") : inst.id === 'nasdaq' ? ui("Nasdaq 100") : inst.id === 'dow' ? ui("Dow 30") : ui("DAX 40")}
                   </span>
                 </button>
               );

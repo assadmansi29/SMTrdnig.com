@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../../hooks/useInterfaceText';
 import React from 'react';
 import {
   X,
@@ -92,11 +93,12 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
   allVisible = true,
   allLocked = false,
 }) => {
+  const ui = useInterfaceText();
   if (!isOpen) return null;
 
   const handleDeleteAllAction = () => {
     if (drawings.length === 0) return;
-    if (window.confirm('Delete all drawings on this chart?')) {
+    if (window.confirm(ui('Delete all drawings on this chart?'))) {
       if (onDeleteAll) onDeleteAll();
       else if (onClearAll) onClearAll();
     }
@@ -111,7 +113,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
       <div className="flex items-center justify-between px-3.5 py-2.5 bg-[#070a12] border-b border-slate-800">
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-amber-400" />
-          <span className="text-xs font-semibold tracking-wide text-slate-100">Object Tree / Drawings</span>
+          <span className="text-xs font-semibold tracking-wide text-slate-100">{ui("Object Tree / Drawings")}</span>
           <span className="text-[10px] px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded font-mono">
             {drawings.length}
           </span>
@@ -120,7 +122,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
           id="btn-close-object-tree"
           onClick={onClose}
           className="p-1 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded transition-colors"
-          title="Close Object Tree"
+          title={ui("Close Object Tree")}
         >
           <X className="w-4 h-4" />
         </button>
@@ -134,7 +136,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
             id="btn-tree-undo"
             onClick={onUndo}
             disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
+            title={ui("Undo (Ctrl+Z)")}
             className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Undo2 className="w-3.5 h-3.5" />
@@ -144,7 +146,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
             id="btn-tree-redo"
             onClick={onRedo}
             disabled={!canRedo}
-            title="Redo (Ctrl+Y)"
+            title={ui("Redo (Ctrl+Y)")}
             className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Redo2 className="w-3.5 h-3.5" />
@@ -156,7 +158,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
           <button
             id="btn-tree-toggle-all-visibility"
             onClick={onToggleAllVisibility}
-            title={allVisible ? 'Hide All Drawings' : 'Show All Drawings'}
+            title={allVisible ? ui("Hide All Drawings") : ui("Show All Drawings")}
             className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
           >
             {allVisible ? <Eye className="w-3.5 h-3.5 text-blue-400" /> : <EyeOff className="w-3.5 h-3.5 text-slate-500" />}
@@ -166,7 +168,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
           <button
             id="btn-tree-toggle-all-lock"
             onClick={onToggleAllLock}
-            title={allLocked ? 'Unlock All Drawings' : 'Lock All Drawings'}
+            title={allLocked ? ui("Unlock All Drawings") : ui("Lock All Drawings")}
             className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
           >
             {allLocked ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5 text-slate-500" />}
@@ -179,7 +181,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
             <button
               id="btn-tree-delete-selected"
               onClick={onDeleteSelected}
-              title="Delete Selected Drawing"
+              title={ui("Delete Selected Drawing")}
               className="p-1 rounded text-rose-400 hover:bg-rose-500/20 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -191,7 +193,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
             id="btn-tree-delete-all"
             onClick={handleDeleteAllAction}
             disabled={drawings.length === 0}
-            title="Delete All Drawings"
+            title={ui("Delete All Drawings")}
             className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -204,8 +206,8 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
         {drawings.length === 0 ? (
           <div className="py-8 px-4 text-center text-slate-500 text-xs flex flex-col items-center gap-2">
             <Layers className="w-8 h-8 opacity-40 text-slate-600" />
-            <span>No drawings on this chart yet.</span>
-            <span className="text-[11px] text-slate-600">Select any tool from the toolbar on the left to start drawing.</span>
+            <span>{ui("No drawings on this chart yet.")}</span>
+            <span className="text-[11px] text-slate-600">{ui("Select any tool from the toolbar on the left to start drawing.")}</span>
           </div>
         ) : (
           drawings.map((item) => {
@@ -236,7 +238,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="truncate font-medium text-slate-200 group-hover:text-white">
-                      {item.name}
+                      {ui(item.name)}
                     </span>
                     {item.previewText && (
                       <span className="text-[10px] text-slate-500 font-mono truncate">
@@ -255,7 +257,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
                   <button
                     id={`btn-toggle-vis-${item.id}`}
                     onClick={() => onToggleVisibility(item.id)}
-                    title={item.visible ? 'Hide Drawing' : 'Show Drawing'}
+                    title={item.visible ? ui("Hide Drawing") : ui("Show Drawing")}
                     className={`p-1 rounded transition-colors ${
                       item.visible
                         ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
@@ -269,7 +271,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
                   <button
                     id={`btn-toggle-lock-${item.id}`}
                     onClick={() => onToggleLock(item.id)}
-                    title={item.locked ? 'Unlock Drawing (Currently Locked)' : 'Lock Drawing (Prevent Moving)'}
+                    title={item.locked ? ui("Unlock Drawing (Currently Locked)") : ui("Lock Drawing (Prevent Moving)")}
                     className={`p-1 rounded transition-colors ${
                       item.locked
                         ? 'text-amber-400 bg-amber-500/20'
@@ -283,7 +285,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
                   <button
                     id={`btn-settings-${item.id}`}
                     onClick={() => onOpenProperties(item.rawDrawing)}
-                    title="Drawing Settings"
+                    title={ui("Drawing Settings")}
                     className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-700/60 transition-colors"
                   >
                     <Settings className="w-3.5 h-3.5" />
@@ -293,7 +295,7 @@ export const ObjectTreePanel: React.FC<ObjectTreePanelProps> = ({
                   <button
                     id={`btn-delete-${item.id}`}
                     onClick={() => onDeleteDrawing(item.id)}
-                    title="Delete Drawing"
+                    title={ui("Delete Drawing")}
                     className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/20 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

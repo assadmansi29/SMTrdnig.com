@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Sparkles, CheckCircle2, ShieldCheck, Mail } from 'lucide-react';
@@ -9,6 +10,7 @@ interface NewsletterModalProps {
 }
 
 export const NewsletterModal: React.FC<NewsletterModalProps> = ({ isOpen, onClose }) => {
+  const ui = useInterfaceText();
   const { t, isRTL } = useTranslation();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
@@ -63,7 +65,7 @@ export const NewsletterModal: React.FC<NewsletterModalProps> = ({ isOpen, onClos
           type="button"
           onClick={onClose}
           className="absolute top-4 right-4 rtl:right-auto rtl:left-4 min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md active:scale-95 z-20"
-          aria-label="Close newsletter modal"
+          aria-label={ui("Close newsletter modal")}
         >
           <X className="w-5 h-5" />
         </button>

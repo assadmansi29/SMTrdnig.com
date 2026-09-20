@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Calendar, 
@@ -50,8 +51,9 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
   onOpenCalendar,
   onOpenChartModal
 }) => {
+  const ui = useInterfaceText();
   const { t, isRTL, language } = useTranslation();
-  const { events: contextEvents, isLoading, isRefreshing, refresh } = useEconomicCalendar();
+  const { events: contextEvents, isLoading, isRefreshing, refresh, error, lastRefreshedAt } = useEconomicCalendar();
   const allEvents = (propEvents && propEvents.length > 0) ? propEvents : contextEvents;
 
   // Active Intl locale for culturally accurate date/time rendering
@@ -124,11 +126,10 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
               </h3>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                {t('liveEconomicCalendarBadge')}
+                {error ? ui("Feed delayed") : ui("Economic releases")}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">
-              {t('liveEconomicCalendarSubtitle')}
+            <p className="text-[11px] text-slate-400">{ui(" BiQuote aggregate feed · 30s polling · Updated ")}{new Date(lastRefreshedAt).toLocaleTimeString()}{error && <span role="alert" className="block text-amber-300">{error}</span>}
             </p>
           </div>
         </div>
@@ -313,13 +314,13 @@ export const EconomicNewsSection: React.FC<EconomicNewsSectionProps> = ({
                       {/* Local Time and Date */}
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-1 flex-wrap">
                         <span className="font-medium text-slate-300">
-                          {timeInfo.dateFormatted} • {timeInfo.timeFormatted}
+                          {timeInfo.dateFormatted} • {ev.sourceTimeMode && ev.sourceTimeMode !== 'exact' ? (ev.sourceTimeMode === 'date' ? 'All day' : 'Time tentative') : timeInfo.timeFormatted}
                         </span>
                         <span className="text-slate-600">•</span>
                         <span className="text-slate-400 font-mono text-[10px]">
                           {tzMeta.offsetString}
                         </span>
-                        {ev.utcIso && (
+                        {ev.utcIso && (!ev.sourceTimeMode || ev.sourceTimeMode === 'exact') && (
                           <span className="text-slate-500 font-mono text-[10px] hidden sm:inline" title={t('calendarUtcTooltip')}>
                             ({ev.utcIso.split('T')[1].substring(0, 5)} UTC)
                           </span>

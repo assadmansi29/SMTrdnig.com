@@ -1,25 +1,8 @@
 /**
  * Reaction Zone Signal Engine
  *
- * Professional state-based signal engine strictly driven by live price interactions
- * with institutional Reaction Zone levels.
- *
- * EXACT TRADING & RISK RULES:
- * 1. ONLY LIVE & CURRENT LINE:
- *    - Operates exclusively when price is NEAR the line.
- *    - Stale signals that price has surpassed/moved away from are cleared and NOT shown.
- * 2. FIRST TOUCH:
- *    - When price reaches and touches the line for the first time -> 'TEST'.
- * 3. SECOND TOUCH:
- *    - When price pulls back and touches the line again -> 'TEST 2'.
- * 4. HOLD / NO BREAK (BAR CLOSED & NEW BAR OPENED):
- *    - If price approached from below (upward move into resistance) and held without breaking:
- *      -> '▼ SELL' with Stop Loss strictly contained between 20 and 35 points (default 28 pts).
- *    - If price approached from above (downward move into support) and held without breaking:
- *      -> '▲ BUY' with Stop Loss strictly contained between 20 and 35 points (default 28 pts).
- * 5. BREAKOUT / BREAKDOWN (PRICE BROKE THE LINE):
- *    - If price moves UP and breaks above the line -> '▲ BUY' (Bullish Breakout).
- *    - If price moves DOWN and breaks below the line -> '▼ SELL' (Bearish Breakdown).
+ * Touch visibility remains scoped to the interacting zone. Normal rejection
+ * validates the next 5-minute candle; breakout retests keep closed-candle confirmation.
  */
 
 export interface CandleData {
@@ -34,12 +17,14 @@ export interface CandleData {
 export type ReactionSignalType =
   | 'test'
   | 'test2'
+  | 'break'
+  | 'retest'
   | 'sell_rejection'
   | 'buy_bounce'
   | 'buy_breakout'
   | 'sell_breakdown';
-
 export type ReactionSignalDirection = 'bullish' | 'bearish' | 'neutral';
+export type ReactionZoneBias = 'bullish' | 'bearish';
 
 export interface ReactionZoneSignal {
   id: string;
@@ -53,26 +38,24 @@ export interface ReactionZoneSignal {
   label: string;
   subLabel?: string;
   approachDirection: 'upward' | 'downward';
-  // Risk & Stop Loss containment (20 to 35 points)
   slPrice?: number;
   slPoints?: number;
   formattedSlPrice?: string;
-}
-
-export interface ReactionLineInfo {
-  id: string;
-  price: number;
-  zoneType?: 'strong' | 'weak';
+  entryPrice?: number;
+  entryAt?: number;
+  validation?: 'test2-60s' | 'next-candle-60s' | 'breakout';
 }
 
 export type ReactionLineState =
-  | 'NEUTRAL'
+  | 'IDLE'
   | 'TEST_1'
+  | 'WAITING_FOR_TEST_2'
   | 'TEST_2'
-  | 'SELL_REJECTION'
-  | 'BUY_BOUNCE'
-  | 'BUY_BREAKOUT'
-  | 'SELL_BREAKDOWN';
+  | 'WAITING_FOR_CLOSE_CONFIRMATION'
+  | 'BREAK'
+  | 'RETEST'
+  | 'CONFIRMED_BUY'
+  | 'CONFIRMED_SELL';
 
 export interface LineEvaluationResult {
   state: ReactionLineState;
@@ -80,40 +63,75 @@ export interface LineEvaluationResult {
   signals: ReactionZoneSignal[];
   lastTouchIndex: number;
   approachDirection: 'upward' | 'downward';
+  // Retained for renderer compatibility. They are not used to confirm or show a signal.
   isPriceNear: boolean;
   hasRecentInteraction: boolean;
 }
 
-/**
- * Normalizes candle timestamp to epoch seconds.
- */
+interface ZoneSignalState {
+  linePrice: number;
+  bias: ReactionZoneBias;
+  state: ReactionLineState;
+  lastProcessedClosedTime: number;
+  test1Time: number | null;
+  test1Index: number;
+  test1Candle: CandleData | null;
+  test2Time: number | null;
+  test2Index: number;
+  touchReleased: boolean;
+  touchDistance: number;
+  releaseTime: number | null;
+  lastLiveTime: number | null;
+  lastLiveClose: number | null;
+  breakTime: number | null;
+  breakDirection: ReactionZoneBias | null;
+  retestTime: number | null;
+  retest2Time: number | null;
+  rejectionDirection: ReactionZoneBias | null;
+  rejectionObservation: {barTime:number; low:number; high:number} | null;
+  activeSignal: ReactionZoneSignal | null;
+  signals: ReactionZoneSignal[];
+  validation: { startedAt: number; lastObservedAt: number; direction: ReactionZoneBias; tolerance: number; barTime:number; low:number; high:number } | null;
+  entryDistanceRejected: boolean;
+  retestObservation: {barTime:number; low:number; high:number} | null;
+}
+
+const zoneStates = new Map<string, ZoneSignalState>();
+
+/** Explicit instrument units; Gold follows the platform's 0.10 = one point convention. */
+export function reactionPointUnit(symbol: string): {size:number; label:string; decimals:number} {
+  const ticker = symbol.toUpperCase().split(':').pop()!.replace('/', '');
+  if (/^(XAU|GOLD)/.test(ticker)) return {size:0.1,label:'Points',decimals:2};
+  if (/^(BTC|NAS|US30|DE30|SPX|GER|US100|US500)/.test(ticker)) return {size:1,label:'Points',decimals:2};
+  if (/^(WTI|BCO|XAG)/.test(ticker)) return {size:0.01,label:'Points',decimals:3};
+  if (/^[A-Z]{6}$/.test(ticker)) return {size:ticker.endsWith('JPY')?0.01:0.0001,label:'Pips',decimals:ticker.endsWith('JPY')?3:5};
+  return {size:1,label:'Points',decimals:2};
+}
+
+/** Normal rejection entries may move up to 25 instrument points from the level. */
+export function isWithinReactionEntryDistance(price:number, linePrice:number, symbol:string):boolean {
+  const rounding=Number.EPSILON*Math.max(1,Math.abs(price),Math.abs(linePrice))*4;
+  return Number.isFinite(price) && Number.isFinite(linePrice)
+    && Math.abs(price-linePrice)<=25*reactionPointUnit(symbol).size+rounding;
+}
+
 export function parseCandleTimestamp(timeVal: any): number {
-  if (typeof timeVal === 'number' && !isNaN(timeVal) && timeVal > 0) return timeVal;
-  const n = Number(timeVal);
-  if (!isNaN(n) && n > 0) return n;
+  if (typeof timeVal === 'number' && Number.isFinite(timeVal) && timeVal > 0) return timeVal;
+  const numeric = Number(timeVal);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
   if (typeof timeVal === 'string') {
     const parsed = Math.floor(new Date(timeVal).getTime() / 1000);
-    if (!isNaN(parsed) && parsed > 0) return parsed;
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
   }
   return 0;
 }
 
-/**
- * Calculates average candle range over recent candles to calibrate volatility.
- */
 export function calculateAverageCandleRange(candles: CandleData[], count: number = 20): number {
-  if (!candles || candles.length === 0) return 0;
   const slice = candles.slice(-count);
-  let sum = 0;
-  let validCount = 0;
-  for (const c of slice) {
-    const rng = Math.abs(c.high - c.low);
-    if (!isNaN(rng) && rng > 0) {
-      sum += rng;
-      validCount++;
-    }
-  }
-  return validCount > 0 ? sum / validCount : 0;
+  const ranges = slice
+    .map((c) => Math.abs(c.high - c.low))
+    .filter((range) => Number.isFinite(range) && range > 0);
+  return ranges.length ? ranges.reduce((sum, range) => sum + range, 0) / ranges.length : 0;
 }
 
 export interface StopLossInfo {
@@ -123,41 +141,24 @@ export interface StopLossInfo {
   formattedSlPrice: string;
 }
 
-/**
- * Calculates stop loss price strictly within 20 to 35 points based on asset type.
- */
+/** Stop distance is measured from entry using the instrument's point unit. */
 export function calculateStopLossForReactionZone(
   linePrice: number,
   direction: 'sell' | 'buy',
-  targetPoints: number = 28 // 20 to 35 points strictly
+  targetPoints: number = 25,
+  symbol = ''
 ): StopLossInfo {
-  const points = Math.min(35, Math.max(20, targetPoints));
-  let slDistance = 0;
-
-  // Gold (XAUUSD, GOLD ~ 1000 - 5000): 1 point = 0.10 USD (20 to 35 points = $2.00 to $3.50)
-  if (linePrice >= 1000 && linePrice <= 5000) {
-    slDistance = points * 0.1;
-  } else if (linePrice > 5000) {
-    // Indices (US30, NAS100, DAX/GER40, S&P 500/ES1!, BTC): 1 point = 1.0 (20 to 35 points)
-    slDistance = points * 1.0;
-  } else if (linePrice >= 10 && linePrice < 1000) {
-    // JPY Forex pairs (USD/JPY ~ 150) or Commodities/Oil: 1 point = 0.01 (20 to 35 pips)
-    slDistance = points * 0.01;
-  } else if (linePrice < 10) {
-    // Standard Forex pairs (EUR/USD ~ 1.08, GBP/USD ~ 1.28): 1 pip = 0.0001 (20 to 35 pips)
-    slDistance = points * 0.0001;
-  } else {
-    slDistance = points * 1.0;
-  }
-
-  const slPrice = direction === 'sell' ? linePrice + slDistance : linePrice - slDistance;
-  const decimals = linePrice < 10 ? 4 : linePrice >= 10 && linePrice < 1000 ? 3 : 2;
+  const points = Math.min(35, Math.max(25, Number.isFinite(targetPoints) ? targetPoints : 25));
+  const unit = reactionPointUnit(symbol);
+  const slDistance = points * unit.size;
+  const decimals = unit.decimals;
+  const rawPrice = direction === 'sell' ? linePrice + slDistance : linePrice - slDistance;
 
   return {
-    slPrice: Number(slPrice.toFixed(decimals)),
+    slPrice: Number(rawPrice.toFixed(decimals)),
     slPoints: points,
     slDistance,
-    formattedSlPrice: slPrice.toFixed(decimals),
+    formattedSlPrice: rawPrice.toFixed(decimals),
   };
 }
 
@@ -170,489 +171,420 @@ export interface ZoneTolerances {
 }
 
 export function computeZoneTolerances(linePrice: number, avgRange: number): ZoneTolerances {
-  const P = linePrice;
-  const isForex = P < 10;
-  const isJpyOrCommodity = P >= 10 && P < 1000;
-  const isGold = P >= 1000 && P <= 5000;
-
-  // Touch tolerance: threshold within which price interacts with the line
-  let touchTolerance = avgRange * 0.20;
+  const isForex = linePrice < 10;
+  const isJpyOrCommodity = linePrice >= 10 && linePrice < 1000;
+  const isGold = linePrice >= 1000 && linePrice <= 5000;
+  let touchTolerance = avgRange * 0.2;
   if (isForex) touchTolerance = Math.max(touchTolerance, 0.00015);
   else if (isJpyOrCommodity) touchTolerance = Math.max(touchTolerance, 0.03);
   else if (isGold) touchTolerance = Math.max(touchTolerance, 0.35);
-  else touchTolerance = Math.max(touchTolerance, 3.0);
-
-  // Breakout tolerance: decisive breach beyond which line is broken
-  let breakoutTolerance = avgRange * 0.40;
-  if (isForex) breakoutTolerance = Math.max(breakoutTolerance, 0.00025);
-  else if (isJpyOrCommodity) breakoutTolerance = Math.max(breakoutTolerance, 0.06);
-  else if (isGold) breakoutTolerance = Math.max(breakoutTolerance, 0.75);
-  else breakoutTolerance = Math.max(breakoutTolerance, 5.0);
-
-  // Pullback distance: required pull away before a second touch qualifies as Test 2
-  let pullbackDistance = avgRange * 0.35;
-  if (isForex) pullbackDistance = Math.max(pullbackDistance, 0.00035);
-  else if (isJpyOrCommodity) pullbackDistance = Math.max(pullbackDistance, 0.08);
-  else if (isGold) pullbackDistance = Math.max(pullbackDistance, 1.20);
-  else pullbackDistance = Math.max(pullbackDistance, 6.0);
-
-  // Proximity threshold
-  const minAbsoluteNear = isForex ? 0.003 : isJpyOrCommodity ? 0.8 : isGold ? 8.0 : 40.0;
-  const nearThreshold = Math.max(avgRange * 3.5, P * 0.003, minAbsoluteNear);
+  else touchTolerance = Math.max(touchTolerance, 3);
 
   return {
-    P,
+    P: linePrice,
     touchTolerance,
-    breakoutTolerance,
-    pullbackDistance,
-    nearThreshold,
+    // Kept for callers that use the shared tolerance interface; break confirmation is close-to-line.
+    breakoutTolerance: touchTolerance,
+    pullbackDistance: touchTolerance,
+    nearThreshold: touchTolerance,
   };
 }
 
-/**
- * Checks if the current live market price is near this reaction zone line.
- */
-export function isPriceNearLine(
-  currentPrice: number,
-  linePrice: number,
-  avgRange: number
-): boolean {
-  const tolerances = computeZoneTolerances(linePrice, avgRange);
-  return Math.abs(currentPrice - linePrice) <= tolerances.nearThreshold;
+export function isPriceNearLine(currentPrice: number, linePrice: number, avgRange: number): boolean {
+  return Math.abs(currentPrice - linePrice) <= computeZoneTolerances(linePrice, avgRange).touchTolerance;
 }
 
-/**
- * Determines the price direction (UP or DOWN) approaching the specific Reaction Zone line.
- * Evaluates the candles leading up to the interaction to identify where price came from:
- * - Price came from above the line and descending: direction is 'downward'.
- * - Price came from below the line and ascending: direction is 'upward'.
- */
-export function determinePriceDirection(
-  linePrice: number,
-  candles: CandleData[],
-  targetIndex: number,
-  touchTolerance: number = 0
-): 'upward' | 'downward' {
-  const P = linePrice;
-  const maxLookback = Math.min(25, targetIndex);
+function zoneBias(zoneType?: 'strong' | 'weak'): ReactionZoneBias {
+  // Zone color only supplies visual approach metadata. Entries use close/open position.
+  return zoneType === 'weak' ? 'bullish' : 'bearish';
+}
 
-  for (let k = 1; k <= maxLookback; k++) {
-    const c = candles[targetIndex - k];
-    if (!c) continue;
-    if (c.close > P + touchTolerance) {
-      return 'downward'; // Came from above line, moving DOWN towards the line
-    }
-    if (c.close < P - touchTolerance) {
-      return 'upward'; // Came from below line, moving UP towards the line
-    }
+function zoneKey(linePrice: number, zoneType?: 'strong' | 'weak', lineId?: string): string {
+  return lineId || `reaction-zone:${zoneType || 'strong'}:${linePrice}`;
+}
+
+function isFiveMinuteInterval(interval?: string): boolean {
+  const normalized = String(interval || '').trim().toLowerCase();
+  return normalized === '5' || normalized === '5m';
+}
+
+function createTestSignal(
+  type: 'test' | 'test2',
+  key: string,
+  candle: CandleData,
+  candleIndex: number,
+  linePrice: number,
+  bias: ReactionZoneBias
+): ReactionZoneSignal {
+  const time = parseCandleTimestamp(candle.time);
+  return {
+    id: `${key}:${type}:${time}`,
+    type,
+    direction: 'neutral',
+    time,
+    price: bias === 'bearish' ? candle.high : candle.low,
+    candle,
+    candleIndex,
+    linePrice,
+    label: type === 'test' ? '● TEST 1' : '● TEST 2',
+    subLabel: type === 'test' ? '1st Touch' : '2nd Touch',
+    approachDirection: bias === 'bearish' ? 'upward' : 'downward',
+  };
+}
+
+function createConfirmationSignal(
+  key: string,
+  candle: CandleData,
+  candleIndex: number,
+  linePrice: number,
+  bias: ReactionZoneBias,
+  breakout = false,
+  symbol = '',
+  entryPrice = candle.close
+): ReactionZoneSignal {
+  const direction = bias === 'bearish' ? 'sell' : 'buy';
+  const stopLoss = calculateStopLossForReactionZone(entryPrice, direction, 25, symbol);
+  const isSell = direction === 'sell';
+  const time = parseCandleTimestamp(candle.time);
+
+  return {
+    id: `${key}:${isSell ? 'confirmed-sell' : 'confirmed-buy'}:${time}`,
+    type: breakout ? (isSell ? 'sell_breakdown' : 'buy_breakout') : (isSell ? 'sell_rejection' : 'buy_bounce'),
+    direction: isSell ? 'bearish' : 'bullish',
+    time,
+    price: isSell ? candle.low : candle.high,
+    candle,
+    candleIndex,
+    linePrice,
+    label: isSell ? '▼ SELL' : '▲ BUY',
+    subLabel: `${isSell ? 'Close + Next Open Below' : 'Close + Next Open Above'} Zone | SL: ${stopLoss.formattedSlPrice}`,
+    approachDirection: isSell ? 'upward' : 'downward',
+    slPrice: stopLoss.slPrice,
+    slPoints: stopLoss.slPoints,
+    formattedSlPrice: stopLoss.formattedSlPrice,
+  };
+}
+
+function initialState(linePrice: number, bias: ReactionZoneBias, lastProcessedClosedTime: number): ZoneSignalState {
+  return {
+    linePrice,
+    bias,
+    state: 'IDLE',
+    // Historical candles establish context only; they can never create a new setup.
+    lastProcessedClosedTime,
+    test1Time: null,
+    test1Index: -1,
+    test1Candle: null,
+    test2Time: null,
+    test2Index: -1,
+    touchReleased: false,
+    touchDistance: 0,
+    releaseTime: null,
+    lastLiveTime: null,
+    lastLiveClose: null,
+    breakTime: null,
+    breakDirection: null,
+    retestTime: null,
+    retest2Time: null,
+    rejectionDirection: null,
+    rejectionObservation: null,
+    activeSignal: null,
+    signals: [],
+    validation: null,
+    entryDistanceRejected: false,
+    retestObservation: null,
+  };
+}
+
+/** Guards pending entries, including when the proximity label is hidden. */
+export function advanceReactionZoneValidation(lineId:string, candles:CandleData[], symbol:string, nowMs=Date.now()): ReactionZoneSignal | null {
+  const state=zoneStates.get(lineId), live=candles[candles.length-1];
+  if (state && live && !state.breakDirection && !state.validation && state.rejectionObservation && state.state !== 'CONFIRMED_BUY' && state.state !== 'CONFIRMED_SELL') {
+    const observed=state.rejectionObservation, barTime=parseCandleTimestamp(live.time);
+    const newBar=barTime!==observed.barTime;
+    if (!isWithinReactionEntryDistance(live.close,state.linePrice,symbol)
+      || ((newBar || live.low<observed.low) && !isWithinReactionEntryDistance(live.low,state.linePrice,symbol))
+      || ((newBar || live.high>observed.high) && !isWithinReactionEntryDistance(live.high,state.linePrice,symbol))) state.entryDistanceRejected=true;
+    state.rejectionObservation={barTime,low:live.low,high:live.high};
   }
+  if (!state?.validation || !live || state.state !== 'WAITING_FOR_CLOSE_CONFIRMATION') return null;
+  const validation=state.validation;
+  const side=validation.direction==='bullish'?1:-1;
+  if (!Number.isFinite(live.close)) return null;
+  const barTime=parseCandleTimestamp(live.time);
+  const newBar=barTime!==validation.barTime;
+  const adverse=side===1 ? (newBar || live.low<validation.low?live.low:live.close) : (newBar || live.high>validation.high?live.high:live.close);
+  const leftEntryArea=!isWithinReactionEntryDistance(live.close,state.linePrice,symbol)
+    || ((newBar || live.low<validation.low) && !isWithinReactionEntryDistance(live.low,state.linePrice,symbol))
+    || ((newBar || live.high>validation.high) && !isWithinReactionEntryDistance(live.high,state.linePrice,symbol));
+  validation.barTime=barTime;validation.low=live.low;validation.high=live.high;
+  if (side*(adverse-state.linePrice) < -validation.tolerance) {
+    state.validation=null; // Existing closed-candle BREAK → RETEST flow still owns breakouts.
+    state.entryDistanceRejected=true;
+    return null;
+  }
+  if(leftEntryArea) {
+    state.validation=null;
+    state.entryDistanceRejected=true;
+    return null; // Returning inside the cap must not revive this expired validation timer.
+  }
+  const liveTime=parseCandleTimestamp(live.time)*1000;
+  if (nowMs < liveTime || nowMs >= liveTime+300000 || nowMs-validation.lastObservedAt>15000) {
+    // Never count an unobserved feed outage/history replay as a minute of validation.
+    validation.startedAt=nowMs;
+    validation.lastObservedAt=nowMs;
+    return null;
+  }
+  validation.lastObservedAt=nowMs;
+  if(nowMs-validation.startedAt<60000 || side*(live.open-state.linePrice)<=0 || side*(live.close-state.linePrice)<=reactionPointUnit(symbol).size*0.1) return null;
+  const signal=createConfirmationSignal(lineId,live,candles.length-1,state.linePrice,validation.direction,false,symbol);
+  const unit=reactionPointUnit(symbol);
+  signal.entryPrice=live.close;
+  signal.entryAt=nowMs;
+  signal.validation='next-candle-60s';
+  signal.slPrice=live.close-side*25*unit.size;
+  signal.formattedSlPrice=signal.slPrice.toFixed(unit.decimals);
+  signal.label=side===1?'▲ ENTRY BUY':'▼ ENTRY SELL';
+  signal.subLabel='New candle · 60-second rejection validated';
+  state.validation=null;
+  state.state=side===1?'CONFIRMED_BUY':'CONFIRMED_SELL';
+  state.signals.push(signal);
+  state.activeSignal=signal;
+  return signal;
+}
 
-  const prevC = targetIndex > 0 ? candles[targetIndex - 1] : candles[targetIndex];
-  return (prevC && prevC.close >= P) ? 'downward' : 'upward';
+export function resetReactionZoneSignalState(lineId?: string): void {
+  if (lineId) zoneStates.delete(lineId);
+  else zoneStates.clear();
+}
+
+/** Only a zone already touched live may continue confirmation outside label proximity. */
+export function hasPendingReactionZoneSetup(lineId: string): boolean {
+  const state = zoneStates.get(lineId);
+  return !!state && state.state !== 'CONFIRMED_BUY' && state.state !== 'CONFIRMED_SELL'
+    && (state.test1Time !== null || state.breakDirection !== null);
+}
+
+/** Inactive zones cannot replay missed candles into new signals on reactivation. */
+export function suspendReactionZoneSignals(lineId: string, candles: CandleData[]): void {
+  const state = zoneStates.get(lineId);
+  if (!state || candles.length < 2) return;
+  if (state.state === 'CONFIRMED_BUY' || state.state === 'CONFIRMED_SELL') {
+    zoneStates.delete(lineId);
+    return;
+  }
+  state.lastProcessedClosedTime = Math.max(state.lastProcessedClosedTime, parseCandleTimestamp(candles[candles.length - 2].time));
+  const live = candles[candles.length - 1];
+  if (!state.touchReleased && Math.abs(live.close - state.linePrice) > state.touchDistance) {
+    state.touchReleased = true;
+    state.releaseTime = parseCandleTimestamp(live.time);
+  }
+  state.lastLiveTime = parseCandleTimestamp(live.time);
+  state.lastLiveClose = live.close;
 }
 
 /**
- * Evaluates the deterministic state machine and extracts signals for a Reaction Zone line.
- *
- * EXACT USER-SPECIFIED TRADING RULES:
- * WHEN PRICE IS MOVING DOWN:
- * - If price breaks BELOW the specific Reaction Zone line it is interacting with, signal is SELL.
- * - If price reaches/interacts with that Reaction Zone but does NOT break below it, signal is BUY.
- * WHEN PRICE IS MOVING UP:
- * - If price breaks ABOVE the specific Reaction Zone line it is interacting with, signal is BUY.
- * - If price reaches/interacts with that Reaction Zone but does NOT break above it, signal is SELL.
- *
- * WHEN THE BAR IS CLOSED AND OPENS THE NEW BAR WITHOUT BREAKING THE LINE:
- * - If price went UP -> SELL with stop loss 20 to 35 points above the line.
- * - If price went DOWN -> BUY with stop loss 20 to 35 points below the line.
- *
- * AND IF THE PRICE BROKE THE LINE THE SIGNALS ARE CHANGED TO THE OTHER WAY:
- * - If price went UP and broke the line -> BUY.
- * - If price went DOWN and broke the line -> SELL.
- *
- * Stop loss strictly 20 to 35 points.
+ * Processes live touches and each newly closed five-minute candle once.
+ * Initial history establishes a baseline, never a retrospective entry.
  */
 export function evaluateReactionZoneSignals(
   linePrice: number,
   candles: CandleData[],
-  zoneType?: 'strong' | 'weak'
+  zoneType?: 'strong' | 'weak',
+  lineId?: string,
+  interval?: string,
+  symbol = '',
+  nowMs = Date.now(),
+  liveObservation = true,
+  allowTouch = true
 ): LineEvaluationResult {
-  const defaultResult: LineEvaluationResult = {
-    state: 'NEUTRAL',
-    activeSignal: null,
-    signals: [],
-    lastTouchIndex: -1,
-    approachDirection: zoneType === 'weak' ? 'downward' : 'upward',
+  const bias = zoneBias(zoneType);
+  const key = zoneKey(linePrice, zoneType, lineId);
+  let state = zoneStates.get(key);
+  if (!state || state.linePrice !== linePrice || state.bias !== bias) {
+    const latestClosedCandle = candles.length >= 2 ? candles[candles.length - 2] : undefined;
+    state = initialState(linePrice, bias, latestClosedCandle ? parseCandleTimestamp(latestClosedCandle.time) : 0);
+    zoneStates.set(key, state);
+  }
+
+  const result = (): LineEvaluationResult => ({
+    state: state!.state,
+    activeSignal: state!.activeSignal,
+    signals: [...state!.signals],
+    lastTouchIndex: state!.test2Index >= 0 ? state!.test2Index : state!.test1Index,
+    approachDirection: bias === 'bearish' ? 'upward' : 'downward',
     isPriceNear: false,
     hasRecentInteraction: false,
+  });
+
+  if (!isFiveMinuteInterval(interval) || !Number.isFinite(linePrice) || linePrice <= 0 || candles.length < 2) {
+    return result();
+  }
+  if (!allowTouch && !hasPendingReactionZoneSetup(key)) return result();
+
+  // The chart always appends/updates a live candle. Only earlier bars are closed and eligible.
+  const closedCandles = candles.slice(0, -1);
+  const tolerance = computeZoneTolerances(linePrice, calculateAverageCandleRange(closedCandles, 20)).touchTolerance;
+
+  const emit = (signal: ReactionZoneSignal) => {
+    state!.signals.push(signal);
+    state!.activeSignal = signal;
+  };
+  const emitBreakStage = (type: 'break' | 'retest', candle: CandleData, index: number) => {
+    const signal = createTestSignal('test', key, candle, index, linePrice, state!.breakDirection!);
+    emit({ ...signal, id: `${key}:${type}:${signal.time}`, type, label: type === 'break' ? '● BREAK' : '● RETEST', subLabel: undefined });
   };
 
-  if (!candles || candles.length < 3 || !linePrice || isNaN(linePrice) || linePrice <= 0) {
-    return defaultResult;
-  }
-
-  const N = candles.length;
-  const currentPrice = candles[N - 1].close;
-  const avgRange = calculateAverageCandleRange(candles, 20);
-  const { touchTolerance, breakoutTolerance, pullbackDistance, nearThreshold } = computeZoneTolerances(
-    linePrice,
-    avgRange
-  );
-  const P = linePrice;
-
-  // Evaluate recent price interaction cycle (up to last 60 candles)
-  const maxLookback = Math.min(N, 60);
-  const startIdx = Math.max(0, N - maxLookback);
-
-  const rawSignals: ReactionZoneSignal[] = [];
-  let currentState: ReactionLineState = 'NEUTRAL';
-  let approachDir: 'upward' | 'downward' = determinePriceDirection(P, candles, startIdx, touchTolerance);
-
-  let test1Idx = -1;
-  let test2Idx = -1;
-  let pullbackOccurred = false;
-  let pullbackBarIdx = -1;
-  let lastActiveSignal: ReactionZoneSignal | null = null;
-
-  for (let i = startIdx; i < N; i++) {
-    const c = candles[i];
-    const prevC = i > 0 ? candles[i - 1] : c;
-    const cTime = parseCandleTimestamp(c.time);
-
-    // Dynamic approach direction when in neutral state
-    if (currentState === 'NEUTRAL') {
-      approachDir = determinePriceDirection(P, candles, i, touchTolerance);
+  const markDeparture = (candle: CandleData) => {
+    if (!state!.touchReleased && Math.abs(candle.close - linePrice) > state!.touchDistance) {
+      state!.touchReleased = true;
+      state!.releaseTime = parseCandleTimestamp(candle.time);
     }
-
-    // 1. Check if candle physically touches or interacts with the line level
-    const isTouching =
-      (c.high >= P - touchTolerance && c.low <= P + touchTolerance) ||
-      (c.high >= P && c.low <= P) ||
-      Math.abs(c.high - P) <= touchTolerance ||
-      Math.abs(c.low - P) <= touchTolerance ||
-      Math.abs(c.close - P) <= touchTolerance ||
-      Math.abs(c.open - P) <= touchTolerance;
-
-    // STEP 1: FIRST TOUCH -> 'TEST'
-    // Price reaches or touches the Reaction Zone for the first time.
-    // MUST always begin with 'TEST' before any signals or TEST 2.
-    if (currentState === 'NEUTRAL') {
-      if (isTouching) {
-        currentState = 'TEST_1';
-        test1Idx = i;
-        pullbackOccurred = false;
-        pullbackBarIdx = -1;
-
-        const sig: ReactionZoneSignal = {
-          id: `sig_test1_${i}_${cTime}`,
-          type: 'test',
-          direction: 'neutral',
-          time: cTime,
-          price: approachDir === 'upward' ? c.high : c.low,
-          candle: c,
-          candleIndex: i,
-          linePrice: P,
-          label: '● TEST',
-          subLabel: '1st Touch',
-          approachDirection: approachDir,
-        };
-        rawSignals.push(sig);
-        lastActiveSignal = sig;
-      }
-      continue;
+    if (!state!.breakDirection && state!.touchReleased && !state!.activeSignal && state!.test1Candle) {
+      emit(createTestSignal('test', key, state!.test1Candle, state!.test1Index, linePrice, bias));
     }
-
-    // STEP 2: SECOND TOUCH / RE-TEST -> 'TEST 2'
-    // After TEST 1, price must undergo a second test (TEST 2) before ANY signals can be issued!
-    // Sequence MUST strictly be: TEST > TEST2 > SIGNALS
-    if (currentState === 'TEST_1') {
-      const isPullingAway =
-        approachDir === 'upward'
-          ? c.low <= P - (pullbackDistance * 0.5)
-          : c.high >= P + (pullbackDistance * 0.5);
-
-      if (isPullingAway) {
-        pullbackOccurred = true;
-        pullbackBarIdx = i;
-      }
-
-      // Second test occurs if:
-      // - Price pulled away and re-tests the line (isTouching)
-      // - OR a subsequent candle tests/touches the line (i > test1Idx && isTouching)
-      const isSecondTest =
-        (pullbackOccurred && i > pullbackBarIdx && isTouching) ||
-        (i > test1Idx && isTouching);
-
-      if (isSecondTest) {
-        currentState = 'TEST_2';
-        test2Idx = i;
-        pullbackOccurred = false;
-
-        const sig: ReactionZoneSignal = {
-          id: `sig_test2_${i}_${cTime}`,
-          type: 'test2',
-          direction: 'neutral',
-          time: cTime,
-          price: approachDir === 'upward' ? c.high : c.low,
-          candle: c,
-          candleIndex: i,
-          linePrice: P,
-          label: '● TEST 2',
-          subLabel: '2nd Touch',
-          approachDirection: approachDir,
-        };
-        rawSignals.push(sig);
-        lastActiveSignal = sig;
-        continue;
-      }
-
-      // If price moved far away from the zone without ever completing TEST 2, reset to NEUTRAL
-      const dist = Math.min(Math.abs(c.close - P), Math.abs(c.low - P), Math.abs(c.high - P));
-      if (dist > nearThreshold * 1.6 && i > test1Idx + 12) {
-        currentState = 'NEUTRAL';
-        test1Idx = -1;
-        pullbackOccurred = false;
-      }
-
-      // STRICT MANDATE: While in TEST_1, NEVER issue Buy/Sell/Breakout signals!
-      // Must progress through TEST 2 first!
-      continue;
-    }
-
-    // STEP 3: AFTER TEST AND TEST 2 -> SIGNALS
-    // Both TEST 1 and TEST 2 have now occurred (currentState === 'TEST_2').
-    // Now and ONLY now do we evaluate confirmed entry signals:
-    // - If line held without breaking -> SELL (if approached upward) or BUY (if approached downward) with 20-35 pt SL.
-    // - If line broke -> BUY (if broke above) or SELL (if broke below) with 20-35 pt SL.
-    if (currentState === 'TEST_2') {
-      // Check if price decisively breaks the line
-      const isBreakoutUp = c.close > P + breakoutTolerance;
-      const isBreakdownDown = c.close < P - breakoutTolerance;
-
-      if (isBreakoutUp) {
-        const slInfo = calculateStopLossForReactionZone(P, 'buy', 28);
-        currentState = 'BUY_BREAKOUT';
-        const sig: ReactionZoneSignal = {
-          id: `sig_break_buy_${i}_${cTime}`,
-          type: 'buy_breakout',
-          direction: 'bullish',
-          time: cTime,
-          price: c.low,
-          candle: c,
-          candleIndex: i,
-          linePrice: P,
-          label: `▲ BUY`,
-          subLabel: `Breakout Above | SL: ${slInfo.formattedSlPrice}`,
-          approachDirection: 'upward',
-          slPrice: slInfo.slPrice,
-          slPoints: slInfo.slPoints,
-          formattedSlPrice: slInfo.formattedSlPrice,
-        };
-        rawSignals.push(sig);
-        lastActiveSignal = sig;
-        continue;
-      }
-
-      if (isBreakdownDown) {
-        const slInfo = calculateStopLossForReactionZone(P, 'sell', 28);
-        currentState = 'SELL_BREAKDOWN';
-        const sig: ReactionZoneSignal = {
-          id: `sig_break_sell_${i}_${cTime}`,
-          type: 'sell_breakdown',
-          direction: 'bearish',
-          time: cTime,
-          price: c.high,
-          candle: c,
-          candleIndex: i,
-          linePrice: P,
-          label: `▼ SELL`,
-          subLabel: `Breakdown Below | SL: ${slInfo.formattedSlPrice}`,
-          approachDirection: 'downward',
-          slPrice: slInfo.slPrice,
-          slPoints: slInfo.slPoints,
-          formattedSlPrice: slInfo.formattedSlPrice,
-        };
-        rawSignals.push(sig);
-        lastActiveSignal = sig;
-        continue;
-      }
-
-      // Check if the 2nd test bar closed holding the line, confirming the rejection/bounce:
-      if (i > test2Idx && i <= test2Idx + 8) {
-        const test2Bar = candles[test2Idx];
-
-        if (approachDir === 'upward') {
-          const testBarHeld = test2Bar.close <= P + touchTolerance;
-          const currentBarHeld = c.close <= P + breakoutTolerance;
-
-          if (testBarHeld && currentBarHeld) {
-            currentState = 'SELL_REJECTION';
-            const slInfo = calculateStopLossForReactionZone(P, 'sell', 28);
-            const sig: ReactionZoneSignal = {
-              id: `sig_sell_${i}_${cTime}`,
-              type: 'sell_rejection',
-              direction: 'bearish',
-              time: cTime,
-              price: c.high,
-              candle: c,
-              candleIndex: i,
-              linePrice: P,
-              label: `▼ SELL`,
-              subLabel: `Hold Resistance | SL: ${slInfo.formattedSlPrice}`,
-              approachDirection: 'upward',
-              slPrice: slInfo.slPrice,
-              slPoints: slInfo.slPoints,
-              formattedSlPrice: slInfo.formattedSlPrice,
-            };
-            rawSignals.push(sig);
-            lastActiveSignal = sig;
-            continue;
-          }
-        } else if (approachDir === 'downward') {
-          const testBarHeld = test2Bar.close >= P - touchTolerance;
-          const currentBarHeld = c.close >= P - breakoutTolerance;
-
-          if (testBarHeld && currentBarHeld) {
-            currentState = 'BUY_BOUNCE';
-            const slInfo = calculateStopLossForReactionZone(P, 'buy', 28);
-            const sig: ReactionZoneSignal = {
-              id: `sig_buy_${i}_${cTime}`,
-              type: 'buy_bounce',
-              direction: 'bullish',
-              time: cTime,
-              price: c.low,
-              candle: c,
-              candleIndex: i,
-              linePrice: P,
-              label: `▲ BUY`,
-              subLabel: `Hold Support | SL: ${slInfo.formattedSlPrice}`,
-              approachDirection: 'downward',
-              slPrice: slInfo.slPrice,
-              slPoints: slInfo.slPoints,
-              formattedSlPrice: slInfo.formattedSlPrice,
-            };
-            rawSignals.push(sig);
-            lastActiveSignal = sig;
-            continue;
-          }
-        }
-      }
-      continue;
-    }
-
-    // STEP 4: POST-SIGNAL REVERSALS
-    // "IF PRICE BROKE THE LINE THE SIGNALS SHOULD BE CHANGED TO OTHER WAY"
-    if (currentState === 'SELL_REJECTION' && c.close > P + breakoutTolerance) {
-      const slInfo = calculateStopLossForReactionZone(P, 'buy', 28);
-      currentState = 'BUY_BREAKOUT';
-      const sig: ReactionZoneSignal = {
-        id: `sig_break_buy_${i}_${cTime}`,
-        type: 'buy_breakout',
-        direction: 'bullish',
-        time: cTime,
-        price: c.low,
-        candle: c,
-        candleIndex: i,
-        linePrice: P,
-        label: `▲ BUY`,
-        subLabel: `Breakout Above | SL: ${slInfo.formattedSlPrice}`,
-        approachDirection: 'upward',
-        slPrice: slInfo.slPrice,
-        slPoints: slInfo.slPoints,
-        formattedSlPrice: slInfo.formattedSlPrice,
-      };
-      rawSignals.push(sig);
-      lastActiveSignal = sig;
-      continue;
-    }
-
-    if (currentState === 'BUY_BOUNCE' && c.close < P - breakoutTolerance) {
-      const slInfo = calculateStopLossForReactionZone(P, 'sell', 28);
-      currentState = 'SELL_BREAKDOWN';
-      const sig: ReactionZoneSignal = {
-        id: `sig_break_sell_${i}_${cTime}`,
-        type: 'sell_breakdown',
-        direction: 'bearish',
-        time: cTime,
-        price: c.high,
-        candle: c,
-        candleIndex: i,
-        linePrice: P,
-        label: `▼ SELL`,
-        subLabel: `Breakdown Below | SL: ${slInfo.formattedSlPrice}`,
-        approachDirection: 'downward',
-        slPrice: slInfo.slPrice,
-        slPoints: slInfo.slPoints,
-        formattedSlPrice: slInfo.formattedSlPrice,
-      };
-      rawSignals.push(sig);
-      lastActiveSignal = sig;
-      continue;
-    }
-
-    // STEP 5: Risk Check / Stop Loss Breach Invalidation
-    if (lastActiveSignal && lastActiveSignal.slPrice) {
-      if (
-        (lastActiveSignal.type === 'sell_rejection' || lastActiveSignal.type === 'sell_breakdown') &&
-        c.high > lastActiveSignal.slPrice + breakoutTolerance
-      ) {
-        // Stop loss breached to upside
-        currentState = 'NEUTRAL';
-        test1Idx = -1;
-        test2Idx = -1;
-      } else if (
-        (lastActiveSignal.type === 'buy_bounce' || lastActiveSignal.type === 'buy_breakout') &&
-        c.low < lastActiveSignal.slPrice - breakoutTolerance
-      ) {
-        // Stop loss breached to downside
-        currentState = 'NEUTRAL';
-        test1Idx = -1;
-        test2Idx = -1;
-      }
-    }
-  }
-
-  // Deduplicate signals: keep the most meaningful signal for each candle
-  const visibleSignals: ReactionZoneSignal[] = [];
-  const seenCandleIndices = new Set<number>();
-  for (let idx = rawSignals.length - 1; idx >= 0; idx--) {
-    const s = rawSignals[idx];
-    if (!seenCandleIndices.has(s.candleIndex)) {
-      seenCandleIndices.add(s.candleIndex);
-      visibleSignals.unshift(s);
-    }
-  }
-
-  const activeSignal = visibleSignals.length > 0 ? visibleSignals[visibleSignals.length - 1] : null;
-  const hasRecentInteraction =
-    visibleSignals.length > 0 &&
-    activeSignal !== null &&
-    (N - 1 - activeSignal.candleIndex) <= 45;
-  const isNear = Math.abs(currentPrice - P) <= nearThreshold;
-
-  return {
-    state: currentState,
-    activeSignal,
-    signals: visibleSignals,
-    lastTouchIndex: test2Idx !== -1 ? test2Idx : test1Idx,
-    approachDirection: approachDir,
-    isPriceNear: isNear,
-    hasRecentInteraction,
   };
+  const processTouch = (candle: CandleData, candleIndex: number, live = false) => {
+    if (!allowTouch) return;
+    const time = parseCandleTimestamp(candle.time);
+    // On repeated ticks, only the newly observed price segment can be a return.
+    // Reusing the candle's old wick would count continuing departure as TEST 2.
+    const sameLiveBar = live && state!.lastLiveTime === time && state!.lastLiveClose !== null;
+    const low = sameLiveBar ? Math.min(state!.lastLiveClose!, candle.close) : candle.low;
+    const high = sameLiveBar ? Math.max(state!.lastLiveClose!, candle.close) : candle.high;
+    const contactDistance = Math.max(low - linePrice, linePrice - high, 0);
+    if(state!.entryDistanceRejected && !state!.breakDirection && live && time>(state!.test2Time ?? state!.test1Time ?? time) && contactDistance<=tolerance && isWithinReactionEntryDistance(candle.close,linePrice,symbol)) {
+      // A fresh later touch starts the existing TEST 1 → TEST 2 sequence again.
+      Object.assign(state!,initialState(linePrice,bias,state!.lastProcessedClosedTime));
+    }
+    if (state!.state === 'TEST_1' && time > state!.test1Time!) state!.state = 'WAITING_FOR_TEST_2';
+    if (!time || contactDistance > tolerance) return;
+    if (state!.state === 'BREAK' && time > state!.breakTime!) {
+      state!.state = 'RETEST';
+      state!.retestTime = time;
+      state!.retest2Time = null;
+      state!.touchReleased = false;
+      state!.touchDistance = contactDistance;
+      state!.releaseTime = null;
+      state!.retestObservation={barTime:time,low:candle.low,high:candle.high};
+      emitBreakStage('retest', candle, candleIndex);
+    } else if (state!.state === 'RETEST' && !state!.retest2Time && state!.touchReleased && time > state!.retestTime! && contactDistance <= state!.touchDistance && (live || time > state!.releaseTime!)) {
+      state!.retest2Time = time;
+      emit(createTestSignal('test2', key, candle, candleIndex, linePrice, state!.breakDirection!));
+    } else if (state!.state === 'IDLE') {
+      state!.state = 'TEST_1';
+      state!.test1Time = time;
+      state!.test1Index = candleIndex;
+      state!.test1Candle = { ...candle };
+      state!.touchReleased = false;
+      state!.releaseTime = null;
+      state!.touchDistance = contactDistance;
+      const approach=state!.lastLiveClose ?? candles[candleIndex-1]?.close ?? candle.open;
+      state!.rejectionDirection=approach>linePrice?'bullish':approach<linePrice?'bearish':null;
+      state!.rejectionObservation={barTime:time,low:candle.low,high:candle.high};
+    } else if ((state!.state === 'WAITING_FOR_TEST_2' || (state!.state === 'WAITING_FOR_CLOSE_CONFIRMATION' && state!.test2Time === null)) && state!.touchReleased && contactDistance <= state!.touchDistance && time > state!.test1Time! && (live || time > state!.releaseTime!)) {
+      state!.state = 'WAITING_FOR_CLOSE_CONFIRMATION';
+      state!.test2Time = time;
+      state!.test2Index = candleIndex;
+      const signal = createTestSignal('test2', key, candle, candleIndex, linePrice, bias);
+      emit(signal);
+      // TEST 2 remains visible, but entry is timed from a respected next candle below/above.
+    }
+  };
+
+  // A reaction observed while inactive is published only on reactivation,
+  // before a returning touch can advance the setup to TEST 2.
+  if (!state.breakDirection && state.touchReleased && !state.activeSignal && state.test1Candle) {
+    emit(createTestSignal('test', key, state.test1Candle, state.test1Index, linePrice, bias));
+  }
+
+
+
+  closedCandles.forEach((candle, candleIndex) => {
+    const closedTime = parseCandleTimestamp(candle.time);
+    if (!closedTime || closedTime <= state!.lastProcessedClosedTime) return;
+    state!.lastProcessedClosedTime = closedTime;
+
+    const previous = candles[candleIndex - 1];
+    const crossedDirection = (previous && previous.close <= linePrice + tolerance || !state!.breakDirection && state!.rejectionDirection === 'bearish') && candle.close > linePrice + tolerance ? 'bullish'
+      : (previous && previous.close >= linePrice - tolerance || !state!.breakDirection && state!.rejectionDirection === 'bullish') && candle.close < linePrice - tolerance ? 'bearish' : null;
+    // Departing on the respected approach side is a rejection, not a breakout.
+    const breakDirection = !state!.breakDirection && crossedDirection === state!.rejectionDirection ? null : crossedDirection;
+    if (breakDirection && breakDirection !== state!.breakDirection) {
+      state!.validation=null;
+      state!.entryDistanceRejected=false;
+      state!.state = 'BREAK';
+      state!.breakTime = closedTime;
+      state!.breakDirection = breakDirection;
+      state!.retestTime = null;
+      state!.retest2Time = null;
+      state!.retestObservation = null;
+      emitBreakStage('break', candle, candleIndex);
+      return; // The breaking candle cannot also be its own retest.
+    }
+
+    if (state!.state === 'CONFIRMED_BUY' || state!.state === 'CONFIRMED_SELL') return;
+
+    if (state!.breakDirection && (state!.breakDirection === 'bullish' ? candle.close <= linePrice : candle.close >= linePrice)) {
+      state!.state='BREAK';
+      state!.breakTime=closedTime;
+      state!.retestTime=null;
+      state!.retest2Time=null;
+      state!.retestObservation=null;
+      state!.validation=null;
+      state!.activeSignal=null;
+      return; // Failed retest stays in breaker mode; never revive the old rejection.
+    }
+
+    processTouch(candle, candleIndex);
+    markDeparture(candle);
+
+    const next = candles[candleIndex + 1];
+    const adjacent = next && parseCandleTimestamp(next.time) === closedTime + 300;
+    const direction = adjacent && candle.close < linePrice && next.open < linePrice ? 'bearish'
+      : adjacent && candle.close > linePrice && next.open > linePrice ? 'bullish' : null;
+    if (state!.validation && next && parseCandleTimestamp(next.time) !== state!.validation.barTime) state!.validation=null;
+    if (liveObservation && direction && next === candles[candles.length-1] && !state!.breakDirection && !state!.entryDistanceRejected && state!.test1Time !== null && state!.touchReleased && direction === state!.rejectionDirection && !state!.validation) {
+      state!.state='WAITING_FOR_CLOSE_CONFIRMATION';
+      state!.validation={startedAt:nowMs,lastObservedAt:nowMs,direction,tolerance,barTime:parseCandleTimestamp(next.time),low:next.open,high:next.open};
+    }
+    const breakoutReady = state!.state === 'RETEST' && state!.retest2Time !== null && closedTime >= state!.retest2Time && direction === state!.breakDirection;
+    if (direction && breakoutReady) {
+      const liveCandle=candles[candles.length-1],livePrice=liveCandle.close;
+      const liveTime=parseCandleTimestamp(liveCandle.time)*1000;
+      if (!liveObservation || next!==liveCandle || nowMs<liveTime || nowMs>=liveTime+300000
+        || (direction==='bullish'?livePrice<=linePrice:livePrice>=linePrice)) return;
+      const signal=createConfirmationSignal(key, candle, candleIndex, linePrice, direction, true,symbol,livePrice);
+      signal.entryPrice=livePrice;
+      signal.entryAt=nowMs;
+      signal.validation='breakout';
+      const unit=reactionPointUnit(symbol);
+      signal.slPrice=livePrice+(direction==='bearish'?1:-1)*25*unit.size;
+      signal.formattedSlPrice=signal.slPrice.toFixed(unit.decimals);
+      emit(signal);
+      state!.state = direction === 'bearish' ? 'CONFIRMED_SELL' : 'CONFIRMED_BUY';
+    }
+  });
+
+  const liveCandle = candles[candles.length - 1];
+  if (liveObservation && parseCandleTimestamp(liveCandle.time) > state.lastProcessedClosedTime) {
+    processTouch(liveCandle, candles.length - 1, true);
+    markDeparture(liveCandle);
+    state.lastLiveTime = parseCandleTimestamp(liveCandle.time);
+    state.lastLiveClose = liveCandle.close;
+  }
+
+  if(liveObservation)advanceReactionZoneValidation(key,candles,symbol,nowMs);
+
+  return result();
 }
 
-/**
- * Calculates live reaction zone signals for a given line price.
- */
 export function calculateReactionZoneSignals(
   linePrice: number,
   candles: CandleData[],
   interval?: string,
-  lineId?: string
+  lineId?: string,
+  zoneType?: 'strong' | 'weak'
 ): ReactionZoneSignal[] {
-  if (!candles || candles.length < 3 || !linePrice || isNaN(linePrice) || linePrice <= 0) {
-    return [];
-  }
-  const evalResult = evaluateReactionZoneSignals(linePrice, candles);
-  return evalResult.signals;
+  return evaluateReactionZoneSignals(linePrice, candles, zoneType, lineId, interval).signals;
 }

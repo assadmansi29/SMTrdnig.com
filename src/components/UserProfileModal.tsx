@@ -1,3 +1,5 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
+import { LiveTrainingNotice, MonthlyPromotionNotice } from './PurchaseNotices';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -60,6 +62,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onOpenAdmin,
   onOpenCoachingDesk,
 }) => {
+  const ui = useInterfaceText();
   const { t } = useTranslation();
   const { user, token, logout, updateProfile, activateSubscription, changePassword, sendProfileVerificationCode } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'referrals' | 'transactions' | 'subscription'>('profile');
@@ -406,7 +409,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="flex items-center justify-between gap-2">
             {/* User Identity Info */}
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-              <div className="relative group cursor-pointer shrink-0" onClick={() => setShowAvatarModal(true)} title="Click to change profile picture">
+              <div className="relative group cursor-pointer shrink-0" onClick={() => setShowAvatarModal(true)} title={ui("Click to change profile picture")}>
                 <UserAvatar
                   user={user}
                   size="lg"
@@ -476,7 +479,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   className="hidden xs:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md shadow-amber-500/20 shrink-0"
                 >
                   {isRoleSuperAdmin ? <Crown className="w-3.5 h-3.5" /> : isRoleCoach ? <GraduationCap className="w-3.5 h-3.5" /> : isRoleEmployee ? <Briefcase className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">{isRoleSuperAdmin ? 'Super Admin' : isRoleCoach ? 'Coaching Desk' : isRoleEmployee ? 'Operations' : 'Admin'}</span>
+                  <span className="hidden sm:inline">{isRoleSuperAdmin ? ui("Super Admin") : isRoleCoach ? ui("Coaching Desk") : isRoleEmployee ? ui("Operations") : ui("Admin")}</span>
                 </button>
               )}
 
@@ -484,7 +487,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 type="button"
                 onClick={onClose}
                 className="min-w-[40px] min-h-[40px] w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                aria-label="Close user profile"
+                aria-label={ui("Close user profile")}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -495,7 +498,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="flex items-center justify-between flex-wrap gap-2 px-3 py-2 bg-slate-900/90 rounded-xl border border-slate-800/90 text-xs">
             <div className="flex items-center gap-2 min-w-0">
               <span className={`w-2 h-2 rounded-full shrink-0 ${isExpired ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
-              <span className="text-slate-400 shrink-0 font-medium">Subscription:</span>
+              <span className="text-slate-400 shrink-0 font-medium">{ui("Subscription:")}</span>
               <span className={`font-bold truncate ${isExpired ? 'text-rose-400' : 'text-emerald-300'}`}>
                 {isStaffRole ? t('profilePermanentDeskAccess') : (isExpired ? t('profileSubExpiredStatus') : `${t('profileSubActiveStatus')} (${formattedExpiry})`)}
               </span>
@@ -512,7 +515,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   className="px-2 py-0.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <GraduationCap className="w-3 h-3 text-emerald-400" />
-                  <span>Coaching Desk</span>
+                  <span>{ui("Coaching Desk")}</span>
                 </button>
               )}
               {!isStaffRole && (
@@ -522,7 +525,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 rounded-md text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <CreditCard className="w-3 h-3" />
-                  <span>{isExpired ? 'Renew Access' : 'Manage Plan'}</span>
+                  <span>{isExpired ? ui("Renew Access") : ui("Manage Plan")}</span>
                 </button>
               )}
             </div>
@@ -710,7 +713,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                 {saveStatus && (
                   <div className="mb-4 p-2.5 bg-slate-800 text-amber-300 text-xs rounded-lg border border-amber-400/30">
-                    {saveStatus}
+                    {ui(saveStatus)}
                   </div>
                 )}
 
@@ -722,10 +725,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         <div className="flex items-center justify-between">
                           <label className="text-xs text-amber-300 font-bold flex items-center gap-1.5">
                             {user.role === 'super_admin' ? <Crown className="w-4 h-4 text-amber-400" /> : <ShieldCheck className="w-4 h-4 text-purple-400" />}
-                            <span>{user.role === 'super_admin' ? 'Super Admin Username' : 'Admin Username'}</span>
+                            <span>{user.role === 'super_admin' ? ui("Super Admin Username") : ui("Admin Username")}</span>
                           </label>
                           <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
-                            {user.role === 'super_admin' ? 'Super Admin Authority' : 'Admin Authority'}
+                            {user.role === 'super_admin' ? ui("Super Admin Authority") : ui("Admin Authority")}
                           </span>
                         </div>
                         <div className="relative">
@@ -741,7 +744,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                           />
                         </div>
                         <p className="text-[11px] text-amber-300/80">
-                          {user.role === 'super_admin' ? 'As Super Admin, you can change your system-wide handle/username.' : 'As Admin, you can update your administrative handle/username.'}
+                          {user.role === 'super_admin' ? ui("As Super Admin, you can change your system-wide handle/username.") : ui("As Admin, you can update your administrative handle/username.")}
                         </p>
                       </div>
                     ) : (
@@ -749,11 +752,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-xs text-slate-400 font-semibold flex items-center gap-1.5">
                             <Lock className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Username</span>
+                            <span>{ui("Username")}</span>
                           </label>
-                          <span className="text-[10px] text-slate-500">
-                            Locked (Administrative Privilege Required)
-                          </span>
+                          <span className="text-[10px] text-slate-500">{ui(" Locked (Administrative Privilege Required) ")}</span>
                         </div>
                         <input
                           type="text"
@@ -768,13 +769,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <div>
                         <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Full Display Name</span>
+                          <span>{ui("Full Display Name")}</span>
                         </label>
                         <input
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
-                          placeholder="e.g. Tariq Al-Mansoor"
+                          placeholder={ui("e.g. Tariq Al-Mansoor")}
                           className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
                         />
                       </div>
@@ -782,7 +783,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <div>
                         <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
                           <Mail className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Email Address</span>
+                          <span>{ui("Email Address")}</span>
                         </label>
                         <input
                           type="email"
@@ -798,13 +799,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       <div>
                         <label className="block text-xs text-slate-400 mb-1 font-semibold flex items-center gap-1.5">
                           <Phone className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Phone Number / Contact</span>
+                          <span>{ui("Phone Number / Contact")}</span>
                         </label>
                         <input
                           type="text"
                           value={editPhone}
                           onChange={(e) => setEditPhone(e.target.value)}
-                          placeholder="+1 (555) 000-0000 or @telegram"
+                          placeholder={ui("+1 (555) 000-0000 or @telegram")}
                           className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
                         />
                       </div>
@@ -813,7 +814,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-xs text-slate-400 font-semibold flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Avatar Image</span>
+                            <span>{ui("Avatar Image")}</span>
                           </label>
                           <div className="flex items-center gap-2">
                             <button
@@ -822,16 +823,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                               className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
                             >
                               <Upload className="w-3 h-3" />
-                              <span>Upload File</span>
+                              <span>{ui("Upload File")}</span>
                             </button>
                             {(user.role === 'super_admin' || user.role === 'admin') && (
                               <button
                                 type="button"
                                 onClick={() => setEditAvatar('/abu_asad_almansi.jpg')}
                                 className="text-[10px] text-slate-400 hover:text-white underline font-medium cursor-pointer"
-                              >
-                                Abu Asad Photo
-                              </button>
+                              >{ui(" Abu Asad Photo ")}</button>
                             )}
                           </div>
                         </div>
@@ -840,7 +839,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                             type="text"
                             value={editAvatar}
                             onChange={(e) => setEditAvatar(e.target.value)}
-                            placeholder="/abu_asad_almansi.jpg or https://... or base64"
+                            placeholder={ui("/abu_asad_almansi.jpg or https://... or base64")}
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400 font-mono text-xs"
                           />
                         </div>
@@ -853,14 +852,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-md shadow-amber-400/20"
                       >
                         <Save className="w-3.5 h-3.5" />
-                        <span>Save Changes</span>
+                        <span>{ui("Save Changes")}</span>
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Username</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Username")}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-slate-200 font-bold">@{user.username}</span>
                         {isRoleSuperAdmin && (
@@ -890,32 +889,32 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Email Address</span>
-                      <span className="text-slate-200 font-medium">{user.email || 'Not configured'}</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Email Address")}</span>
+                      <span className="text-slate-200 font-medium">{user.email || ui("Not configured")}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Phone Number / Contact</span>
-                      <span className="text-slate-200 font-medium">{user.phone || 'Not configured'}</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Phone Number / Contact")}</span>
+                      <span className="text-slate-200 font-medium">{user.phone || ui("Not configured")}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Full Display Name</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Full Display Name")}</span>
                       <span className="text-slate-200 font-medium">{user.fullName || user.username}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Account Role</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Account Role")}</span>
                       <span className="font-bold uppercase text-amber-400">{user.role}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Member Since</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Member Since")}</span>
                       <span className="text-slate-300">{new Date(user.createdAt).toLocaleDateString()}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Referral Code</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Referral Code")}</span>
                       <span className="font-mono text-amber-300 font-bold">{user.referralCode}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Referral Commission Rate</span>
-                      <span className="font-bold text-emerald-400">{user.commissionRate}% per referred plan</span>
+                      <span className="text-slate-500 block mb-0.5">{ui("Referral Commission Rate")}</span>
+                      <span className="font-bold text-emerald-400">{user.commissionRate}{ui("% per referred plan")}</span>
                     </div>
                   </div>
                 )}
@@ -973,7 +972,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       }`}>
                         {passwordStatus.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
                         {passwordStatus.type === 'error' && <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />}
-                        <span>{passwordStatus.msg}</span>
+                        <span>{ui(passwordStatus.msg)}</span>
                       </div>
                     )}
 
@@ -1052,15 +1051,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         {newPassword && (
                           <span className={`font-mono font-bold ${
                             newPassword.length >= 8 ? 'text-emerald-400' : newPassword.length >= 6 ? 'text-amber-400' : 'text-rose-400'
-                          }`}>
-                            Strength: {newPassword.length >= 8 ? 'Strong' : newPassword.length >= 6 ? 'Fair' : 'Too Short'}
+                          }`}>{ui(" Strength: ")}{newPassword.length >= 8 ? ui("Strong") : newPassword.length >= 6 ? ui("Fair") : ui("Too Short")}
                           </span>
                         )}
                         {newPassword && confirmPassword && (
                           <span className={`font-semibold ${
                             newPassword === confirmPassword ? 'text-emerald-400' : 'text-rose-400'
                           }`}>
-                            {newPassword === confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                            {newPassword === confirmPassword ? ui("✓ Passwords match") : ui("✗ Passwords do not match")}
                           </span>
                         )}
                       </div>
@@ -1071,7 +1069,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm shadow-amber-500/20"
                       >
                         <Lock className="w-3.5 h-3.5" />
-                        <span>{passwordStatus?.type === 'loading' ? 'Updating...' : t('profileSaveNewPass')}</span>
+                        <span>{passwordStatus?.type === 'loading' ? ui("Updating...") : t('profileSaveNewPass')}</span>
                       </button>
                     </div>
                   </form>
@@ -1231,7 +1229,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
-                          {new Date(tx.createdAt).toLocaleString()} • Ref ID: {tx.id}
+                          {new Date(tx.createdAt).toLocaleString()}{ui(" • Ref ID: ")}{tx.id}
                         </div>
                       </div>
                       <div className={`text-sm font-mono font-black ${
@@ -1260,7 +1258,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">{t('profileCurrentPlan')}</span>
-                  <h3 className="text-base sm:text-lg font-black text-white truncate">{user.subscriptionPlan || 'Pro Order Flow SMC'}</h3>
+                  <h3 className="text-base sm:text-lg font-black text-white truncate">{user.subscriptionPlan || ui("Pro Order Flow SMC")}</h3>
                   <div className="mt-1 flex items-center flex-wrap gap-2 text-xs">
                     <span className={`inline-flex items-center gap-1 font-bold ${isExpired ? 'text-rose-400' : 'text-emerald-400'}`}>
                       <span className={`w-2 h-2 rounded-full ${isExpired ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
@@ -1268,7 +1266,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     </span>
                     <span className="text-slate-600">•</span>
                     <span className="text-slate-400">
-                      {isStaffRole ? t('profilePermanentDeskAccess') : `Expires: ${formattedExpiry}`}
+                      {isStaffRole ? t('profilePermanentDeskAccess') : ui("Expires: {p0}", {p0: formattedExpiry})}
                     </span>
                   </div>
                 </div>
@@ -1288,7 +1286,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       className="mt-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all cursor-pointer w-full sm:w-auto"
                     >
                       <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Access Coaching Desk</span>
+                      <span>{ui("Access Coaching Desk")}</span>
                     </button>
                   )}
                 </div>
@@ -1307,17 +1305,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                     {t('profileExtendUpgrade')}
                   </h4>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    USDT TRC20 Settle
-                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">{ui("USDT TRC20 Settle")}</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-xs font-bold text-white">Monthly SMC Pass</div>
-                      <div className="text-xl font-black text-amber-400 mt-1 font-mono-num">80$ <span className="text-xs text-slate-400 font-normal">/ 30 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">Single month extension with real-time indicators.</p>
+                      <div className="text-xs font-bold text-white">{ui("Monthly SMC Pass")}</div>
+                      <div className="text-xl font-black text-amber-400 mt-1 font-mono-num">$80 <span className="text-xs text-slate-400 font-normal">{ui("/ 30 days")}</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">{ui("Single month extension with real-time indicators.")}</p>
+                      <MonthlyPromotionNotice />
+                      <LiveTrainingNotice />
                     </div>
                     <button
                       type="button"
@@ -1325,15 +1323,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       onClick={() => handleRenewSubscription(1, 'Site Subscription — Monthly ($80)')}
                       className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
-                      {renewing ? 'Updating...' : 'Extend 1 Month'}
+                      {renewing ? ui("Updating...") : ui("Extend 1 Month")}
                     </button>
                   </div>
 
                   <div className="p-4 rounded-xl bg-[#090D15] border border-slate-800 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-xs font-bold text-cyan-300">6 Months SMC Pass</div>
-                      <div className="text-xl font-black text-white mt-1 font-mono-num">$400 <span className="text-xs text-slate-400 font-normal">/ 180 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">Half-year institutional trading access ($66/mo).</p>
+                      <div className="text-xs font-bold text-cyan-300">{ui("6 Months SMC Pass")}</div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$400 <span className="text-xs text-slate-400 font-normal">{ui("/ 180 days")}</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">{ui("Half-year institutional trading access ($66/mo).")}</p>
+                      <LiveTrainingNotice />
                     </div>
                     <button
                       type="button"
@@ -1341,18 +1340,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       onClick={() => handleRenewSubscription(6, 'Site Subscription — 6 Months ($400)')}
                       className="w-full min-h-[44px] py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
-                      {renewing ? 'Updating...' : 'Extend 6 Months ($400)'}
+                      {renewing ? ui("Updating...") : ui("Extend 6 Months ($400)")}
                     </button>
                   </div>
 
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-400/60 flex flex-col justify-between space-y-3 relative">
-                    <span className="absolute -top-2 right-3 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
-                      Best Value
-                    </span>
+                    <span className="absolute -top-2 right-3 bg-amber-400 text-slate-950 text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">{ui(" Best Value ")}</span>
                     <div>
-                      <div className="text-xs font-bold text-amber-300">1 Year SMC Pass</div>
-                      <div className="text-xl font-black text-white mt-1 font-mono-num">$650 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">Full year complete market access ($54/mo).</p>
+                      <div className="text-xs font-bold text-amber-300">{ui("1 Year SMC Pass")}</div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$650 <span className="text-xs text-slate-400 font-normal">{ui("/ 365 days")}</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">{ui("Full year complete market access ($54/mo).")}</p>
+                      <LiveTrainingNotice />
                     </div>
                     <button
                       type="button"
@@ -1360,15 +1358,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       onClick={() => handleRenewSubscription(12, 'Site Subscription — 1 Year ($650)')}
                       className="w-full min-h-[44px] py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-xl transition-all cursor-pointer shadow-md shadow-amber-500/20 active:scale-98"
                     >
-                      {renewing ? 'Updating...' : 'Extend 1 Year ($650)'}
+                      {renewing ? ui("Updating...") : ui("Extend 1 Year ($650)")}
                     </button>
                   </div>
 
                   <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/40 flex flex-col justify-between space-y-3">
                     <div>
-                      <div className="text-xs font-bold text-emerald-300">All-Inclusive VIP</div>
-                      <div className="text-xl font-black text-white mt-1 font-mono-num">$999 <span className="text-xs text-slate-400 font-normal">/ 365 days</span></div>
-                      <p className="text-[11px] text-slate-400 mt-1">1 Year + SMC & 144 Strategy Academy Courses.</p>
+                      <div className="text-xs font-bold text-emerald-300">{ui("All-Inclusive VIP")}</div>
+                      <div className="text-xl font-black text-white mt-1 font-mono-num">$999 <span className="text-xs text-slate-400 font-normal">{ui("/ 365 days")}</span></div>
+                      <p className="text-[11px] text-slate-400 mt-1">{ui("1 Year + SMC Academy Course.")}</p>
+                      <LiveTrainingNotice />
                     </div>
                     <button
                       type="button"
@@ -1376,7 +1375,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       onClick={() => handleRenewSubscription(12, 'All-Inclusive Package ($999/Year)')}
                       className="w-full min-h-[44px] py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-98"
                     >
-                      {renewing ? 'Updating...' : 'Extend VIP ($999)'}
+                      {renewing ? ui("Updating...") : ui("Extend VIP ($999)")}
                     </button>
                   </div>
                 </div>
@@ -1414,7 +1413,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 type="button"
                 onClick={() => setShowPayoutModal(false)}
                 className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                aria-label="Close payout modal"
+                aria-label={ui("Close payout modal")}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1427,7 +1426,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             {payoutStatus && (
               <div className="p-2.5 bg-slate-800 text-amber-300 text-xs rounded-lg border border-amber-400/30">
-                {payoutStatus}
+                {ui(payoutStatus)}
               </div>
             )}
 
@@ -1442,7 +1441,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   min={50}
                   value={payoutAmount}
                   onChange={(e) => setPayoutAmount(e.target.value)}
-                  placeholder="Min $50.00"
+                  placeholder={ui("Min $50.00")}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
                 />
               </div>
@@ -1454,10 +1453,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   onChange={(e) => setPayoutMethod(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400"
                 >
-                  <option value="USDT (TRC20)">USDT (TRC20 - Instant Network)</option>
+                  <option value="USDT (TRC20)">{ui("USDT (TRC20 - Instant Network)")}</option>
                   <option value="USDT (ERC20)">USDT (ERC20)</option>
-                  <option value="Bitcoin (BTC)">Bitcoin (BTC)</option>
-                  <option value="Bank Wire">International Bank Wire</option>
+                  <option value="Bitcoin (BTC)">{ui("Bitcoin (BTC)")}</option>
+                  <option value="Bank Wire">{ui("International Bank Wire")}</option>
                 </select>
               </div>
 
@@ -1509,7 +1508,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   setVerifyError(null);
                 }}
                 className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                aria-label="Close security modal"
+                aria-label={ui("Close security modal")}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1534,7 +1533,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             {verifyError && (
               <div className="p-3 bg-rose-950/70 border border-rose-800 text-rose-200 text-xs rounded-xl flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <span>{verifyError}</span>
+                <span>{ui(verifyError)}</span>
               </div>
             )}
 
@@ -1601,7 +1600,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   {isSendingProfileCode ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Verifying...</span>
+                      <span>{ui("Verifying...")}</span>
                     </>
                   ) : (
                     <>

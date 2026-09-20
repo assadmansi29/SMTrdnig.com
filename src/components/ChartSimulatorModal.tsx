@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
@@ -11,7 +12,6 @@ import {
 import { TradingViewWidget } from './TradingViewWidget';
 import { BlueVerifiedBadge } from './BlueVerifiedBadge';
 import { ChartToolbar, ChartStrategyType } from './chart/ChartToolbar';
-import { AiTradingAssistantModal } from './chart/AiTradingAssistantModal';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,6 +28,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
   defaultSymbol = 'OANDA:XAUUSD',
   onOpenAdminModal
 }) => {
+  const ui = useInterfaceText();
   const { t } = useTranslation();
   const { user } = useAuth();
   const isStaff = user?.role === 'super_admin' || user?.role === 'admin';
@@ -35,7 +36,6 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
   const [activeInterval, setActiveInterval] = useState('15');
   const [activeStrategy, setActiveStrategy] = useState<ChartStrategyType>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isAiCopilotOpen, setIsAiCopilotOpen] = useState(false);
 
   console.log('[FLOW: Step 2 - selectedSymbol State in ChartSimulatorModal]:', selectedSymbol);
   
@@ -99,9 +99,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
                 <span>{t('chartStudioBy')}</span>
                 <BlueVerifiedBadge size="sm" />
               </div>
-              <span className="text-slate-400 text-xs hidden lg:inline font-medium">
-                (Smart Money Trading)
-              </span>
+              <span className="text-slate-400 text-xs hidden lg:inline font-medium">{ui(" (Smart Money Trading) ")}</span>
               <span className="hidden md:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono-num font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 {t('chartStudioFeed')}
@@ -115,7 +113,7 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
               target="_blank"
               rel="noreferrer"
               className="hidden sm:inline-flex text-[11px] text-amber-400 hover:text-amber-300 font-semibold items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-colors"
-              title="Open full chart on TradingView"
+              title={ui("Open full chart on TradingView")}
             >
               {t('chartOpenTv')} <ExternalLink className="w-3 h-3 rtl:rotate-180" />
             </a>
@@ -124,8 +122,8 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
               type="button"
               onClick={toggleBrowserFullscreen}
               className="w-8 h-8 rounded-lg bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-300 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm"
-              title={isFullscreen ? "Exit Fullscreen" : "Full Screen Mode"}
-              aria-label="Toggle Fullscreen"
+              title={isFullscreen ? ui("Exit Fullscreen") : ui("Full Screen Mode")}
+              aria-label={ui("Toggle Fullscreen")}
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
@@ -134,8 +132,8 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
               type="button"
               onClick={onClose}
               className="w-8 h-8 rounded-lg bg-slate-800/90 hover:bg-rose-500/20 hover:text-rose-400 border border-slate-700/80 hover:border-rose-500/30 text-slate-300 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-              title="Close Chart Studio"
-              aria-label="Close Chart Studio"
+              title={ui("Close Chart Studio")}
+              aria-label={ui("Close Chart Studio")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -150,7 +148,6 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
           onSelectInterval={setActiveInterval}
           activeStrategy={activeStrategy}
           onSelectStrategy={setActiveStrategy}
-          onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
         />
 
         {/* Main Fully Responsive Chart Container: Fills 100% width and height below toolbar */}
@@ -168,17 +165,6 @@ export const ChartSimulatorModal: React.FC<ChartSimulatorModalProps> = ({
             className="w-full h-full flex-1 min-h-0 min-w-0 rounded-none border-0"
           />
         </div>
-
-        {/* AI Trading Copilot Modal */}
-        <AiTradingAssistantModal
-          isOpen={isAiCopilotOpen}
-          onClose={() => setIsAiCopilotOpen(false)}
-          symbol={selectedSymbol}
-          interval={activeInterval}
-          currentPrice={2900}
-          candles={[]}
-          reactionZones={[]}
-        />
       </div>
     </div>
   );

@@ -1,3 +1,8 @@
+import {serverNow} from '../services/serverClock';
+import { useInterfaceText } from '../hooks/useInterfaceText';
+import {ReactionTradePanel} from './chart/ReactionTradePanel';
+import { CandleCountdown } from './chart/CandleCountdown';
+import { liveCandleTime, timestampSeconds } from '../utils/liveCandleTime';
 import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   createChart,
@@ -111,6 +116,40 @@ const getStrategyStorageKey = (sym: string, strategy?: string | null): string =>
   return `tv_drawings_${cleanSym}_${stratKey}`;
 };
 
+function exportPersistentDrawings(manager: DrawingManager): SerializedDrawingPayload[] {
+  return manager.exportDrawings().map((d: any) => {
+      const live = manager.getDrawing(d.id);
+      if (live && (live as any).zoneType) {
+        return {
+          ...d,
+          type: (live as any).zoneType === 'strong' ? 'reaction-zone-strong' : 'reaction-zone-weak',
+          options: {
+            ...(d.options || {}),
+            zoneType: (live as any).zoneType,
+          },
+        };
+      }
+      if (live && (live as any).gannOptions) {
+        return {
+          ...d,
+          options: {
+            ...(d.options || {}),
+            ...(live as any).gannOptions,
+          },
+          gannOptions: (live as any).gannOptions,
+        };
+      }
+      return d;
+    });
+}
+
+function pendingDrawingEdits(symbol: string, strategy: string | null) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(getStrategyStorageKey(symbol, strategy) + '_pending') || '{}');
+    return { dirty: stored.dirty === true, deletedIds: new Set<string>(Array.isArray(stored.deletedIds) ? stored.deletedIds : []) };
+  } catch { return { dirty: false, deletedIds: new Set<string>() }; }
+}
+
 const sanitizeDrawingsList = (drawings: any[]): any[] => {
   if (!Array.isArray(drawings)) return [];
   return drawings.filter((d: any) => {
@@ -167,7 +206,7 @@ const loadStrategyDrawingsLocal = (sym: string, strategy?: string | null): any[]
     if (raw) {
       const parsed = JSON.parse(raw);
       const sanitized = sanitizeDrawingsList(parsed);
-      if (sanitized.length > 0) return sanitized;
+      if (Array.isArray(parsed)) return sanitized;
     }
 
     // Try base ticker key fallback (e.g. XAUUSD if sym was OANDA:XAUUSD)
@@ -178,7 +217,7 @@ const loadStrategyDrawingsLocal = (sym: string, strategy?: string | null): any[]
       if (baseRaw) {
         const parsed = JSON.parse(baseRaw);
         const sanitized = sanitizeDrawingsList(parsed);
-        if (sanitized.length > 0) return sanitized;
+        if (Array.isArray(parsed)) return sanitized;
       }
 
       // Try OANDA prefix fallback
@@ -301,6 +340,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   activeStrategy = null,
   onSelectStrategy,
 }) => {
+  const ui = useInterfaceText();
   console.log('[FLOW: Step 4 - TradingViewWidget received symbol prop]:', { symbol, interval, activeStrategy });
   const { user, token: authToken } = useAuth();
   const isOwnerOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.email === 'am29multibrand@gmail.com';
@@ -686,6 +726,39 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const [canUndo, setCanUndo] = useState<boolean>(false);
   const [canRedo, setCanRedo] = useState<boolean>(false);
 
+  const drawingViewRef = useRef<{ symbol: string; strategy: string; key: string } | null>(null);
+  const desiredDrawingKeyRef = useRef('');
+  desiredDrawingKeyRef.current = getStrategyStorageKey(symbol, activeStrategy);
+  const drawingLoadIdRef = useRef(0);
+  const drawingRevisionRef = useRef(0);
+  const restoringDrawingsRef = useRef(false);
+  const drawingVisibleIdsRef = useRef(new Map<string, Set<string>>());
+  const drawingSaveInFlightRef = useRef(false);
+
+  const markDrawingsChanged = useCallback(() => {
+    if (restoringDrawingsRef.current) return;
+    const manager = drawingManagerRef.current;
+    const view = drawingViewRef.current;
+    if (!manager || !view || view.key !== desiredDrawingKeyRef.current) return;
+    drawingRevisionRef.current++;
+    setSaveStatus('unsaved');
+    if (!isOwnerOrAdminRef.current) return;
+    const drawings = exportPersistentDrawings(manager);
+    const ids = new Set(drawings.map(d => d.id));
+    const pending = pendingDrawingEdits(view.symbol, view.strategy);
+    for (const id of drawingVisibleIdsRef.current.get(view.key) || []) {
+      if (!ids.has(id)) pending.deletedIds.add(id);
+    }
+    for (const id of ids) pending.deletedIds.delete(id);
+    drawingVisibleIdsRef.current.set(view.key, ids);
+    // Existing local backup protects unsaved edits while switching chart views.
+    // PostgreSQL is still written only by Save Strategy or manual deletion.
+    saveStrategyDrawingsLocal(view.symbol, view.strategy, drawings, true);
+    try {
+      localStorage.setItem(view.key + '_pending', JSON.stringify({ dirty: true, deletedIds: [...pending.deletedIds] }));
+    } catch (error) { console.warn('[Financial Chart] Local drawing draft backup unavailable:', error); }
+  }, []);
+
   const syncDrawingsList = useCallback(() => {
     const manager = drawingManagerRef.current;
     if (!manager) {
@@ -726,6 +799,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     } catch {}
   }, []);
 
+  useEffect(() => {
+    if (!isOwnerOrAdmin) return;
+    for (const drawing of drawingManagerRef.current?.getAllDrawings() || []) {
+      const restored = drawing as any;
+      if (restored._restorePermissionLock) {
+        restored.options.locked = false;
+        restored._restorePermissionLock = false;
+        restored.requestUpdate?.();
+      }
+    }
+    syncDrawingsList();
+  }, [isOwnerOrAdmin, syncDrawingsList]);
+
   const handleUndo = useCallback(async () => {
     const manager = drawingManagerRef.current;
     if (!manager || undoStackRef.current.length === 0) return;
@@ -747,7 +833,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       setCanUndo(undoStackRef.current.length > 0);
       setCanRedo(true);
       syncDrawingsList();
-      setSaveStatus('unsaved');
+      markDrawingsChanged();
     } catch (e: any) {
       console.warn('[Financial Chart] Undo error:', e.message);
     }
@@ -774,7 +860,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       setCanUndo(true);
       setCanRedo(redoStackRef.current.length > 0);
       syncDrawingsList();
-      setSaveStatus('unsaved');
+      markDrawingsChanged();
     } catch (e: any) {
       console.warn('[Financial Chart] Redo error:', e.message);
     }
@@ -788,6 +874,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   // Track currently active symbol and interval loaded in chart series
   const lastLoadedKeyRef = useRef<string>('');
   const prevSymbolRef = useRef<string>('');
+  const candleContextRef = useRef({ key: `${symbol}_${interval}`, generation: 0 });
+  if (candleContextRef.current.key !== `${symbol}_${interval}`) {
+    candleContextRef.current = { key: `${symbol}_${interval}`, generation: candleContextRef.current.generation + 1 };
+  }
+  const loadedGenerationRef = useRef(-1);
+  const candleRequestRef = useRef(0);
+  const liveRevisionRef = useRef(0);
+  const lastLiveTickRef = useRef<{ generation: number; time: number } | null>(null);
 
   // 2. Fetch Candle Data
   const fetchCandles = useCallback(async (
@@ -802,6 +896,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       return;
     }
     const requestKey = `${sym}_${inv}`;
+    if (requestKey !== candleContextRef.current.key) return;
+    const generation = candleContextRef.current.generation;
+    const requestId = ++candleRequestRef.current;
+    const liveRevision = liveRevisionRef.current;
+    const isCurrentRequest = () => candleContextRef.current.generation === generation && candleRequestRef.current === requestId;
     const isColdMount = candlesRef.current.length === 0;
 
     console.log('[FLOW: Step 6 - fetchCandles start]:', {
@@ -858,6 +957,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         }
       }
 
+      if (!isCurrentRequest()) return;
       // If network fetch failed or returned no candles, attempt to restore from local storage cache
       if (!data || data.status !== 'ok' || !Array.isArray(data.candles) || data.candles.length === 0) {
         const localKey = `smtrading_cached_candles_${sym}_${inv}`;
@@ -873,13 +973,32 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       }
 
       if (data && data.status === 'ok' && Array.isArray(data.candles) && data.candles.length > 0) {
-        const incomingCandles = data.candles;
+        const byTime = new Map<number, CandleData>();
+        for (const raw of data.candles) {
+          const time = timestampSeconds(Number(raw.time));
+          if (Number.isFinite(time) && ['open', 'high', 'low', 'close'].every(k => Number.isFinite(raw[k]))) {
+            byTime.set(time, { ...raw, time });
+          }
+        }
         const existingCandles = candlesRef.current;
+        // An HTTP snapshot must not roll back ticks received while it was in flight.
+        if (loadedGenerationRef.current === generation && liveRevisionRef.current !== liveRevision) {
+          const lastExisting = existingCandles.at(-1);
+          const latestFetched = Math.max(...byTime.keys());
+          for (const bar of existingCandles) {
+            if (bar.time > latestFetched || (bar === lastExisting && bar.time === latestFetched)) {
+              const historical = byTime.get(bar.time);
+              byTime.set(bar.time, bar);
+            }
+          }
+        }
+        const incomingCandles = [...byTime.values()].sort((a, b) => a.time - b.time);
+        if (!incomingCandles.length) return;
 
         candlesRef.current = incomingCandles;
         (window as any).__chartCandles = incomingCandles;
         (window as any).__chartInterval = inv;
-        setReactionZoneMarketData(incomingCandles, inv, sym);
+        setReactionZoneMarketData(incomingCandles, inv, sym, chartApiRef.current, activeStrategyRef.current);
 
         // Persist to local cache for offline/instant resilience
         try {
@@ -935,7 +1054,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               ];
               whitespaceSeriesApiRef.current.setData(fullTimeline);
             }
-            seriesApiRef.current.setData(incomingCandles);
+            seriesApiRef.current.setData(incomingCandles as any);
             console.log('[FLOW: Step 6 - seriesApiRef.setData COMPLETED for full reload]:', sym, 'count:', incomingCandles.length);
 
             const totalReal = incomingCandles.length;
@@ -957,7 +1076,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               ];
               whitespaceSeriesApiRef.current.setData(fullTimeline);
             }
-            seriesApiRef.current.setData(incomingCandles);
+            seriesApiRef.current.setData(incomingCandles as any);
 
             // Cleanly position viewport to display the latest price action with optimal density.
             const totalReal = incomingCandles.length;
@@ -986,11 +1105,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             chartApiRef.current?.priceScale('right')?.applyOptions({ autoScale: true });
           } else {
             // Background polling / silent refresh for the EXACT SAME symbol & interval
-            if (incomingCandles.length > 0) {
-              const lastIncoming = incomingCandles[incomingCandles.length - 1];
-              seriesApiRef.current.update(lastIncoming);
-              updateSmcIndicator(incomingCandles);
-            }
+            // Reconcile all recovered bars, not just the last one: refs and canvas
+            // must contain exactly the same timestamps after reconnecting.
+            whitespaceSeriesApiRef.current?.setData([
+              ...incomingCandles.map(c => ({ time: c.time as any })),
+              ...generateFutureWhitespaceScale(incomingCandles, inv, 500),
+            ]);
+            seriesApiRef.current.setData(incomingCandles as any);
+            updateSmcIndicator(incomingCandles);
           }
 
           const last = incomingCandles[incomingCandles.length - 1];
@@ -1001,7 +1123,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           (chartApiRef.current as any)._candles = incomingCandles;
           (chartApiRef.current as any)._currentInterval = inv;
         }
-        setReactionZoneMarketData(incomingCandles, inv, sym);
+        setReactionZoneMarketData(incomingCandles, inv, sym, chartApiRef.current, activeStrategyRef.current);
 
         // Immediately recalculate screen positions for all drawings on the new timeframe
         const manager = drawingManagerRef.current;
@@ -1020,8 +1142,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         }
         syncDrawingsList();
         lastLoadedKeyRef.current = requestKey;
+        loadedGenerationRef.current = generation;
       }
     } catch (err: any) {
+      if (!isCurrentRequest()) return;
       if (isSilent) {
         console.warn('[Financial Chart] Background candle refresh skipped:', err.message);
       } else {
@@ -1029,14 +1153,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         // If cold mount failed, schedule a single deferred retry
         if (isColdMount) {
           setTimeout(() => {
-            if (candlesRef.current.length === 0) {
+            if (isCurrentRequest() && candlesRef.current.length === 0) {
               fetchCandles(sym, inv, false, false, false);
             }
           }, 2500);
         }
       }
     } finally {
-      setIsLoadingCandles(false);
+      if (isCurrentRequest()) setIsLoadingCandles(false);
     }
   }, [syncDrawingsList]);
 
@@ -1052,9 +1176,24 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       if (!manager) return;
 
       const stratKey = (targetStrategy || 'default').toLowerCase();
+      const viewKey = getStrategyStorageKey(sym, stratKey);
+      if (desiredDrawingKeyRef.current !== viewKey) return;
+      const loadId = ++drawingLoadIdRef.current;
+      const sameView = drawingViewRef.current?.key === viewKey;
+      if (!sameView) {
+        drawingViewRef.current = { symbol: sym, strategy: stratKey, key: viewKey };
+        undoStackRef.current = [];
+        redoStackRef.current = [];
+        setCanUndo(false);
+        setCanRedo(false);
+        manager.clearAll();
+        clearReactionZoneDrawings(chartApiRef.current);
+        drawingVisibleIdsRef.current.set(viewKey, new Set());
+        isDrawingsLoadedRef.current = false;
+      }
 
       // If not forcing a reload and we already have drawings loaded for this symbol & strategy, keep them
-      if (!force && (manager.getAllDrawings() || []).length > 0) {
+      if (!force && sameView && isDrawingsLoadedRef.current) {
         isDrawingsLoadedRef.current = true;
         return;
       }
@@ -1074,25 +1213,28 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         console.warn('[Financial Chart] Network fetch drawings notice:', networkErr.message);
       }
 
-      // Fallback to local storage if PostgreSQL returns empty or network fails
-      if (rawDrawings.length === 0) {
-        const localList = loadStrategyDrawingsLocal(sym, targetStrategy);
-        if (Array.isArray(localList) && localList.length > 0) {
-          rawDrawings = localList;
-        }
+      if (drawingLoadIdRef.current !== loadId || desiredDrawingKeyRef.current !== viewKey || drawingManagerRef.current !== manager) return;
+      const pending = pendingDrawingEdits(sym, stratKey);
+      const local = loadStrategyDrawingsLocal(sym, stratKey);
+      const existing = exportPersistentDrawings(manager);
+      const combined = new Map<string, SerializedDrawingPayload>();
+      // Keep the current canvas on empty/error responses. A missing ID is not a
+      // user deletion, and an in-flight response cannot discard newer edits.
+      for (const d of local) combined.set(d.id, d);
+      for (const d of rawDrawings) combined.set(d.id, d);
+      if (isOwnerOrAdminRef.current && pending.dirty) {
+        for (const d of local) combined.set(d.id, d);
       }
-
-      // If we have drawings to mount OR if force was requested for this view:
-      // SAFETY: If rawDrawings is empty and network failed, DO NOT wipe existing in-memory drawings!
-      if (rawDrawings.length === 0 && !fetchSucceeded && (manager.getAllDrawings() || []).length > 0) {
-        console.warn('[Financial Chart] Preserving in-memory drawings during transient fetch failure');
-        isDrawingsLoadedRef.current = true;
-        return;
+      for (const d of existing) {
+        if (!combined.has(d.id) || (isOwnerOrAdminRef.current && pending.dirty)) combined.set(d.id, d);
       }
+      for (const id of pending.deletedIds) combined.delete(id);
+      rawDrawings = [...combined.values()];
+      restoringDrawingsRef.current = true;
 
       // Validate-then-swap: only clear canvas once we know the new dataset
       manager.clearAll();
-      clearReactionZoneDrawings();
+      clearReactionZoneDrawings(chartApiRef.current);
 
       if (rawDrawings.length > 0) {
         const registry = ToolRegistry.getInstance();
@@ -1114,7 +1256,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             }
 
             const isReactionZone = actualType === 'reaction-zone-strong' || actualType === 'reaction-zone-weak';
-            const isLocked = isReactionZone ? !isOwnerOrAdminRef.current : (isReadOnlyView || !enableDrawingToolsRef.current);
+            const isLocked = isOwnerOrAdminRef.current ? (d.options?.locked === true) : (isReactionZone || isReadOnlyView || !enableDrawingToolsRef.current);
             const restored = registry.createDrawing(
               actualType,
               d.id,
@@ -1124,6 +1266,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             );
 
             if (restored) {
+              (restored as any)._restorePermissionLock = isLocked && !isOwnerOrAdminRef.current && d.options?.locked !== true;
               (restored as any)._currentChartInterval = inv;
               (restored as any)._strategy = stratKey;
               if (actualType === 'gann-box' || actualType === 'gannbox') {
@@ -1171,10 +1314,13 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         });
       }
 
+      restoringDrawingsRef.current = false;
+      drawingVisibleIdsRef.current.set(viewKey, new Set((manager.getAllDrawings() || []).map(d => d.id)));
       isDrawingsLoadedRef.current = true;
-      setSaveStatus('synced');
+      setSaveStatus(pending.dirty ? 'unsaved' : 'synced');
       syncDrawingsList();
     } catch (err: any) {
+      restoringDrawingsRef.current = false;
       console.error('[Financial Chart] Error loading drawings:', err.message);
       isDrawingsLoadedRef.current = true;
     }
@@ -1182,7 +1328,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 4. Manual Save Strategy (Authoritative single action for persisting chart drawings to PostgreSQL)
   const handleManualSaveStrategy = useCallback(async () => {
-    if (saveStatus === 'saving') return;
+    if (drawingSaveInFlightRef.current) return;
     if (!isOwnerOrAdminRef.current) return;
 
     const token = getAuthToken();
@@ -1197,36 +1343,17 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     if (!manager) return;
 
     const currentStrat = activeStrategyRef.current || 'default';
+    const viewKey = getStrategyStorageKey(symbol, currentStrat);
+    if (drawingViewRef.current?.key !== viewKey || !isDrawingsLoadedRef.current) return;
     const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Hunter Strategy' : 'Strategy';
 
-    const allDrawings = manager.exportDrawings().map((d: any) => {
-      const live = manager.getDrawing(d.id);
-      if (live && (live as any).zoneType) {
-        return {
-          ...d,
-          type: (live as any).zoneType === 'strong' ? 'reaction-zone-strong' : 'reaction-zone-weak',
-          options: {
-            ...(d.options || {}),
-            zoneType: (live as any).zoneType,
-          },
-        };
-      }
-      if (live && (live as any).gannOptions) {
-        return {
-          ...d,
-          options: {
-            ...(d.options || {}),
-            ...(live as any).gannOptions,
-          },
-          gannOptions: (live as any).gannOptions,
-        };
-      }
-      return d;
-    });
+    const allDrawings = exportPersistentDrawings(manager);
+    const pending = pendingDrawingEdits(symbol, currentStrat);
+    const revision = drawingRevisionRef.current;
 
     // Guard: An empty drawings array must NEVER be interpreted as an automatic delete operation!
     // Empty payloads are rejected to protect saved strategies from accidental wiping.
-    if (allDrawings.length === 0) {
+    if (allDrawings.length === 0 && pending.deletedIds.size === 0) {
       setSaveStatus('unsaved');
       setSaveError('No drawings on the chart to save. To permanently delete this strategy from the database, click Clear All (trash icon) with confirmation.');
       setTimeout(() => setSaveError(null), 6000);
@@ -1234,6 +1361,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     }
 
     try {
+      drawingSaveInFlightRef.current = true;
       setSaveStatus('saving');
       setSaveError(null);
 
@@ -1248,14 +1376,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           interval,
           strategy: currentStrat.toLowerCase(),
           drawings: allDrawings,
+          manualSave: true,
+          deletedDrawingIds: [...pending.deletedIds],
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.status === 'ok') {
         // Atomic save succeeded! Update local storage cache as backup
-        saveStrategyDrawingsLocal(symbol, currentStrat, allDrawings);
-        setSaveStatus('synced');
+        if (drawingRevisionRef.current === revision) {
+          saveStrategyDrawingsLocal(symbol, currentStrat, allDrawings, true);
+          localStorage.removeItem(viewKey + '_pending');
+        }
+        if (desiredDrawingKeyRef.current !== viewKey) return;
+        setSaveStatus(drawingRevisionRef.current === revision ? 'synced' : 'unsaved');
         setRefreshNotification(`${stratLabel} Saved Successfully (${data.count} drawings)`);
         setTimeout(() => setRefreshNotification(null), 3500);
       } else {
@@ -1271,10 +1405,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const failureMsg = `Network error while saving strategy: ${err.message || 'Connection lost'}. Previous saved version preserved.`;
       setSaveError(failureMsg);
       setTimeout(() => setSaveError(null), 6000);
+    } finally {
+      drawingSaveInFlightRef.current = false;
     }
   }, [saveStatus, symbol, interval, getAuthToken]);
 
-  // 5.1 Manual Refresh Strategy (fetches & applies latest saved strategy from PostgreSQL, discarding uncommitted in-memory edits)
+  // 5.1 Manual Refresh Strategy (merges saved drawings while preserving pending edits)
   const handleManualRefreshStrategy = useCallback(async () => {
     if (isRefreshingStrategy) return;
     setIsRefreshingStrategy(true);
@@ -1283,7 +1419,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     try {
       await loadPostgresDrawings(symbol, interval, true, activeStrategy);
       const stratLabel = activeStrategy === '144' ? '144 Strategy' : activeStrategy === 'smc' ? 'SMC Strategy' : activeStrategy === 'fib' ? 'Hunter Strategy' : 'Strategy';
-      setSaveStatus('synced');
       setRefreshNotification(`${stratLabel} Refreshed from Database`);
       setTimeout(() => {
         setRefreshNotification(null);
@@ -1376,28 +1511,23 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       manager.removeDrawing(selectedDrawingId);
       setSelectedDrawingId(null);
       syncDrawingsList();
-      setSaveStatus('unsaved');
+      markDrawingsChanged();
     }
   }, [selectedDrawingId, pushUndoSnapshot, syncDrawingsList]);
 
   // 7. Clear All Drawings (MANUAL ONLY with Explicit User Confirmation)
   const handleClearAll = useCallback(async () => {
     const currentStrat = activeStrategyRef.current || 'default';
+    const viewKey = getStrategyStorageKey(symbol, currentStrat);
+    if (drawingViewRef.current?.key !== viewKey || !isDrawingsLoadedRef.current) return;
     const stratLabel = currentStrat === '144' ? '144 Strategy' : currentStrat === 'smc' ? 'SMC Strategy' : currentStrat === 'fib' ? 'Hunter Strategy' : 'Strategy';
 
     const confirmed = window.confirm(
-      `Are you sure you want to permanently DELETE and CLEAR all saved drawings for ${stratLabel} on ${symbol} from the database?\n\nThis is a manual deletion action and cannot be undone.`
+      ui("Are you sure you want to permanently DELETE and CLEAR all saved drawings for {p0} on {p1} from the database? This is a manual deletion action and cannot be undone.", {p0: stratLabel, p1: symbol})
     );
     if (!confirmed) return;
 
-    pushUndoSnapshot();
     const manager = drawingManagerRef.current;
-    if (manager) {
-      manager.clearAll();
-      clearReactionZoneDrawings();
-    }
-    setSelectedDrawingId(null);
-    syncDrawingsList();
 
     const token = getAuthToken();
     if (token && isOwnerOrAdminRef.current) {
@@ -1419,6 +1549,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         const data = await res.json();
         if (res.ok && data.status === 'ok') {
           saveStrategyDrawingsLocal(symbol, currentStrat, [], true);
+          localStorage.removeItem(viewKey + '_pending');
+          drawingVisibleIdsRef.current.set(viewKey, new Set());
+          if (desiredDrawingKeyRef.current !== viewKey) return;
+          pushUndoSnapshot();
+          manager?.clearAll();
+          clearReactionZoneDrawings(chartApiRef.current);
+          setSelectedDrawingId(null);
+          syncDrawingsList();
           setSaveStatus('synced');
           setRefreshNotification(`${stratLabel} drawings permanently deleted from database`);
           setTimeout(() => setRefreshNotification(null), 3500);
@@ -1435,7 +1573,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     } else {
       setSaveStatus('synced');
     }
-  }, [symbol, getAuthToken, pushUndoSnapshot, syncDrawingsList]);
+  }, [symbol, getAuthToken, pushUndoSnapshot, syncDrawingsList, ui]);
 
   // 7.1 Object Tree & Drawing Manager Actions (In-Memory Canvas Operations)
   const handleToggleDrawingVisibility = useCallback((id: string) => {
@@ -1446,7 +1584,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     d.options.visible = d.options.visible === false ? true : false;
     d.requestUpdate?.();
     syncDrawingsList();
-    setSaveStatus('unsaved');
+    markDrawingsChanged();
   }, [syncDrawingsList]);
 
   const handleToggleDrawingLock = useCallback((id: string) => {
@@ -1457,7 +1595,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     d.options.locked = !d.options.locked;
     d.requestUpdate?.();
     syncDrawingsList();
-    setSaveStatus('unsaved');
+    markDrawingsChanged();
   }, [syncDrawingsList]);
 
   const handleToggleAllVisibility = useCallback(() => {
@@ -1472,7 +1610,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       d.requestUpdate?.();
     });
     syncDrawingsList();
-    setSaveStatus('unsaved');
+    markDrawingsChanged();
   }, [syncDrawingsList]);
 
   const handleToggleAllLock = useCallback(() => {
@@ -1487,7 +1625,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       d.requestUpdate?.();
     });
     syncDrawingsList();
-    setSaveStatus('unsaved');
+    markDrawingsChanged();
   }, [syncDrawingsList]);
 
   const handleDeleteIndividualDrawing = useCallback((id: string) => {
@@ -1497,7 +1635,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     manager.removeDrawing(id);
     if (selectedDrawingId === id) setSelectedDrawingId(null);
     syncDrawingsList();
-    setSaveStatus('unsaved');
+    markDrawingsChanged();
   }, [selectedDrawingId, pushUndoSnapshot, syncDrawingsList]);
 
   // 8. Initialize Lightweight Chart & Drawing Manager
@@ -1779,7 +1917,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             creation.drawing.requestUpdate();
             currentManager.selectDrawing(creation.drawing.id);
             setSelectedDrawingId(creation.drawing.id);
-            setSaveStatus('unsaved');
+            markDrawingsChanged();
             unlockCameraAfterInteraction(currentChart, false);
             currentContainer.style.cursor = '';
             setActiveTool(null);
@@ -1871,7 +2009,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               drawing.requestUpdate();
               currentManager.selectDrawing(drawing.id);
               setSelectedDrawingId(drawing.id);
-              setSaveStatus('unsaved');
+              markDrawingsChanged();
               pushUndoSnapshot();
               syncDrawingsList();
             }
@@ -1924,7 +2062,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               drawing.requestUpdate();
               currentManager.selectDrawing(drawing.id);
               setSelectedDrawingId(drawing.id);
-              setSaveStatus('unsaved');
+              markDrawingsChanged();
               pushUndoSnapshot();
               syncDrawingsList();
             }
@@ -2326,7 +2464,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               creation.drawing.requestUpdate();
               currentManager?.selectDrawing(creation.drawing.id);
               setSelectedDrawingId(creation.drawing.id);
-              setSaveStatus('unsaved');
+              markDrawingsChanged();
               if (currentChart) unlockCameraAfterInteraction(currentChart, false);
               if (currentContainer) currentContainer.style.cursor = '';
               setActiveTool(null);
@@ -2362,7 +2500,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         }
 
         if (dragState.hasMoved) {
-          setSaveStatus('unsaved');
+          markDrawingsChanged();
         }
 
         dragStateRef.current = null;
@@ -2454,7 +2592,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     manager.on('drawing:updated', () => {
       // In-memory update - mark unsaved, do NOT automatically save to PostgreSQL
-      setSaveStatus('unsaved');
+      if (!dragStateRef.current && !drawingCreationRef.current) markDrawingsChanged();
     });
 
     // Crosshair move handler for OHLC header display (optimized to avoid re-renders when bar doesn't change)
@@ -2604,7 +2742,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     });
 
     // If neither initial mount nor symbol change, and interval already loaded, DO NOT reload!
-    if (!isInitialMount && !isSymbolChange && lastLoadedKeyRef.current === key) {
+    if (!isInitialMount && !isSymbolChange && lastLoadedKeyRef.current === key && loadedGenerationRef.current === candleContextRef.current.generation) {
       return;
     }
 
@@ -2612,7 +2750,6 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     if (isSymbolChange) {
       // Symbol changed: clear canvas for previous symbol and load new symbol
-      drawingManagerRef.current?.clearAll();
       candlesRef.current = [];
       setLastBarInfo(null);
       seriesApiRef.current?.setData([]);
@@ -2637,7 +2774,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         loadPostgresDrawings(symbol, interval, false, activeStrategy);
       }
     }
-  }, [symbol, interval, activeStrategy, fetchCandles, loadPostgresDrawings]);
+  }, [symbol, interval, fetchCandles, loadPostgresDrawings]);
 
   // Switch Independent Strategy Chart View (144 Strategy, SMC Strategy, Hunter Strategy)
   const prevStrategyRef = useRef<string | null>(activeStrategy);
@@ -2658,6 +2795,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // Persistent real-time market data stream (WebSocket with auto-fallback to SSE) for lowest possible latency (0s delay)
   useEffect(() => {
+    const generation = candleContextRef.current.generation;
     const getIntervalDuration = (inv: string): number => {
       const norm = (inv || '15').trim().toLowerCase();
       if (norm === '1' || norm === '1m') return 60;
@@ -2675,6 +2813,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
     };
 
     const handleStreamEvent = (data: any) => {
+      if (candleContextRef.current.generation !== generation || loadedGenerationRef.current !== generation) return;
+      if (data.type === 'bar' && data.interval !== interval) return;
       if (!seriesApiRef.current || !candlesRef.current || candlesRef.current.length === 0) {
         return;
       }
@@ -2715,9 +2855,18 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       }
 
       if (data.type === 'bar' && data.bar) {
-        const updatedBar = data.bar;
+        const updatedBar = { ...data.bar, time: timestampSeconds(Number(data.bar.time)) };
         const current = candlesRef.current;
         const lastIdx = current.length - 1;
+        if (!Number.isFinite(updatedBar.time) || updatedBar.time < current[lastIdx].time || updatedBar.time > serverNow() / 1000 + 60) return;
+        if (!['open', 'high', 'low', 'close'].every(k => Number.isFinite(updatedBar[k]))) return;
+        const liveTick = lastLiveTickRef.current;
+        if (!data.authoritative && updatedBar.time === current[lastIdx].time && liveTick?.generation === generation && liveTick.time >= updatedBar.time) {
+          updatedBar.high = Math.max(updatedBar.high, current[lastIdx].high);
+          updatedBar.low = Math.min(updatedBar.low, current[lastIdx].low);
+          updatedBar.close = current[lastIdx].close;
+        }
+        const gap = updatedBar.time - current[lastIdx].time > getIntervalDuration(interval);
         if (lastIdx >= 0) {
           if (current[lastIdx].time === updatedBar.time) {
             current[lastIdx] = updatedBar;
@@ -2725,17 +2874,26 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             current.push(updatedBar);
           }
         }
+        liveRevisionRef.current++;
+        if (gap) {
+          whitespaceSeriesApiRef.current?.setData([...current.map(c => ({ time: c.time as any })), ...generateFutureWhitespaceScale(current, interval, 500)]);
+          fetchCandles(symbol, interval, true);
+        }
         seriesApiRef.current.update(updatedBar as any);
         setLastBarInfo({ open: updatedBar.open, high: updatedBar.high, low: updatedBar.low, close: updatedBar.close });
-        setReactionZoneMarketData(current, interval, symbol);
-      } else if (data.type === 'tick' && typeof data.price === 'number' && !isNaN(data.price) && data.price > 0) {
+        setReactionZoneMarketData(current, interval, symbol, chartApiRef.current, activeStrategyRef.current, true);
+      } else if (data.type === 'tick' && !data.authoritative && typeof data.price === 'number' && !isNaN(data.price) && data.price > 0) {
         const price = data.price;
         const current = candlesRef.current;
         if (current.length > 0) {
           const last = current[current.length - 1];
           const durationSec = getIntervalDuration(interval);
-          const tickTimeSec = typeof data.time === 'number' && data.time > 0 ? data.time : Math.floor(Date.now() / 1000);
-          const currentBarTime = Math.floor(tickTimeSec / durationSec) * durationSec;
+          const tickTimeSec = timestampSeconds(typeof data.time === 'number' && data.time > 0 ? data.time : NaN);
+          if (tickTimeSec < Number(last.time) || tickTimeSec > serverNow() / 1000 + 60) return;
+          if (lastLiveTickRef.current?.generation === generation && tickTimeSec < lastLiveTickRef.current.time) return;
+          lastLiveTickRef.current = { generation, time: tickTimeSec };
+          const currentBarTime = liveCandleTime(tickTimeSec, Number(last.time), durationSec);
+          liveRevisionRef.current++;
 
           if (currentBarTime > Number(last.time)) {
             // A genuine new candle timeframe has started: spawn the real-time bar!
@@ -2748,10 +2906,14 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               volume: 1,
             };
             current.push(newBar);
+            if (currentBarTime - Number(last.time) > durationSec) {
+              whitespaceSeriesApiRef.current?.setData([...current.map(c => ({ time: c.time as any })), ...generateFutureWhitespaceScale(current, interval, 500)]);
+              fetchCandles(symbol, interval, true);
+            }
             seriesApiRef.current.update(newBar as any);
             updateSmcIndicator(current);
             setLastBarInfo({ open: newBar.open, high: newBar.high, low: newBar.low, close: newBar.close });
-            setReactionZoneMarketData(current, interval, symbol);
+            setReactionZoneMarketData(current, interval, symbol, chartApiRef.current, activeStrategyRef.current, true);
           } else {
             // Update active candle with incoming tick
             const updatedBar: CandleData = {
@@ -2764,7 +2926,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             current[current.length - 1] = updatedBar;
             seriesApiRef.current.update(updatedBar as any);
             setLastBarInfo({ open: updatedBar.open, high: updatedBar.high, low: updatedBar.low, close: updatedBar.close });
-            setReactionZoneMarketData(current, interval, symbol);
+            setReactionZoneMarketData(current, interval, symbol, chartApiRef.current, activeStrategyRef.current, true);
           }
         }
       }
@@ -2807,7 +2969,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const drawing = manager.getDrawing(selectedDrawingId);
       if (drawing) {
         drawing.updateStyle({ lineColor: newColor, fillColor: `${newColor}1a` });
-        setSaveStatus('unsaved');
+        markDrawingsChanged();
       }
     }
   };
@@ -2820,7 +2982,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       const drawing = manager.getDrawing(selectedDrawingId);
       if (drawing) {
         drawing.updateStyle({ lineWidth: newWidth });
-        setSaveStatus('unsaved');
+        markDrawingsChanged();
       }
     }
   };
@@ -2870,12 +3032,12 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                   ? 'bg-amber-400 animate-ping'
                   : 'bg-slate-400'
               }`}
-              title={streamStatus === 'connected' ? 'Real-Time Stream Active (0s delay)' : 'Connecting stream...'}
+              title={streamStatus === 'connected' ? ui("Real-Time Stream Active (0s delay)") : ui("Connecting stream...")}
             />
             {brokerName && (
               <span 
                 className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-800/90 text-amber-300 border border-slate-700/60 font-semibold shrink-0" 
-                title={`Market Feed Broker: ${brokerName}`}
+                title={ui("Market Feed Broker: {p0}", {p0: brokerName})}
               >
                 {brokerName}
               </span>
@@ -2883,7 +3045,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             <span className="tracking-wide font-bold text-white">{displayTicker}</span>
             <span 
               className="text-[10px] text-amber-400/90 font-mono bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-semibold shrink-0"
-              title={`Chart Timeframe: ${formatIntervalDisplay(interval)}`}
+              title={ui("Chart Timeframe: {p0}", {p0: formatIntervalDisplay(interval)})}
             >
               {formatIntervalDisplay(interval)}
             </span>
@@ -2893,10 +3055,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                   ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
                   : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
               }`}
-              title="Persistent market streaming feed"
+              title={ui("Persistent market streaming feed")}
             >
               <Zap className="w-2.5 h-2.5" />
-              <span>{streamStatus === 'connected' ? 'Live Stream' : 'Syncing'}</span>
+              <span>{streamStatus === 'connected' ? ui("Live Stream") : ui("Syncing")}</span>
             </span>
           </div>
 
@@ -2914,9 +3076,9 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         {/* Right Info: Strategy Save / Refresh & PostgreSQL Sync Status */}
         <div className="flex items-center gap-2">
           {saveError && (
-            <span className="text-[11px] font-semibold text-rose-300 bg-rose-950/90 border border-rose-500/50 px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 max-w-sm truncate" title={saveError}>
+            <span className="text-[11px] font-semibold text-rose-300 bg-rose-950/90 border border-rose-500/50 px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 max-w-sm truncate" title={ui(saveError)}>
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-              <span className="truncate">{saveError}</span>
+              <span className="truncate">{ui(saveError)}</span>
               <button type="button" onClick={() => setSaveError(null)} className="text-rose-400 hover:text-white ml-1">
                 <X className="w-3 h-3" />
               </button>
@@ -2936,7 +3098,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               type="button"
               onClick={handleManualSaveStrategy}
               disabled={saveStatus === 'saving'}
-              title="Manually save all drawings to PostgreSQL strategy database"
+              title={ui("Manually save all drawings to PostgreSQL strategy database")}
               className={`flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group ${
                 saveStatus === 'unsaved'
                   ? 'text-amber-200 bg-amber-500/25 hover:bg-amber-500/35 border border-amber-400 shadow-amber-500/20 ring-1 ring-amber-400/40'
@@ -2953,18 +3115,18 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                   'Saving...'
                 ) : (
                   <>
-                    <span className="sm:hidden">Save</span>
+                    <span className="sm:hidden">{ui("Save")}</span>
                     <span className="hidden sm:inline">
                       {activeStrategy === '144'
-                        ? 'Save (144)'
+                        ? ui("Save (144)")
                         : activeStrategy === 'smc'
-                        ? 'Save (SMC)'
+                        ? ui("Save (SMC)")
                         : activeStrategy === 'fib'
-                        ? 'Save (Hunter)'
-                        : 'Save Strategy'}
+                        ? ui("Save (Hunter)")
+                        : ui("Save Strategy")}
                     </span>
                     {saveStatus === 'unsaved' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block ml-0.5" title="Unsaved changes" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block ml-0.5" title={ui("Unsaved changes")} />
                     )}
                   </>
                 )}
@@ -2978,20 +3140,20 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             type="button"
             onClick={handleManualRefreshStrategy}
             disabled={isRefreshingStrategy}
-            title="Fetch and apply latest admin strategy drawings without reloading the page"
+            title={ui("Fetch and apply latest admin strategy drawings without reloading the page")}
             className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-cyan-300 hover:text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 hover:border-cyan-400/60 rounded-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs group"
           >
             <RefreshCw className={`w-3 h-3 text-cyan-400 group-hover:rotate-180 transition-transform duration-500 ${isRefreshingStrategy ? 'animate-spin' : ''}`} />
             <span className="tracking-tight">
               {isRefreshingStrategy
-                ? 'Refreshing...'
+                ? ui("Refreshing...")
                 : activeStrategy === '144'
-                ? 'Refresh (144)'
+                ? ui("Refresh (144)")
                 : activeStrategy === 'smc'
-                ? 'Refresh (SMC)'
+                ? ui("Refresh (SMC)")
                 : activeStrategy === 'fib'
-                ? 'Refresh (Hunter)'
-                : 'Refresh'}
+                ? ui("Refresh (Hunter)")
+                : ui("Refresh")}
             </span>
           </button>
 
@@ -3002,32 +3164,24 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                 <Database className="w-3 h-3 text-amber-400" />
                 {saveStatus === 'saving' ? (
                   <span className="text-amber-300 flex items-center gap-1">
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Saving
-                  </span>
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />{ui(" Saving ")}</span>
                 ) : saveStatus === 'synced' ? (
                   <span className="text-emerald-400 flex items-center gap-1">
-                    <Check className="w-2.5 h-2.5" /> Saved
-                  </span>
+                    <Check className="w-2.5 h-2.5" />{ui(" Saved ")}</span>
                 ) : saveStatus === 'unsaved' ? (
                   <span className="text-amber-300 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> Unsaved
-                  </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" />{ui(" Unsaved ")}</span>
                 ) : saveStatus === 'error' ? (
                   <span className="text-rose-400 flex items-center gap-1">
-                    <AlertTriangle className="w-2.5 h-2.5" /> Error
-                  </span>
+                    <AlertTriangle className="w-2.5 h-2.5" />{ui(" Error ")}</span>
                 ) : (
-                  <span>Ready</span>
+                  <span>{ui("Ready")}</span>
                 )}
               </span>
-              <span className="hidden xl:inline text-[10px] text-amber-300 font-medium bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
-                Admin Mode
-              </span>
+              <span className="hidden xl:inline text-[10px] text-amber-300 font-medium bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">{ui(" Admin Mode ")}</span>
             </div>
           ) : (
-            <span className="hidden md:inline text-[10px] text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
-              Published Analysis
-            </span>
+            <span className="hidden md:inline text-[10px] text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">{ui(" Published Analysis ")}</span>
           )}
         </div>
       </div>
@@ -3036,7 +3190,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       {effectiveDrawingTools && activeToolDef && (
         <div className="absolute top-10 left-14 z-30 bg-amber-500/95 text-slate-950 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1 border border-amber-400">
           <span>
-            <strong>{activeToolDef.name}:</strong> Click chart to place point {pendingAnchors.length + 1} of {activeToolDef.requiredAnchors}
+            <strong>{activeToolDef.name}:</strong>{ui(" Click chart to place point ")}{pendingAnchors.length + 1} of {activeToolDef.requiredAnchors}
           </span>
           <button
             onClick={() => {
@@ -3044,7 +3198,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               setPendingAnchors([]);
             }}
             className="hover:bg-amber-600/50 p-0.5 rounded transition-colors"
-            title="Cancel"
+            title={ui("Cancel")}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -3063,29 +3217,24 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
                 : 'bg-emerald-400'
             }`}
           />
-          <span>
-            Strategy View:{' '}
+          <span>{ui(" Strategy View:")}{' '}
             <strong className="text-white font-semibold">
               {activeStrategy === '144'
-                ? '144 Strategy'
+                ? ui("144 Strategy")
                 : activeStrategy === 'smc'
-                ? 'SMC Strategy'
-                : 'Hunter Strategy'}
+                ? ui("SMC Strategy")
+                : ui("Hunter Strategy")}
             </strong>
             {isOwnerOrAdmin ? (
-              <span className="ml-2 text-[10px] text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">
-                Admin Edit Mode
-              </span>
+              <span className="ml-2 text-[10px] text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">{ui(" Admin Edit Mode ")}</span>
             ) : (
-              <span className="ml-2 text-[10px] text-sky-300 bg-sky-500/15 px-1.5 py-0.5 rounded border border-sky-500/30">
-                Published Analysis • View Only
-              </span>
+              <span className="ml-2 text-[10px] text-sky-300 bg-sky-500/15 px-1.5 py-0.5 rounded border border-sky-500/30">{ui(" Published Analysis • View Only ")}</span>
             )}
           </span>
           <button
             onClick={() => onSelectStrategy?.(null)}
             className="hover:bg-slate-800 p-1 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer ml-1"
-            title="Exit Strategy View (Return to Normal Chart)"
+            title={ui("Exit Strategy View (Return to Normal Chart)")}
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -3175,6 +3324,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         id="lightweight-financial-chart-container"
         className={`w-full h-full flex-1 min-h-0 min-w-0 relative overflow-hidden ${activeTool ? 'cursor-crosshair' : 'cursor-default'}`}
       >
+        <CandleCountdown interval={interval} chartRef={chartApiRef} seriesRef={seriesApiRef} candlesRef={candlesRef} />
         {/* Chart View Controls Group: Zoom In, Zoom Out, and Reset View */}
         <div
           id="chart-view-controls-group"
@@ -3186,7 +3336,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             id="btn-zoom-in-chart"
             type="button"
             onClick={handleZoomIn}
-            title="Zoom In (Time Scale)"
+            title={ui("Zoom In (Time Scale)")}
             className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded transition-colors cursor-pointer select-none active:scale-95"
           >
             <ZoomIn className="w-3.5 h-3.5" />
@@ -3195,7 +3345,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             id="btn-zoom-out-chart"
             type="button"
             onClick={handleZoomOut}
-            title="Zoom Out (Time Scale)"
+            title={ui("Zoom Out (Time Scale)")}
             className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded transition-colors cursor-pointer select-none active:scale-95"
           >
             <ZoomOut className="w-3.5 h-3.5" />
@@ -3205,11 +3355,11 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             id="btn-reset-chart-view"
             type="button"
             onClick={handleResetChartView}
-            title="Reset chart to standard initial view, zoom, and position without deleting drawings (Alt+R)"
+            title={ui("Reset chart to standard initial view, zoom, and position without deleting drawings (Alt+R)")}
             className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 rounded transition-all duration-200 active:scale-95 group cursor-pointer select-none"
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 group-hover:-rotate-90 transition-all duration-300" />
-            <span className="tracking-wide">Reset</span>
+            <span className="tracking-wide">{ui("Reset")}</span>
           </button>
         </div>
 
@@ -3223,6 +3373,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
           />
         )}
 
+        <ReactionTradePanel symbol={symbol} strategy={activeStrategy || 'default'} isAdmin={user?.role === 'admin' || user?.role === 'super_admin'} />
         {/* Reaction Zones Legend - shows price zones context clearly for all users */}
         <ReactionZonesLegend
           isAdmin={isOwnerOrAdmin}
@@ -3237,18 +3388,17 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         {isLoadingCandles && candlesRef.current.length === 0 && (
           <div className="absolute inset-0 z-20 bg-[#090D17]/85 backdrop-blur-xs flex flex-col items-center justify-center gap-2 pointer-events-none">
             <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
-            <span className="text-[11px] font-mono text-slate-400">Loading {symbol} chart...</span>
+            <span className="text-[11px] font-mono text-slate-400">{ui("Loading ")}{symbol}{ui(" chart...")}</span>
           </div>
         )}
       </div>
 
       {/* 5. Chart Footer Attribution */}
       <div className="h-5 bg-[#070A10] border-t border-[#131B2E] px-3 flex items-center justify-between text-[9px] shrink-0 text-slate-500 select-none">
-        <span className="font-mono">
-          Lightweight Charts Engine • {symbol} ({formatIntervalDisplay(interval)})
+        <span className="font-mono">{ui(" Lightweight Charts Engine • ")}{symbol} ({formatIntervalDisplay(interval)})
         </span>
         <span>
-          {enableDrawingTools ? 'Drawing Toolbar Active' : 'Read-Only Mode'}
+          {enableDrawingTools ? ui("Drawing Toolbar Active") : ui("Read-Only Mode")}
         </span>
       </div>
 
@@ -3266,7 +3416,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
             setPropertiesDrawing(null);
           }}
           onApply={() => {
-            setSaveStatus('unsaved');
+            markDrawingsChanged();
           }}
           onDelete={(drawingId) => {
             const manager = drawingManagerRef.current;
@@ -3274,7 +3424,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
               manager.removeDrawing(drawingId);
               setSelectedDrawingId(null);
               syncDrawingsList();
-              setSaveStatus('unsaved');
+              markDrawingsChanged();
             }
           }}
         />

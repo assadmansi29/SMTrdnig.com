@@ -1,3 +1,4 @@
+import {ReactionTradeMonitor} from './components/chart/ReactionTradePanel';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -21,9 +22,9 @@ import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { BlueVerifiedBadge } from './components/BlueVerifiedBadge';
 import { useAbuAsadAvatar } from './context/AvatarContext';
 import { PositionCalculatorModal } from './components/PositionCalculatorModal';
+import { LiquidityReader } from './components/LiquidityReader';
 import { EconomicCalendarModal } from './components/EconomicCalendarModal';
 import { ChartSimulatorModal } from './components/ChartSimulatorModal';
-import { AiTradingAssistantModal } from './components/chart/AiTradingAssistantModal';
 import { SavedArticlesModal } from './components/SavedArticlesModal';
 import { SearchModal } from './components/SearchModal';
 import { NewsletterModal } from './components/NewsletterModal';
@@ -63,8 +64,13 @@ export default function App() {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [calculatorSetup, setCalculatorSetup] = useState<TradeSetup | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isLiquidityOpen, setIsLiquidityOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setIsCalendarOpen(true);
+    window.addEventListener('smtrading:open-calendar', open);
+    return () => window.removeEventListener('smtrading:open-calendar', open);
+  }, []);
   const [isChartOpen, setIsChartOpen] = useState(false);
-  const [isAiCopilotOpen, setIsAiCopilotOpen] = useState(false);
   const [chartDefaultSymbol, setChartDefaultSymbol] = useState('OANDA:XAUUSD');
   const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -178,6 +184,7 @@ export default function App() {
       <div className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col selection:bg-amber-400/20 selection:text-amber-300">
         {/* Top Navigation & Brand Header */}
         <Header
+        onOpenLiquidity={() => setIsLiquidityOpen(true)}
         activeCategory={activeCategory}
         onSelectCategory={setActiveCategory}
         savedArticlesCount={savedArticleIds.length}
@@ -189,7 +196,6 @@ export default function App() {
         }}
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenChart={() => setIsChartOpen(true)}
-        onOpenAiCopilot={() => setIsAiCopilotOpen(true)}
         onOpenNewsletter={() => setIsNewsletterOpen(true)}
         onOpenECommerce={() => setIsECommerceOpen(true)}
         onOpenCoachingDesk={handleOpenCoachingDesk}
@@ -197,6 +203,7 @@ export default function App() {
         onOpenAdmin={(tab) => handleOpenAdmin(tab || 'users')}
       />
 
+      <ReactionTradeMonitor />
       {/* Dynamic Global Live Broadcast Bar when YouTube live stream is active */}
       {isLive && stream && (
         <div className="bg-gradient-to-r from-rose-950 via-[#180B15] to-[#0A0E1A] border-b border-rose-500/40 px-4 py-2.5 shadow-lg relative z-20">
@@ -527,6 +534,7 @@ export default function App() {
         initialSetup={calculatorSetup}
       />
 
+      {isLiquidityOpen && <LiquidityReader onClose={() => setIsLiquidityOpen(false)} />}
       <EconomicCalendarModal
         isOpen={isCalendarOpen}
         onClose={() => setIsCalendarOpen(false)}
@@ -537,16 +545,6 @@ export default function App() {
         onClose={() => setIsChartOpen(false)}
         defaultSymbol={chartDefaultSymbol}
         onOpenAdminModal={(tab, symbol, interval) => handleOpenAdmin((tab as AdminPanelTabType) || 'users', symbol, interval)}
-      />
-
-      <AiTradingAssistantModal
-        isOpen={isAiCopilotOpen}
-        onClose={() => setIsAiCopilotOpen(false)}
-        symbol={chartDefaultSymbol}
-        interval="15"
-        currentPrice={2900}
-        candles={[]}
-        reactionZones={[]}
       />
 
       <SavedArticlesModal

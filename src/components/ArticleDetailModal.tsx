@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState } from 'react';
 import { Article, Comment, TradeSetup } from '../types';
 import { 
@@ -50,6 +51,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   onSelectArticle,
   allArticles
 }) => {
+  const ui = useInterfaceText();
   const { abuAsadAvatar, handleFileUpload, canEditAbuAsadAvatar } = useAbuAsadAvatar();
   const { t, isRTL } = useTranslation();
   const [copiedLink, setCopiedLink] = useState(false);
@@ -197,7 +199,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               type="button"
               onClick={onClose}
               className="min-w-[40px] min-h-[40px] w-10 h-10 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95 ml-1 sm:ml-2 rtl:ml-0 rtl:mr-1 rtl:sm:mr-2"
-              aria-label="Close article"
+              aria-label={ui("Close article")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -289,16 +291,12 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               <div className="space-y-1 max-w-xl">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0088cc]/20 border border-[#0088cc]/50 text-[#38bdf8] text-[11px] font-mono-num font-bold uppercase tracking-wider">
-                    <Radio className="w-3 h-3 text-[#38bdf8] animate-pulse" />
-                    Official VIP Desk
-                  </span>
+                    <Radio className="w-3 h-3 text-[#38bdf8] animate-pulse" />{ui(" Official VIP Desk ")}</span>
                   <span className="text-xs text-amber-400 font-bold">
                     SMTrading.pro
                   </span>
                 </div>
-                <h3 className="text-base sm:text-lg font-black text-white">
-                  SMTrading VIP Signals Telegram
-                </h3>
+                <h3 className="text-base sm:text-lg font-black text-white">{ui(" SMTrading VIP Signals Telegram ")}</h3>
                 <p className="text-xs text-slate-300">
                   {t('vipChannelSubtitle')}
                 </p>
@@ -323,9 +321,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               <div className="space-y-1 max-w-xl">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[11px] font-mono-num font-bold uppercase tracking-wider">
-                    <Headphones className="w-3 h-3 text-amber-400" />
-                    24/7 Desk Help
-                  </span>
+                    <Headphones className="w-3 h-3 text-amber-400" />{ui(" 24/7 Desk Help ")}</span>
                   <span className="text-xs text-emerald-400 font-mono-num font-bold">
                     {t('supportResponseTime')}
                   </span>
@@ -486,7 +482,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             <div className="relative shrink-0">
               {article.author.name.includes('Abu Asad') ? (
                 canEditAbuAsadAvatar ? (
-                  <label className="relative block cursor-pointer group/avatar" title="Click to upload exact photo file">
+                  <label className="relative block cursor-pointer group/avatar" title={ui("Click to upload exact photo file")}>
                     <input 
                       type="file" 
                       accept="image/*" 

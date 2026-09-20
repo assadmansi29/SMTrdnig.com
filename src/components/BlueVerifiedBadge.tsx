@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React from 'react';
 import { BadgeCheck } from 'lucide-react';
 
@@ -12,6 +13,7 @@ export const BlueVerifiedBadge: React.FC<BlueVerifiedBadgeProps> = ({
   className = '',
   withTooltip = true 
 }) => {
+  const ui = useInterfaceText();
   const sizeMap = {
     xs: 'w-3 h-3',
     sm: 'w-3.5 h-3.5',
@@ -22,7 +24,7 @@ export const BlueVerifiedBadge: React.FC<BlueVerifiedBadgeProps> = ({
   return (
     <span 
       className={`inline-flex items-center justify-center shrink-0 ${className}`}
-      title={withTooltip ? 'Verified Author: Abu Asad Almansi' : undefined}
+      title={withTooltip ? ui("Verified Author: Abu Asad Almansi") : undefined}
     >
       <BadgeCheck 
         className={`${sizeMap[size]} text-white fill-[#1D9BF0] transition-transform hover:scale-110 drop-shadow-sm`} 

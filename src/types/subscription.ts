@@ -89,11 +89,9 @@ export const PREMIUM_ALL_INCLUSIVE_PLAN: SubscriptionPlanInfo = {
     'Ready-made strategy setups & algorithmic execution signals',
     'Trading recommendations with precision entry/exit targets',
     'SMC Trading Course (Smart Money Concepts Masterclass)',
-    '144 Strategy Course (Complete Institutional Methodology)',
-    'Full curriculum access, video masterclasses, and certified syllabus'
+    'Full curriculum access, live masterclasses, and certified syllabus'
   ],
   coursesIncluded: [
     'SMC Trading Course — Smart Money Concepts Masterclass',
-    '144 Strategy Course — Proprietary Institutional Framework'
   ]
 };

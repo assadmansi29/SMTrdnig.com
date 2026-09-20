@@ -5,7 +5,7 @@
  * 1. Timezone conversion accuracy with full DST support across New York, London, Berlin, Dubai, Tokyo, Sydney, UTC.
  * 2. Countdown calculation precision (must be mathematically invariant regardless of local timezone).
  * 3. Strict past-event removal: an event whose timestamp <= now must NEVER be returned in upcoming events.
- * 4. High-impact prioritization: Tier-1 catalysts (CPI, NFP, FOMC, GDP, Interest Rates) are correctly categorized as High impact.
+ * 4. High-impact prioritization: Provider impact is preserved, without keyword-based promotion.
  * 5. Formatting of local dates, local times, and currency flags.
  */
 
@@ -155,11 +155,11 @@ assert(past.length === 1, 'Past list contains exactly 1 event', `Got ${past.leng
 assert(past[0].id === 'test-past-event', 'Past list contains the past event');
 
 // 5. Impact Categorization & Prioritization
-console.log('\n--- Suite 5: Tier-1 Macro Impact Prioritization ---');
-assert(normalizeImpact('Low', 'Consumer Price Index (CPI)') === 'High', 'CPI is automatically elevated to High Impact');
-assert(normalizeImpact('Low', 'Non-Farm Payrolls') === 'High', 'NFP is automatically elevated to High Impact');
-assert(normalizeImpact('Low', 'FOMC Interest Rate Decision') === 'High', 'FOMC Rate Decision is elevated to High Impact');
-assert(normalizeImpact('Low', 'Unemployment Rate') === 'High', 'Unemployment Rate is elevated to High Impact');
+console.log('\n--- Suite 5: Provider Impact Classification ---');
+assert(normalizeImpact('Low', 'Consumer Price Index (CPI)') === 'Low', 'CPI preserves provider Low importance');
+assert(normalizeImpact('Low', 'Non-Farm Payrolls') === 'Low', 'NFP preserves provider Low importance');
+assert(normalizeImpact('Low', 'FOMC Interest Rate Decision') === 'Low', 'FOMC Rate Decision preserves provider Low importance');
+assert(normalizeImpact('Low', 'Unemployment Rate') === 'Low', 'Unemployment Rate preserves provider Low importance');
 assert(normalizeImpact('High', 'Industrial Production') === 'High', 'Explicit High remains High');
 assert(normalizeImpact('Medium', 'Trade Balance') === 'Medium', 'Medium impact preserved');
 assert(normalizeImpact('Low', 'BusinessNZ Services Index') === 'Low', 'Low impact preserved');

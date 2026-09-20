@@ -137,7 +137,8 @@ export interface LocalizedProduct {
 }
 
 const formatProducts = (list: Omit<LocalizedProduct, 'isDigital'>[]): LocalizedProduct[] => {
-  return list.map(p => ({
+  // Hide paused courses from sale only; keep their records and existing access intact.
+  return list.filter(p => !['prod-4', 'prod-5'].includes(p.id)).map(p => ({
     ...p,
     isDigital: p.deliveryType === 'instant_digital'
   }));
@@ -277,12 +278,12 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
         image: completeBundleImg,
         badge: 'الباقة الشاملة',
         badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
-        description: 'حزمة SM Trading الشاملة والكاملة التي تتضمن جميع الدورات والاستراتيجيات المذكورة أعلاه:\n• دورة تداول SMC (SMC Trading Course)\n• تحليل مربع جان والزمن (Gann Box & Time Analysis)\n• التحليل الفني الكلاسيكي (Classic Technical Analysis)\n• استراتيجية 144 (144 Strategy)\n• استراتيجية التداول عبر Bookmap\n• استراتيجية SMC المركزة',
+        description: 'حزمة SM Trading الشاملة والكاملة التي تتضمن جميع الدورات والاستراتيجيات المذكورة أعلاه:\n• دورة تداول SMC (SMC Trading Course)\n• تحليل مربع جان والزمن (Gann Box & Time Analysis)\n• التحليل الفني الكلاسيكي (Classic Technical Analysis)\n• استراتيجية SMC المركزة',
         features: [
           'دورة تداول SMC الشاملة من الصفر حتى الاحتراف المؤسسي',
-          'دورة تحليل مربع جان والزمن + استراتيجية 144 الرقمية',
+          'دورة تحليل مربع جان والزمن',
           'دورة التحليل الفني الكلاسيكي للمبتدئين وقراءة حركة السعر',
-          'استراتيجية Bookmap المتقدمة لتدفق الأوامر + استراتيجية SMC المركزة'
+          'استراتيجية SMC المركزة'
         ],
         deliveryType: 'instant_digital'
       }
@@ -421,12 +422,12 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
         image: completeBundleImg,
         badge: 'ВСЁ ВКЛЮЧЕНО',
         badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
-        description: 'Полный образовательный пакет SM Trading, включающий ВСЕ вышеперечисленные курсы и стратегии:\n• Курс по торговле SMC (SMC Trading Course)\n• Анализ времени и Gann Box (Gann Box & Time Analysis)\n• Классический технический анализ (Classic Technical Analysis)\n• Стратегия 144 (144 Strategy)\n• Торговая стратегия Bookmap\n• Стратегия SMC',
+        description: 'Полный образовательный пакет SM Trading, включающий ВСЕ вышеперечисленные курсы и стратегии:\n• Курс по торговле SMC (SMC Trading Course)\n• Анализ времени и Gann Box (Gann Box & Time Analysis)\n• Классический технический анализ (Classic Technical Analysis)\n• Стратегия SMC',
         features: [
           'Курс по торговле SMC (От новичка до профессионала)',
-          'Курс «Gann Box & Анализ времени» и Стратегия 144',
+          'Курс «Gann Box & Анализ времени»',
           'Курс «Классический технический анализ для начинающих»',
-          'Торговая стратегия Bookmap и Фокусная стратегия SMC'
+          'Фокусная стратегия SMC'
         ],
         deliveryType: 'instant_digital'
       }
@@ -565,12 +566,12 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
         image: completeBundleImg,
         badge: 'ВСЕ ВКЛЮЧЕНО',
         badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
-        description: 'Повний навчальний пакет SM Trading, який містить УСІ перелічені вище курси та стратегії:\n• Курс з торгівлі SMC (SMC Trading Course)\n• Аналіз часу та Gann Box (Gann Box & Time Analysis)\n• Класичний технічний аналіз (Classic Technical Analysis)\n• Стратегія 144 (144 Strategy)\n• Торгова стратегія Bookmap\n• Стратегія SMC',
+        description: 'Повний навчальний пакет SM Trading, який містить УСІ перелічені вище курси та стратегії:\n• Курс з торгівлі SMC (SMC Trading Course)\n• Аналіз часу та Gann Box (Gann Box & Time Analysis)\n• Класичний технічний аналіз (Classic Technical Analysis)\n• Стратегія SMC',
         features: [
           'Курс з торгівлі SMC (Від новачка до професіонала)',
-          'Курс «Gann Box та аналіз часу» і Стратегія 144',
+          'Курс «Gann Box та аналіз часу»',
           'Курс «Класичний технічний аналіз для початківців»',
-          'Торгова стратегія Bookmap та Фокусна стратегія SMC'
+          'Фокусна стратегія SMC'
         ],
         deliveryType: 'instant_digital'
       }
@@ -710,12 +711,12 @@ export const getProductsByLanguage = (lang: LanguageCode): LocalizedProduct[] =>
       image: completeBundleImg,
       badge: 'COMPLETE BUNDLE',
       badgeColor: 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold',
-      description: 'The complete SM Trading package including ALL courses and strategies listed above:\nSMC Trading Course\nGann Box & Time Analysis\nClassic Technical Analysis\n144 Strategy\nBookmap Trading Strategy\nSMC Strategy',
+      description: 'The complete SM Trading package including ALL courses and strategies listed above:\nSMC Trading Course\nGann Box & Time Analysis\nClassic Technical Analysis\nSMC Strategy',
       features: [
         'SMC Trading Course (Beginner to Pro) & Gann Box Time Analysis',
-        'Classic Technical Analysis & 144 Strategy (Gann Box)',
-        'Bookmap Order Flow Trading Strategy & Focused SMC Strategy',
-        'Lifetime access to all masterclass recordings, future updates & blueprints'
+        'Classic Technical Analysis',
+        'Focused SMC Strategy',
+        'Lifetime access to live masterclasses, future updates & blueprints'
       ],
       deliveryType: 'instant_digital'
     }

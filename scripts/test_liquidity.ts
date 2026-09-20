@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {analyzeBook,analyzeCandles} from '../src/utils/liquidityAnalysis';
+const book=analyzeBook({bids:[['100','2'],['99','1']],asks:[['101','1']]},[{p:'100',q:'2',T:1000,m:false},{p:'101',q:'1',T:2000,m:true}]);
+assert.equal(book.price,100.5);
+assert.equal(book.buyVolume,2); assert.equal(book.sellVolume,1);
+assert.equal(book.imbalance,49.5);
+assert.equal(book.tradeWindow,1000);
+assert.throws(()=>analyzeBook({bids:[],asks:[]},[]));
+const bars=Array.from({length:25},(_,i)=>({time:1000+300*i,open:100,high:102,low:98,close:101,volume:0}));
+bars[24]={...bars[24],high:105,close:101};
+assert.match(analyzeCandles(bars,(bars[24].time+300)*1000).sweep,/Upper range/);
+assert.match(analyzeCandles(bars,(bars[24].time+10)*1000).sweep,/No closed/);
+assert.equal(analyzeCandles([...bars,bars[0]],(bars[24].time+300)*1000).hasVolume,false);
+assert.equal(analyzeCandles(bars,(bars[24].time+300)*1000).profile.reduce((s,b)=>s+b.size,0),25);
+console.log('PASS liquidity: depth notional imbalance, aggressor side, malformed depth, duplicate candles, missing volume, closed-candle-only sweeps');

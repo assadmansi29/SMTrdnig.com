@@ -1,3 +1,5 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
+import { LiveTrainingNotice, MonthlyPromotionNotice } from './PurchaseNotices';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -24,6 +26,7 @@ import {
 import { SubscriptionCheckoutModal } from './SubscriptionCheckoutModal';
 
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const ui = useInterfaceText();
   const { user, loading, logout } = useAuth();
   const { t, isRTL, language } = useTranslation();
 
@@ -122,7 +125,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                     <div className="space-y-2">
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t(planNameKey)}</div>
                       <div className="text-2xl font-black text-white font-mono-num">{plan.priceDisplay}</div>
-                      <span className="text-[11px] text-slate-400 block">{t(planBillingKey)} • USDT</span>
+                      {plan.id === 'monthly' && <MonthlyPromotionNotice />}
+                      <LiveTrainingNotice />
+                      <span className="text-[11px] text-slate-400 block">{t(planBillingKey)}{ui(" • USDT")}</span>
                       <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[10px] text-amber-300 font-semibold leading-snug">
                         {t('authSubCoursesNotIncluded')}
                       </div>
@@ -149,10 +154,9 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
                   <Crown className="w-3 h-3" />
                   <span>{t('planAllInclusiveBadge')}</span>
                 </div>
-                <h4 className="text-sm font-black text-white">{t('planAllInclusiveName')} ({PREMIUM_ALL_INCLUSIVE_PLAN.priceDisplay}/Year)</h4>
-                <p className="text-xs text-slate-300">
-                  Full 12-month platform access + SMC Trading Course + 144 Strategy Course.
-                </p>
+                <h4 className="text-sm font-black text-white">{t('planAllInclusiveName')} ({PREMIUM_ALL_INCLUSIVE_PLAN.priceDisplay}{ui("/Year)")}</h4>
+                <p className="text-xs text-slate-300">{ui(" Full 12-month platform access + SMC Trading Course. ")}</p>
+                <LiveTrainingNotice />
               </div>
               <button
                 type="button"

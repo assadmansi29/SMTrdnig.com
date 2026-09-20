@@ -283,23 +283,10 @@ export const calculateLiveCountdown = (eventTimestamp: number, currentNow: numbe
  * Distinguishes High, Medium, Low impact cleanly.
  * Extreme & High tier are marked as High-Impact for critical macroeconomic tracking.
  */
-export const normalizeImpact = (impact: string, eventName?: string): 'High' | 'Medium' | 'Low' => {
+export const normalizeImpact = (impact: string, _eventName?: string): 'High' | 'Medium' | 'Low' => {
   const imp = (impact || '').toLowerCase().trim();
-  const name = (eventName || '').toLowerCase();
 
-  const isTier1Name =
-    name.includes('cpi') ||
-    name.includes('consumer price') ||
-    name.includes('non-farm') ||
-    name.includes('nonfarm') ||
-    name.includes('interest rate') ||
-    name.includes('rate decision') ||
-    name.includes('fomc') ||
-    name.includes('gdp') ||
-    name.includes('unemployment rate') ||
-    name.includes('pce');
-
-  if (imp === 'extreme' || imp === 'high' || isTier1Name) {
+  if (imp === 'extreme' || imp === 'high') {
     return 'High';
   }
   if (imp === 'medium' || imp === 'moderate') {

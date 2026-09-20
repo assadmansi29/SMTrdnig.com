@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
@@ -69,6 +70,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   initialSymbol,
   initialInterval
 }) => {
+  const ui = useInterfaceText();
   const { user, token } = useAuth();
   
   // Available tabs based on role
@@ -337,7 +339,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         fetchAdminData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to change role');
+        alert(ui(data.error || 'Failed to change role'));
       }
     } catch (err) {
       console.error('Failed to change role:', err);
@@ -488,7 +490,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   // Delete User (Super Admin Only)
   const handleDeleteUser = async (userId: string, username: string) => {
     if (!isSuperAdmin) return;
-    if (!window.confirm(`Are you sure you want to permanently delete @${username}? This action is irreversible.`)) return;
+    if (!window.confirm(ui("Are you sure you want to permanently delete @{p0}? This action is irreversible.", {p0: username}))) return;
 
     try {
       const res = await fetch(`/api/admin/users/${userId}`, {
@@ -500,7 +502,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         fetchAdminData();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to delete user');
+        alert(ui(data.error || 'Failed to delete user'));
       }
     } catch (err) {
       console.error('Delete user error:', err);
@@ -647,11 +649,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         });
         fetchAdminData();
       } else {
-        alert(data.error || 'Failed to approve payment verification');
+        alert(ui(data.error || 'Failed to approve payment verification'));
       }
     } catch (err: any) {
       console.error('Error approving payment verification:', err);
-      alert(err.message || 'Error approving payment');
+      alert(ui(err.message || 'Error approving payment'));
     } finally {
       setProcessingVerificationId(null);
     }
@@ -659,7 +661,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   // Payment Verification: Reject payment verification
   const handleRejectPaymentVerification = async (ticketId: string) => {
-    const reason = window.prompt('Enter rejection reason (optional):', 'Transaction unverified or cancelled.');
+    const reason = window.prompt(ui('Enter rejection reason (optional):'), 'Transaction unverified or cancelled.');
     if (reason === null) return;
     setProcessingVerificationId(ticketId);
     try {
@@ -675,11 +677,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
       if (res.ok && data.success) {
         fetchAdminData();
       } else {
-        alert(data.error || 'Failed to reject payment verification');
+        alert(ui(data.error || 'Failed to reject payment verification'));
       }
     } catch (err: any) {
       console.error('Error rejecting payment verification:', err);
-      alert(err.message || 'Error rejecting payment');
+      alert(ui(err.message || 'Error rejecting payment'));
     } finally {
       setProcessingVerificationId(null);
     }
@@ -804,12 +806,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <h2 className="text-sm sm:text-lg font-black text-white truncate max-w-[150px] sm:max-w-none">
                   {isSuperAdmin 
-                    ? 'SM Trading Master Super Admin'
+                    ? ui("SM Trading Master Super Admin")
                     : isCoach 
-                    ? 'SM Trading Master Coaching Desk'
+                    ? ui("SM Trading Master Coaching Desk")
                     : isEmployee
-                    ? 'SM Trading Operational Desk'
-                    : 'SM Trading Management Desk'}
+                    ? ui("SM Trading Operational Desk")
+                    : ui("SM Trading Management Desk")}
                 </h2>
                 <span className={`text-[9px] sm:text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${
                   isSuperAdmin
@@ -820,17 +822,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                     : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                 }`}>
-                  {isSuperAdmin ? 'Full Authority' : isCoach ? 'Coach Staff' : isEmployee ? 'Operations' : 'Admin'}
+                  {isSuperAdmin ? ui("Full Authority") : isCoach ? ui("Coach Staff") : isEmployee ? ui("Operations") : ui("Admin")}
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 truncate max-w-xs sm:max-w-xl">
                 {isSuperAdmin
-                  ? 'Unrestricted control: Users, Roles, Balances, Subscriptions, Audit Logs & RBAC Matrix'
+                  ? ui("Unrestricted control: Users, Roles, Balances, Subscriptions, Audit Logs & RBAC Matrix")
                   : isCoach
-                  ? 'Manage student progress, review lessons, and update training milestones'
+                  ? ui("Manage student progress, review lessons, and update training milestones")
                   : isEmployee
-                  ? 'Operational tasks, market research briefs, and live stream coordination'
-                  : 'Manage client accounts, subscriptions, and operational queues'}
+                  ? ui("Operational tasks, market research briefs, and live stream coordination")
+                  : ui("Manage client accounts, subscriptions, and operational queues")}
               </p>
             </div>
           </div>
@@ -840,8 +842,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               type="button"
               onClick={fetchAdminData}
               className="min-w-[38px] min-h-[38px] w-9 h-9 sm:w-10 sm:h-10 text-slate-400 hover:text-amber-400 rounded-xl bg-slate-850 border border-slate-700/60 hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center shrink-0 shadow-sm active:scale-95"
-              title="Refresh Desk Data"
-              aria-label="Refresh Desk Data"
+              title={ui("Refresh Desk Data")}
+              aria-label={ui("Refresh Desk Data")}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -849,7 +851,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               type="button"
               onClick={onClose}
               className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-              aria-label="Close Admin Panel"
+              aria-label={ui("Close Admin Panel")}
             >
               <X className="w-5 h-5" />
             </button>
@@ -860,23 +862,23 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
         {stats && (isSuperAdmin || isAdmin) && (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3 sm:p-4 bg-[#070A11] border-b border-slate-800 text-xs">
             <div className="p-2.5 bg-slate-900/80 rounded-xl border border-slate-800">
-              <span className="text-slate-500 block uppercase text-[10px] font-bold">Total Accounts</span>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">{ui("Total Accounts")}</span>
               <span className="text-base sm:text-lg font-black text-white">{stats.totalUsers}</span>
             </div>
             <div className="p-2.5 bg-slate-900/80 rounded-xl border border-slate-800">
-              <span className="text-emerald-400 block uppercase text-[10px] font-bold">Active Subs</span>
+              <span className="text-emerald-400 block uppercase text-[10px] font-bold">{ui("Active Subs")}</span>
               <span className="text-base sm:text-lg font-black text-emerald-300">{stats.activeSubscribers}</span>
             </div>
             <div className="p-2.5 bg-slate-900/80 rounded-xl border border-slate-800">
-              <span className="text-rose-400 block uppercase text-[10px] font-bold">Expired</span>
+              <span className="text-rose-400 block uppercase text-[10px] font-bold">{ui("Expired")}</span>
               <span className="text-base sm:text-lg font-black text-rose-300">{stats.expiredSubscribers}</span>
             </div>
             <div className="p-2.5 bg-slate-900/80 rounded-xl border border-slate-800">
-              <span className="text-amber-400 block uppercase text-[10px] font-bold">Balance Liability</span>
+              <span className="text-amber-400 block uppercase text-[10px] font-bold">{ui("Balance Liability")}</span>
               <span className="text-base sm:text-lg font-black text-amber-300">${stats.totalBalanceLiability?.toFixed(2) || '0.00'}</span>
             </div>
             <div className="p-2.5 bg-slate-900/80 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
-              <span className="text-blue-400 block uppercase text-[10px] font-bold">Commissions Paid</span>
+              <span className="text-blue-400 block uppercase text-[10px] font-bold">{ui("Commissions Paid")}</span>
               <span className="text-base sm:text-lg font-black text-blue-300">${stats.totalCommissionsPaid?.toFixed(2) || '0.00'}</span>
             </div>
           </div>
@@ -896,7 +898,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <Users className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>{isSuperAdmin ? 'Users & Staff' : 'User Directory'}</span>
+              <span>{isSuperAdmin ? ui("Users & Staff") : ui("User Directory")}</span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
                 activeTab === 'users'
                   ? 'bg-amber-400 text-slate-950 font-extrabold shadow-sm'
@@ -918,7 +920,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Audit Trail</span>
+              <span>{ui("Audit Trail")}</span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
                 activeTab === 'audit_logs'
                   ? 'bg-cyan-400 text-slate-950 font-extrabold shadow-sm'
@@ -940,7 +942,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <Sliders className="w-4 h-4 text-purple-400 shrink-0" />
-              <span>RBAC Permissions</span>
+              <span>{ui("RBAC Permissions")}</span>
             </button>
           )}
 
@@ -955,7 +957,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Coaching Desk</span>
+              <span>{ui("Coaching Desk")}</span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
                 activeTab === 'coaching'
                   ? 'bg-emerald-400 text-slate-950 font-extrabold shadow-sm'
@@ -977,7 +979,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <ListTodo className="w-4 h-4 text-blue-400 shrink-0" />
-              <span>Operations Queue</span>
+              <span>{ui("Operations Queue")}</span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
                 activeTab === 'operations'
                   ? 'bg-blue-400 text-slate-950 font-extrabold shadow-sm'
@@ -999,7 +1001,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <Wallet className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Financial Ledger</span>
+              <span>{ui("Financial Ledger")}</span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-black font-mono-num ${
                 activeTab === 'transactions'
                   ? 'bg-amber-400 text-slate-950 font-extrabold shadow-sm'
@@ -1021,7 +1023,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <UserPlus className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{isSuperAdmin ? 'Create Any Account' : 'Create Client'}</span>
+              <span>{isSuperAdmin ? ui("Create Any Account") : ui("Create Client")}</span>
             </button>
           )}
 
@@ -1036,7 +1038,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <Radio className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>YouTube Live Stream</span>
+              <span>{ui("YouTube Live Stream")}</span>
             </button>
           )}
 
@@ -1051,7 +1053,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               }`}
             >
               <Send className="w-4 h-4 text-sky-400 shrink-0" />
-              <span>Telegram Bot</span>
+              <span>{ui("Telegram Bot")}</span>
             </button>
           )}
         </div>
@@ -1071,7 +1073,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by username, name, email, ref code..."
+                    placeholder={ui("Search by username, name, email, ref code...")}
                     className="w-full bg-[#070A11] border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
@@ -1082,12 +1084,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onChange={(e) => setRoleFilter(e.target.value)}
                     className="bg-[#070A11] border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-amber-400"
                   >
-                    <option value="all">All Roles</option>
-                    <option value="super_admin">Super Admin</option>
-                    <option value="admin">Admin</option>
-                    <option value="employee">Employee</option>
-                    <option value="coach">Coach</option>
-                    <option value="client">Client</option>
+                    <option value="all">{ui("All Roles")}</option>
+                    <option value="super_admin">{ui("Super Admin")}</option>
+                    <option value="admin">{ui("Admin")}</option>
+                    <option value="employee">{ui("Employee")}</option>
+                    <option value="coach">{ui("Coach")}</option>
+                    <option value="client">{ui("Client")}</option>
                   </select>
 
                   <select
@@ -1095,10 +1097,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="bg-[#070A11] border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-amber-400"
                   >
-                    <option value="all">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="expired">Expired</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="all">{ui("All Statuses")}</option>
+                    <option value="active">{ui("Active")}</option>
+                    <option value="expired">{ui("Expired")}</option>
+                    <option value="inactive">{ui("Inactive")}</option>
                   </select>
                 </div>
               </div>
@@ -1109,19 +1111,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <table className="w-full text-left text-xs text-slate-300">
                     <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                       <tr>
-                        <th className="px-4 py-3">User & Identity</th>
-                        <th className="px-4 py-3">Role & Authority</th>
-                        <th className="px-4 py-3">Subscription</th>
-                        {(isSuperAdmin || isAdmin) && <th className="px-4 py-3">Balance & Commission</th>}
-                        <th className="px-4 py-3 text-right">Desk Controls</th>
+                        <th className="px-4 py-3">{ui("User & Identity")}</th>
+                        <th className="px-4 py-3">{ui("Role & Authority")}</th>
+                        <th className="px-4 py-3">{ui("Subscription")}</th>
+                        {(isSuperAdmin || isAdmin) && <th className="px-4 py-3">{ui("Balance & Commission")}</th>}
+                        <th className="px-4 py-3 text-right">{ui("Desk Controls")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
                       {filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                            No accounts match the current filter criteria.
-                          </td>
+                          <td colSpan={5} className="px-4 py-8 text-center text-slate-500">{ui(" No accounts match the current filter criteria. ")}</td>
                         </tr>
                       ) : (
                         filteredUsers.map((u) => {
@@ -1147,7 +1147,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                       {u.referralCode && (
                                         <>
                                           <span>•</span>
-                                          <span className="font-mono text-amber-400/80">Ref: {u.referralCode}</span>
+                                          <span className="font-mono text-amber-400/80">{ui("Ref: ")}{u.referralCode}</span>
                                         </>
                                       )}
                                     </div>
@@ -1163,11 +1163,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
                                     className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white font-semibold focus:outline-none focus:border-amber-400"
                                   >
-                                    <option value="super_admin">👑 Super Admin</option>
-                                    <option value="admin">🛡️ Admin</option>
-                                    <option value="employee">💼 Employee</option>
-                                    <option value="coach">🎓 Coach</option>
-                                    <option value="client">👤 Pro Client</option>
+                                    <option value="super_admin">{ui("👑 Super Admin")}</option>
+                                    <option value="admin">{ui("🛡️ Admin")}</option>
+                                    <option value="employee">{ui("💼 Employee")}</option>
+                                    <option value="coach">{ui("🎓 Coach")}</option>
+                                    <option value="client">{ui("👤 Pro Client")}</option>
                                   </select>
                                 ) : (
                                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -1181,7 +1181,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                       ? 'bg-purple-400/20 text-purple-300 border border-purple-400/40'
                                       : 'bg-slate-800 text-slate-300 border border-slate-700'
                                   }`}>
-                                    {u.role === 'super_admin' ? 'Super Admin' : u.role === 'coach' ? 'Coach' : u.role === 'employee' ? 'Employee' : u.role === 'admin' ? 'Admin' : 'Client'}
+                                    {u.role === 'super_admin' ? ui("Super Admin") : u.role === 'coach' ? ui("Coach") : u.role === 'employee' ? ui("Employee") : u.role === 'admin' ? ui("Admin") : ui("Client")}
                                   </span>
                                 )}
                               </td>
@@ -1206,23 +1206,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                       <button
                                         onClick={() => handleExtendSubscription(u.id, 1)}
                                         className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-medium transition-colors"
-                                        title="Extend by 1 month"
+                                        title={ui("Extend by 1 month")}
                                       >
                                         +1m
                                       </button>
                                       <button
                                         onClick={() => handleExtendSubscription(u.id, 12)}
                                         className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-medium transition-colors"
-                                        title="Extend by 1 year"
+                                        title={ui("Extend by 1 year")}
                                       >
                                         +1y
                                       </button>
                                       <button
                                         onClick={() => handleSubscriptionChange(u.id, u.subscriptionStatus === 'active' ? 'expired' : 'active')}
                                         className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-medium transition-colors"
-                                      >
-                                        Toggle
-                                      </button>
+                                      >{ui(" Toggle ")}</button>
                                     </div>
                                   )}
                                 </div>
@@ -1241,7 +1239,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                             setBalanceAmount('');
                                           }}
                                           className="text-amber-400 hover:text-amber-300 p-0.5 rounded hover:bg-slate-800"
-                                          title="Super Admin Direct Balance Adjustment"
+                                          title={ui("Super Admin Direct Balance Adjustment")}
                                         >
                                           <DollarSign className="w-3 h-3" />
                                         </button>
@@ -1249,9 +1247,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     </div>
                                     <div className="text-[10px] text-slate-400 flex flex-col gap-0.5">
                                       <div className="flex items-center gap-1">
-                                        <span className="text-emerald-400 font-mono">Sub: {u.commissionRate ?? 20}%</span>
+                                        <span className="text-emerald-400 font-mono">{ui("Sub: ")}{u.commissionRate ?? 20}%</span>
                                         <span>•</span>
-                                        <span className="text-amber-400 font-mono">Buy: {u.purchaseCommissionRate ?? 10}%</span>
+                                        <span className="text-amber-400 font-mono">{ui("Buy: ")}{u.purchaseCommissionRate ?? 10}%</span>
                                         {isSuperAdmin && (
                                           <button
                                             onClick={() => {
@@ -1260,7 +1258,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                               setNewPurchaseCommissionRate(String(u.purchaseCommissionRate ?? 10));
                                             }}
                                             className="text-slate-400 hover:text-white p-0.5 ml-1 cursor-pointer"
-                                            title="Update Referral Commission Rates"
+                                            title={ui("Update Referral Commission Rates")}
                                           >
                                             <Edit className="w-2.5 h-2.5" />
                                           </button>
@@ -1283,7 +1281,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                         setNewPassword('');
                                       }}
                                       className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 rounded-lg text-xs transition-colors"
-                                      title="Reset Password"
+                                      title={ui("Reset Password")}
                                     >
                                       <KeyRound className="w-3.5 h-3.5" />
                                     </button>
@@ -1294,7 +1292,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     <button
                                       onClick={() => handleDeleteUser(u.id, u.username)}
                                       className="p-1.5 bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 rounded-lg text-xs transition-colors border border-rose-900/30"
-                                      title="Delete Account (Irreversible)"
+                                      title={ui("Delete Account (Irreversible)")}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -1321,11 +1319,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <FileText className="w-4 h-4 text-cyan-400" />
-                    <span>Security & Governance Audit Trail</span>
+                    <span>{ui("Security & Governance Audit Trail")}</span>
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Immutable log of all administrative actions, role modifications, financial changes, and security events.
-                  </p>
+                  <p className="text-xs text-slate-400">{ui(" Immutable log of all administrative actions, role modifications, financial changes, and security events. ")}</p>
                 </div>
                 <div className="relative w-full sm:w-72">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -1333,7 +1329,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     type="text"
                     value={auditSearch}
                     onChange={(e) => setAuditSearch(e.target.value)}
-                    placeholder="Search audit trail..."
+                    placeholder={ui("Search audit trail...")}
                     className="w-full bg-[#070A11] border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                   />
                 </div>
@@ -1344,19 +1340,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <table className="w-full text-left text-xs text-slate-300">
                     <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                       <tr>
-                        <th className="px-4 py-3">Timestamp</th>
-                        <th className="px-4 py-3">Actor & Authority</th>
-                        <th className="px-4 py-3">Action Type</th>
-                        <th className="px-4 py-3">Target</th>
-                        <th className="px-4 py-3">Audit Details</th>
+                        <th className="px-4 py-3">{ui("Timestamp")}</th>
+                        <th className="px-4 py-3">{ui("Actor & Authority")}</th>
+                        <th className="px-4 py-3">{ui("Action Type")}</th>
+                        <th className="px-4 py-3">{ui("Target")}</th>
+                        <th className="px-4 py-3">{ui("Audit Details")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
                       {filteredAuditLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-slate-500 font-sans">
-                            No security audit logs found.
-                          </td>
+                          <td colSpan={5} className="px-4 py-8 text-center text-slate-500 font-sans">{ui(" No security audit logs found. ")}</td>
                         </tr>
                       ) : (
                         filteredAuditLogs.map((log) => (
@@ -1376,7 +1370,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               </span>
                             </td>
                             <td className="px-4 py-2.5 text-slate-300">
-                              {log.targetUsername ? `@${log.targetUsername}` : 'System'}
+                              {log.targetUsername ? `@${log.targetUsername}` : ui("System")}
                             </td>
                             <td className="px-4 py-2.5 text-slate-200 font-sans text-xs">
                               {log.details}
@@ -1397,11 +1391,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Sliders className="w-4 h-4 text-purple-400" />
-                  <span>Role-Based Access Control (RBAC) Permission Matrix</span>
+                  <span>{ui("Role-Based Access Control (RBAC) Permission Matrix")}</span>
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Super Admin can configure role permissions. Changes apply across server authorization guards.
-                </p>
+                <p className="text-xs text-slate-400">{ui(" Super Admin can configure role permissions. Changes apply across server authorization guards. ")}</p>
               </div>
 
               {rbacSettings ? (
@@ -1410,12 +1402,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <table className="w-full text-left text-xs text-slate-300">
                       <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                         <tr>
-                          <th className="px-4 py-3">Permission Descriptor</th>
-                          <th className="px-4 py-3 text-center text-amber-300">👑 Super Admin</th>
-                          <th className="px-4 py-3 text-center text-purple-300">🛡️ Admin</th>
-                          <th className="px-4 py-3 text-center text-blue-300">💼 Employee</th>
-                          <th className="px-4 py-3 text-center text-emerald-300">🎓 Coach</th>
-                          <th className="px-4 py-3 text-center text-slate-400">👤 Client</th>
+                          <th className="px-4 py-3">{ui("Permission Descriptor")}</th>
+                          <th className="px-4 py-3 text-center text-amber-300">{ui("👑 Super Admin")}</th>
+                          <th className="px-4 py-3 text-center text-purple-300">{ui("🛡️ Admin")}</th>
+                          <th className="px-4 py-3 text-center text-blue-300">{ui("💼 Employee")}</th>
+                          <th className="px-4 py-3 text-center text-emerald-300">{ui("🎓 Coach")}</th>
+                          <th className="px-4 py-3 text-center text-slate-400">{ui("👤 Client")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
@@ -1441,7 +1433,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         ].map((perm) => (
                           <tr key={perm.key} className="hover:bg-slate-900/50">
                             <td className="px-4 py-2.5 font-semibold text-white">
-                              {perm.label}
+                              {ui(perm.label)}
                             </td>
                             {(['super_admin', 'admin', 'employee', 'coach', 'client'] as UserRole[]).map((role) => {
                               const isEnabled = (rbacSettings[role] as any)?.[perm.key] || false;
@@ -1461,7 +1453,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                           ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
                                           : 'bg-slate-800 text-slate-500 hover:bg-slate-700'
                                       }`}
-                                      title={`Toggle ${perm.label} for ${role}`}
+                                      title={ui("Toggle {p0} for {p1}", {p0: ui(perm.label), p1: ui(role)})}
                                     >
                                       {isEnabled ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                                     </button>
@@ -1476,7 +1468,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="p-8 text-center text-slate-500">Loading RBAC matrix...</div>
+                <div className="p-8 text-center text-slate-500">{ui("Loading RBAC matrix...")}</div>
               )}
             </div>
           )}
@@ -1488,19 +1480,15 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <GraduationCap className="w-4 h-4 text-emerald-400" />
-                    <span>SM Trading Student Mentorship & Coaching Desk</span>
+                    <span>{ui("SM Trading Student Mentorship & Coaching Desk")}</span>
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Track institutional trading students, SMC curriculum milestones, order flow lessons, and review notes.
-                  </p>
+                  <p className="text-xs text-slate-400">{ui(" Track institutional trading students, SMC curriculum milestones, order flow lessons, and review notes. ")}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {coachingStudents.length === 0 ? (
-                  <div className="col-span-2 p-8 text-center text-slate-500 bg-[#070A11] border border-slate-800 rounded-xl">
-                    No students currently enrolled in the coaching roster.
-                  </div>
+                  <div className="col-span-2 p-8 text-center text-slate-500 bg-[#070A11] border border-slate-800 rounded-xl">{ui(" No students currently enrolled in the coaching roster. ")}</div>
                 ) : (
                   coachingStudents.map((student) => (
                     <div key={student.id} className="p-4 bg-[#070A11] border border-slate-800 rounded-xl space-y-3">
@@ -1527,7 +1515,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       <div className="space-y-2 pt-2 border-t border-slate-800/80 text-xs">
                         <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                           <BookOpen className="w-3 h-3 text-amber-400" />
-                          <span>Curriculum Milestones</span>
+                          <span>{ui("Curriculum Milestones")}</span>
                         </span>
                         {student.trainingProgress?.map((m, idx) => {
                           const total = m.totalLessons || 1;
@@ -1536,14 +1524,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           return (
                             <div key={m.id || idx} className="bg-slate-900/60 p-2 rounded-lg border border-slate-800/60">
                               <div className="flex items-center justify-between text-[11px] mb-1">
-                                <span className="font-semibold text-slate-200">{m.courseName || `Phase ${idx + 1}`}</span>
+                                <span className="font-semibold text-slate-200">{(m.courseName ? ui(m.courseName) : null) || ui("Phase {p0}", {p0: idx + 1})}</span>
                                 <span className="font-mono text-emerald-400 font-bold">{completed}/{total} ({pct}%)</span>
                               </div>
                               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-1.5">
                                 <div className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
                               </div>
                               <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-slate-400">Lessons Completed</span>
+                                <span className="text-slate-400">{ui("Lessons Completed")}</span>
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -1556,9 +1544,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     type="button"
                                     onClick={() => handleUpdateMilestone(student.id, idx, Math.min(total, completed + 1))}
                                     className="px-1.5 py-0.2 bg-emerald-600 hover:bg-emerald-500 text-white rounded cursor-pointer"
-                                  >
-                                    +1 Lesson
-                                  </button>
+                                  >{ui(" +1 Lesson ")}</button>
                                 </div>
                               </div>
                             </div>
@@ -1569,7 +1555,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       {/* Coach Notes & Action */}
                       <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
                         <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                          {student.coachingNotes ? `Note: ${student.coachingNotes}` : 'No review notes yet.'}
+                          {student.coachingNotes ? ui("Note: {p0}", {p0: student.coachingNotes}) : ui("No review notes yet.")}
                         </div>
                         <button
                           onClick={() => {
@@ -1578,9 +1564,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                             setStudentStatusDraft(student.trainingStatus);
                           }}
                           className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                        >
-                          Edit Notes
-                        </button>
+                        >{ui(" Edit Notes ")}</button>
                       </div>
                     </div>
                   ))
@@ -1598,24 +1582,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span>USDT (TRC20) Subscription Payment Verifications</span>
+                      <span>{ui("USDT (TRC20) Subscription Payment Verifications")}</span>
                       {operationsQueue.filter(i => i.type === 'payment_verification' && i.status === 'pending').length > 0 && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                          {operationsQueue.filter(i => i.type === 'payment_verification' && i.status === 'pending').length} Pending
-                        </span>
+                          {operationsQueue.filter(i => i.type === 'payment_verification' && i.status === 'pending').length}{ui(" Pending ")}</span>
                       )}
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Incoming subscription orders via USDT TRC20. Verify blockchain TxID and click Approve to instantly provision the account with the correct duration and access permissions.
-                    </p>
+                    <p className="text-xs text-slate-400">{ui(" Incoming subscription orders via USDT TRC20. Verify blockchain TxID and click Approve to instantly provision the account with the correct duration and access permissions. ")}</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   {operationsQueue.filter(i => i.type === 'payment_verification').length === 0 ? (
-                    <div className="p-6 text-center text-slate-500 bg-[#070A11] border border-slate-800 rounded-xl text-xs">
-                      No payment verification requests in queue.
-                    </div>
+                    <div className="p-6 text-center text-slate-500 bg-[#070A11] border border-slate-800 rounded-xl text-xs">{ui(" No payment verification requests in queue. ")}</div>
                   ) : (
                     operationsQueue.filter(i => i.type === 'payment_verification').map((item) => {
                       let meta: any = {};
@@ -1654,36 +1633,35 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                                     : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                                 }`}>
-                                  {isPending ? 'Pending Payment Verification' : isResolved ? 'Approved / Active' : 'Rejected'}
+                                  {isPending ? ui("Pending Payment Verification") : isResolved ? ui("Approved / Active") : ui("Rejected")}
                                 </span>
-                                <span className="text-[10px] font-mono text-slate-400">
-                                  Ticket #{item.id.substring(0, 8)}
+                                <span className="text-[10px] font-mono text-slate-400">{ui(" Ticket #")}{item.id.substring(0, 8)}
                                 </span>
                               </div>
 
                               {/* Subscriber details grid */}
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-300 bg-black/40 p-2.5 rounded-lg border border-slate-800">
                                 <div>
-                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">Subscriber Telegram:</span>
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">{ui("Subscriber Telegram:")}</span>
                                   <span className="font-bold text-amber-400 font-mono">
                                     {meta.telegramUsername ? (meta.telegramUsername.startsWith('@') ? meta.telegramUsername : `@${meta.telegramUsername}`) : 'N/A'}
                                   </span>
                                 </div>
                                 <div>
-                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">Subscriber Email:</span>
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">{ui("Subscriber Email:")}</span>
                                   <span className="font-medium text-white">{meta.subscriberEmail || 'N/A'}</span>
                                 </div>
                                 <div>
-                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">USDT (TRC20) TxID:</span>
+                                  <span className="text-[10px] text-slate-500 uppercase font-mono block">{ui("USDT (TRC20) TxID:")}</span>
                                   <span className="font-mono text-slate-300 text-[11px] truncate block" title={meta.txHash}>
-                                    {meta.txHash ? `${meta.txHash.substring(0, 16)}...` : 'Pending Telegram submission'}
+                                    {meta.txHash ? `${meta.txHash.substring(0, 16)}...` : ui("Pending Telegram submission")}
                                   </span>
                                 </div>
                                 {meta.referralCode && (
                                   <div className="sm:col-span-3 text-[11px] bg-amber-500/10 border border-amber-500/30 rounded p-1.5 flex items-center gap-2">
-                                    <span className="text-amber-400 font-bold font-mono">Affiliate / Referral Code:</span>
+                                    <span className="text-amber-400 font-bold font-mono">{ui("Affiliate / Referral Code:")}</span>
                                     <span className="text-white font-mono font-bold">{meta.referralCode}</span>
-                                    <span className="text-slate-400 text-[10px]">(Will automatically receive commission upon approval)</span>
+                                    <span className="text-slate-400 text-[10px]">{ui("(Will automatically receive commission upon approval)")}</span>
                                   </div>
                                 )}
                               </div>
@@ -1691,11 +1669,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                               {meta.credentials && (
                                 <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
                                   <div className="space-y-0.5">
-                                    <span className="font-bold text-emerald-300 block">
-                                      Activated Account: @{meta.credentials.username}
+                                    <span className="font-bold text-emerald-300 block">{ui(" Activated Account: @")}{meta.credentials.username}
                                     </span>
-                                    <span className="text-[11px] text-slate-300">
-                                      Plan: {meta.credentials.subscriptionPlan} • Expires: {new Date(meta.credentials.subscriptionExpiresAt).toLocaleDateString()}
+                                    <span className="text-[11px] text-slate-300">{ui(" Plan: ")}{meta.credentials.subscriptionPlan}{ui(" • Expires: ")}{new Date(meta.credentials.subscriptionExpiresAt).toLocaleDateString()}
                                     </span>
                                   </div>
                                   <button
@@ -1703,12 +1679,10 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     onClick={() => {
                                       const text = `Hello! Your SM Trading Pro subscription has been approved and activated:\nWebsite: ${window.location.origin}\nUsername: ${meta.credentials.username}\nPassword: ${meta.credentials.temporaryPassword || '(Existing Password)'}\nPackage: ${meta.credentials.subscriptionPlan}\nExpires: ${new Date(meta.credentials.subscriptionExpiresAt).toLocaleDateString()}`;
                                       navigator.clipboard.writeText(text);
-                                      alert('Client credentials message copied to clipboard!');
+                                      alert(ui('Client credentials message copied to clipboard!'));
                                     }}
                                     className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold cursor-pointer transition-colors shrink-0"
-                                  >
-                                    Copy Login Details
-                                  </button>
+                                  >{ui(" Copy Login Details ")}</button>
                                 </div>
                               )}
                             </div>
@@ -1724,7 +1698,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
                                   >
                                     <Check className="w-3.5 h-3.5" />
-                                    <span>{processingVerificationId === item.id ? 'Activating...' : 'Approve & Activate'}</span>
+                                    <span>{processingVerificationId === item.id ? ui("Activating...") : ui("Approve & Activate")}</span>
                                   </button>
 
                                   <button
@@ -1732,9 +1706,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                     disabled={processingVerificationId === item.id}
                                     onClick={() => handleRejectPaymentVerification(item.id)}
                                     className="px-3 py-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 font-bold rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
-                                  >
-                                    Reject
-                                  </button>
+                                  >{ui(" Reject ")}</button>
                                 </>
                               )}
                             </div>
@@ -1752,18 +1724,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <div>
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <ListTodo className="w-4 h-4 text-blue-400" />
-                      <span>General Operational & Stream Tasks</span>
+                      <span>{ui("General Operational & Stream Tasks")}</span>
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Market briefs, live stream preparations, and routine maintenance tasks.
-                    </p>
+                    <p className="text-xs text-slate-400">{ui(" Market briefs, live stream preparations, and routine maintenance tasks. ")}</p>
                   </div>
                   <button
                     onClick={() => setShowNewOpModal(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/20"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Add Operational Task</span>
+                    <span>{ui("Add Operational Task")}</span>
                   </button>
                 </div>
 
@@ -1772,19 +1742,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     <table className="w-full text-left text-xs text-slate-300">
                       <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                         <tr>
-                          <th className="px-4 py-3">Task & Scope</th>
-                          <th className="px-4 py-3">Type</th>
-                          <th className="px-4 py-3">Priority</th>
-                          <th className="px-4 py-3">Status</th>
-                          <th className="px-4 py-3 text-right">Action</th>
+                          <th className="px-4 py-3">{ui("Task & Scope")}</th>
+                          <th className="px-4 py-3">{ui("Type")}</th>
+                          <th className="px-4 py-3">{ui("Priority")}</th>
+                          <th className="px-4 py-3">{ui("Status")}</th>
+                          <th className="px-4 py-3 text-right">{ui("Action")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
                         {operationsQueue.filter(i => i.type !== 'payment_verification').length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                              No general tasks in queue.
-                            </td>
+                            <td colSpan={5} className="px-4 py-6 text-center text-slate-500">{ui(" No general tasks in queue. ")}</td>
                           </tr>
                         ) : (
                           operationsQueue.filter(i => i.type !== 'payment_verification').map((item) => (
@@ -1826,9 +1794,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                                   onChange={(e) => handleUpdateOpStatus(item.id, e.target.value as any)}
                                   className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
                                 >
-                                  <option value="pending">Pending</option>
-                                  <option value="in_progress">In Progress</option>
-                                  <option value="resolved">Resolved</option>
+                                  <option value="pending">{ui("Pending")}</option>
+                                  <option value="in_progress">{ui("In Progress")}</option>
+                                  <option value="resolved">{ui("Resolved")}</option>
                                 </select>
                               </td>
                             </tr>
@@ -1848,7 +1816,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-amber-400" />
-                  <span>Global Financial & Commission Ledger</span>
+                  <span>{ui("Global Financial & Commission Ledger")}</span>
                 </h3>
               </div>
 
@@ -1857,20 +1825,18 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <table className="w-full text-left text-xs text-slate-300">
                     <thead className="bg-[#0E1322] border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                       <tr>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">User</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Amount</th>
-                        <th className="px-4 py-3">Description</th>
-                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">{ui("Date")}</th>
+                        <th className="px-4 py-3">{ui("User")}</th>
+                        <th className="px-4 py-3">{ui("Type")}</th>
+                        <th className="px-4 py-3">{ui("Amount")}</th>
+                        <th className="px-4 py-3">{ui("Description")}</th>
+                        <th className="px-4 py-3">{ui("Status")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60">
                       {transactions.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                            No ledger transactions recorded yet.
-                          </td>
+                          <td colSpan={6} className="px-4 py-8 text-center text-slate-500">{ui(" No ledger transactions recorded yet. ")}</td>
                         </tr>
                       ) : (
                         transactions.map((t) => (
@@ -1921,42 +1887,42 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <UserPlus className="w-4 h-4 text-amber-400" />
-                  <span>{isSuperAdmin ? 'Provision Any Account (Super Admin, Admin, Coach, Employee, Client)' : 'Provision New Client Account'}</span>
+                  <span>{isSuperAdmin ? ui("Provision Any Account (Super Admin, Admin, Coach, Employee, Client)") : ui("Provision New Client Account")}</span>
                 </h3>
                 <p className="text-xs text-slate-400">
                   {isSuperAdmin
-                    ? 'Super Admin has authority to generate any tier role directly into the server database.'
-                    : 'Admins can provision new client accounts.'}
+                    ? ui("Super Admin has authority to generate any tier role directly into the server database.")
+                    : ui("Admins can provision new client accounts.")}
                 </p>
               </div>
 
               <form onSubmit={handleCreateUserSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Username *</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Username *")}</label>
                     <input
                       type="text"
                       required
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
-                      placeholder="e.g. smc_trader"
+                      placeholder={ui("e.g. smc_trader")}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Full Name</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Full Name")}</label>
                     <input
                       type="text"
                       value={newFullName}
                       onChange={(e) => setNewFullName(e.target.value)}
-                      placeholder="e.g. Alex Trader"
+                      placeholder={ui("e.g. Alex Trader")}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Email Address *</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Email Address *")}</label>
                     <input
                       type="email"
                       required
@@ -1968,68 +1934,68 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Initial Password *</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Initial Password *")}</label>
                     <input
                       type="password"
                       required
                       value={newPass}
                       onChange={(e) => setNewPass(e.target.value)}
-                      placeholder="Min. 6 characters"
+                      placeholder={ui("Min. 6 characters")}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                     />
                   </div>
 
                   {isSuperAdmin && (
                     <div>
-                      <label className="block text-xs font-bold text-amber-300 mb-1">Account Role</label>
+                      <label className="block text-xs font-bold text-amber-300 mb-1">{ui("Account Role")}</label>
                       <select
                         value={newRole}
                         onChange={(e) => setNewRole(e.target.value as UserRole)}
                         className="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-400"
                       >
-                        <option value="client">👤 Pro Client</option>
-                        <option value="coach">🎓 Certified Coach</option>
-                        <option value="employee">💼 Operations Employee</option>
-                        <option value="admin">🛡️ System Admin</option>
-                        <option value="super_admin">👑 Master Super Admin</option>
+                        <option value="client">{ui("👤 Pro Client")}</option>
+                        <option value="coach">{ui("🎓 Certified Coach")}</option>
+                        <option value="employee">{ui("💼 Operations Employee")}</option>
+                        <option value="admin">{ui("🛡️ System Admin")}</option>
+                        <option value="super_admin">{ui("👑 Master Super Admin")}</option>
                       </select>
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Subscription Status</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Subscription Status")}</label>
                     <select
                       value={newSubStatus}
                       onChange={(e) => setNewSubStatus(e.target.value as SubscriptionStatus)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                     >
-                      <option value="active">Active</option>
-                      <option value="expired">Expired</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="active">{ui("Active")}</option>
+                      <option value="expired">{ui("Expired")}</option>
+                      <option value="inactive">{ui("Inactive")}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-amber-300 mb-1">Subscription Package / Tier</label>
+                    <label className="block text-xs font-bold text-amber-300 mb-1">{ui("Subscription Package / Tier")}</label>
                     <select
                       value={newPlanName}
                       onChange={(e) => setNewPlanName(e.target.value)}
                       className="w-full bg-slate-900 border border-amber-500/50 rounded-lg px-3 py-2 text-xs text-white font-medium focus:outline-none focus:border-amber-400"
                     >
-                      <option value="Site Subscription — Monthly ($80)">Monthly — $80 (Site Subscription)</option>
-                      <option value="Site Subscription — 6 Months ($400)">6 Months — $400 (Site Subscription)</option>
-                      <option value="Site Subscription — 1 Year ($650)">1 Year — $650 (Site Subscription)</option>
-                      <option value="All-Inclusive Package ($999/Year)">All-Inclusive Package ($999/Year — SMC + 144 Courses)</option>
+                      <option value="Site Subscription — Monthly ($80)">{ui("Monthly — $80/month (regular $100, 20% off; promo valid for 3 months)")}</option>
+                      <option value="Site Subscription — 6 Months ($400)">{ui("6 Months — $400 (Site Subscription)")}</option>
+                      <option value="Site Subscription — 1 Year ($650)">{ui("1 Year — $650 (Site Subscription)")}</option>
+                      <option value="All-Inclusive Package ($999/Year)">{ui("All-Inclusive Package ($999/Year — SMC Course)")}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">Referred By (Optional Code or Username)</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Referred By (Optional Code or Username)")}</label>
                     <input
                       type="text"
                       value={newReferredBy}
                       onChange={(e) => setNewReferredBy(e.target.value.toUpperCase())}
-                      placeholder="e.g. SMATTAR123 or username"
+                      placeholder={ui("e.g. SMATTAR123 or username")}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
@@ -2037,7 +2003,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   {isSuperAdmin && (
                     <>
                       <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1">Initial Balance ($)</label>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Initial Balance ($)")}</label>
                         <input
                           type="number"
                           value={newInitialBalance}
@@ -2047,7 +2013,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-300 mb-1">Commission Rate (%)</label>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">{ui("Commission Rate (%)")}</label>
                         <input
                           type="number"
                           value={newRate}
@@ -2072,9 +2038,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer shadow-lg shadow-amber-500/20"
-                >
-                  Create Account
-                </button>
+                >{ui(" Create Account ")}</button>
               </form>
             </div>
           )}
@@ -2085,11 +2049,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <Radio className="w-4 h-4 text-rose-500" />
-                  <span>YouTube Live Stream Management</span>
+                  <span>{ui("YouTube Live Stream Management")}</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Official live broadcast configuration permanently locked to the SM Trading YouTube channel.
-                </p>
+                <p className="text-xs text-slate-400 mt-1">{ui(" Official live broadcast configuration permanently locked to the SM Trading YouTube channel. ")}</p>
               </div>
 
               {/* Locked Official Channel Info Card */}
@@ -2097,19 +2059,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Official Channel Source (Permanently Locked)</span>
+                    <span>{ui("Official Channel Source (Permanently Locked)")}</span>
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                    LOCKED & VERIFIED
-                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">{ui(" LOCKED & VERIFIED ")}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
                   <div className="bg-[#0A0F1D] p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 block font-sans">Channel Handle</span>
+                    <span className="text-[10px] text-slate-500 block font-sans">{ui("Channel Handle")}</span>
                     <span className="text-amber-300 font-bold">@Smtradingpro</span>
                   </div>
                   <div className="bg-[#0A0F1D] p-2.5 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 block font-sans">Channel ID</span>
+                    <span className="text-[10px] text-slate-500 block font-sans">{ui("Channel ID")}</span>
                     <span className="text-slate-300 select-all">UCkohQ1nDiIosi6gTPv0oXQA</span>
                   </div>
                 </div>
@@ -2119,29 +2079,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2 text-xs">
                 <div className="font-bold text-slate-300 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                  <span>OBS / Live Encoder Ingestion Endpoints</span>
+                  <span>{ui("OBS / Live Encoder Ingestion Endpoints")}</span>
                 </div>
                 <div className="space-y-1.5 font-mono text-[11px]">
                   <div className="bg-[#0A0F1D] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span className="text-slate-400 font-sans text-[10px]">Primary RTMP:</span>
+                    <span className="text-slate-400 font-sans text-[10px]">{ui("Primary RTMP:")}</span>
                     <span className="text-amber-300 select-all font-semibold">rtmp://a.rtmp.youtube.com/live2</span>
                   </div>
                   <div className="bg-[#0A0F1D] p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span className="text-slate-400 font-sans text-[10px]">Backup RTMP:</span>
+                    <span className="text-slate-400 font-sans text-[10px]">{ui("Backup RTMP:")}</span>
                     <span className="text-amber-300 select-all font-semibold">rtmp://b.rtmp.youtube.com/live2?backup=1</span>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-400 font-sans">
-                  Use your stream key from YouTube Studio for the official channel. All live streams from these endpoints are automatically rendered on SMTrading.pro.
-                </p>
+                <p className="text-[10px] text-slate-400 font-sans">{ui(" Use your stream key from YouTube Studio for the official channel. All live streams from these endpoints are automatically rendered on SMTrading.pro. ")}</p>
               </div>
 
               <form onSubmit={handleSaveYouTubeSettings} className="space-y-4">
                 {/* Live Stream Broadcast Status Toggle */}
                 <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                  <label className="block text-xs font-bold text-slate-200">
-                    Live Stream Broadcast Status
-                  </label>
+                  <label className="block text-xs font-bold text-slate-200">{ui(" Live Stream Broadcast Status ")}</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -2153,7 +2109,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                       }`}
                     >
                       <span className={`w-2 h-2 rounded-full ${ytIsLive ? 'bg-white animate-ping' : 'bg-slate-500'}`} />
-                      <span>Broadcasting LIVE</span>
+                      <span>{ui("Broadcasting LIVE")}</span>
                     </button>
                     <button
                       type="button"
@@ -2164,34 +2120,28 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                           : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-white'
                       }`}
                     >
-                      <span>Offline Mode</span>
+                      <span>{ui("Offline Mode")}</span>
                     </button>
                   </div>
-                  <p className="text-[10px] text-slate-400">
-                    When active, SMTrading.pro will display the live stream player.
-                  </p>
+                  <p className="text-[10px] text-slate-400">{ui(" When active, SMTrading.pro will display the live stream player. ")}</p>
                 </div>
 
                 {/* Optional Manual Video ID Override */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    Direct Video ID (Optional Override)
-                  </label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">{ui(" Direct Video ID (Optional Override) ")}</label>
                   <input
                     type="text"
                     value={ytManualVideoId}
                     onChange={(e) => setYtManualVideoId(e.target.value)}
-                    placeholder="e.g. jfKfPfyJRdk (leave blank to use channel live feed)"
+                    placeholder={ui("e.g. jfKfPfyJRdk (leave blank to use channel live feed)")}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                   />
-                  <span className="text-[10px] text-slate-500 mt-1 block">
-                    Leave blank to automatically broadcast from the official channel live stream.
-                  </span>
+                  <span className="text-[10px] text-slate-500 mt-1 block">{ui(" Leave blank to automatically broadcast from the official channel live stream. ")}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span className={`w-2 h-2 rounded-full ${ytApiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span>API Key: {ytApiKeyConfigured ? 'Connected' : 'Default Quota / Direct Scraper Active'}</span>
+                  <span>{ui("API Key: ")}{ytApiKeyConfigured ? ui("Connected") : ui("Default Quota / Direct Scraper Active")}</span>
                 </div>
 
                 {ytSaveStatus && (
@@ -2208,9 +2158,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                   <button
                     type="submit"
                     className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-lg shadow-rose-600/20"
-                  >
-                    Save Live Stream Settings
-                  </button>
+                  >{ui(" Save Live Stream Settings ")}</button>
 
                   <button
                     type="button"
@@ -2218,22 +2166,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     disabled={ytTesting}
                     className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-all cursor-pointer"
                   >
-                    {ytTesting ? 'Scanning...' : 'Test Scanner Now'}
+                    {ytTesting ? ui("Scanning...") : ui("Test Scanner Now")}
                   </button>
                 </div>
               </form>
 
               {ytLiveStatus && (
                 <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl text-xs space-y-2">
-                  <span className="font-bold text-white block">Live Stream Status:</span>
-                  <div className="text-slate-300">
-                    Broadcast Status:{' '}
+                  <span className="font-bold text-white block">{ui("Live Stream Status:")}</span>
+                  <div className="text-slate-300">{ui(" Broadcast Status:")}{' '}
                     <span className={ytLiveStatus.isLive ? 'text-rose-400 font-bold' : 'text-slate-400'}>
-                      {ytLiveStatus.isLive ? '🔴 LIVE NOW ON SMTRADING' : 'Offline'}
+                      {ytLiveStatus.isLive ? ui("🔴 LIVE NOW ON SMTRADING") : ui("Offline")}
                     </span>
                   </div>
-                  {ytLiveStatus.stream?.title && <div>Title: <span className="text-white">{ytLiveStatus.stream.title}</span></div>}
-                  {ytLiveStatus.stream?.videoId && <div className="font-mono text-slate-400">Video: {ytLiveStatus.stream.videoId}</div>}
+                  {ytLiveStatus.stream?.title && <div>{ui("Title: ")}<span className="text-white">{ytLiveStatus.stream.title}</span></div>}
+                  {ytLiveStatus.stream?.videoId && <div className="font-mono text-slate-400">{ui("Video: ")}{ytLiveStatus.stream.videoId}</div>}
                   {ytLiveStatus.stream?.embedUrl && (
                     <div className="pt-1">
                       <a
@@ -2241,8 +2188,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-amber-400 hover:underline flex items-center gap-1 text-[11px]"
-                      >
-                        Open Live Stream on YouTube <ExternalLink className="w-3 h-3" />
+                      >{ui(" Open Live Stream on YouTube ")}<ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   )}
@@ -2265,22 +2211,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex justify-between items-center gap-2">
                 <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
                   <Crown className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="truncate">Super Admin Balance Adjustment</span>
+                  <span className="truncate">{ui("Super Admin Balance Adjustment")}</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => setSelectedUserForBalance(null)}
                   className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                  aria-label="Close modal"
+                  aria-label={ui("Close modal")}
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="text-xs text-slate-300">
-                User: <span className="text-white font-bold">@{selectedUserForBalance.username}</span> ({selectedUserForBalance.email})
-                <br />
-                Current Balance: <span className="text-emerald-400 font-mono font-bold">${selectedUserForBalance.balance.toFixed(2)}</span>
+              <div className="text-xs text-slate-300">{ui(" User: ")}<span className="text-white font-bold">@{selectedUserForBalance.username}</span> ({selectedUserForBalance.email})
+                <br />{ui(" Current Balance: ")}<span className="text-emerald-400 font-mono font-bold">${selectedUserForBalance.balance.toFixed(2)}</span>
               </div>
 
               <form onSubmit={handleBalanceSubmit} className="space-y-3">
@@ -2291,31 +2235,25 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className={`py-1.5 rounded-lg text-xs font-bold ${
                       balanceAction === 'add' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
                     }`}
-                  >
-                    + Credit
-                  </button>
+                  >{ui(" + Credit ")}</button>
                   <button
                     type="button"
                     onClick={() => setBalanceAction('deduct')}
                     className={`py-1.5 rounded-lg text-xs font-bold ${
                       balanceAction === 'deduct' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400'
                     }`}
-                  >
-                    - Debit
-                  </button>
+                  >{ui(" - Debit ")}</button>
                   <button
                     type="button"
                     onClick={() => setBalanceAction('set')}
                     className={`py-1.5 rounded-lg text-xs font-bold ${
                       balanceAction === 'set' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'
                     }`}
-                  >
-                    = Set Exact
-                  </button>
+                  >{ui(" = Set Exact ")}</button>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Amount ($)</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("Amount ($)")}</label>
                   <input
                     type="number"
                     step="0.01"
@@ -2328,13 +2266,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Reason (Audit Trail Record)</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("Reason (Audit Trail Record)")}</label>
                   <input
                     type="text"
                     required
                     value={balanceReason}
                     onChange={(e) => setBalanceReason(e.target.value)}
-                    placeholder="e.g. Desk bonus, manual correction"
+                    placeholder={ui("e.g. Desk bonus, manual correction")}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
@@ -2350,9 +2288,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Confirm Balance Adjustment
-                </button>
+                >{ui(" Confirm Balance Adjustment ")}</button>
               </form>
             </div>
           </div>
@@ -2363,12 +2299,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="w-full max-w-md bg-[#0C111E] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
               <div className="flex justify-between items-center gap-2">
-                <h4 className="text-sm font-bold text-white min-w-0 flex-1 truncate">Update Commission Rate</h4>
+                <h4 className="text-sm font-bold text-white min-w-0 flex-1 truncate">{ui("Update Commission Rate")}</h4>
                 <button
                   type="button"
                   onClick={() => setSelectedUserForRate(null)}
                   className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                  aria-label="Close modal"
+                  aria-label={ui("Close modal")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2376,9 +2312,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               <form onSubmit={handleRateSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
-                    Subscription Commission Rate (%)
-                  </label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui(" Subscription Commission Rate (%) ")}</label>
                   <input
                     type="number"
                     min="0"
@@ -2389,13 +2323,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     placeholder="20"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Standard rate for recurring subscriptions (Default: 20%)</p>
+                  <p className="text-[10px] text-slate-500 mt-1">{ui("Standard rate for recurring subscriptions (Default: 20%)")}</p>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
-                    Lifetime Purchase Commission Rate (%)
-                  </label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui(" Lifetime Purchase Commission Rate (%) ")}</label>
                   <input
                     type="number"
                     min="0"
@@ -2406,7 +2338,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
                     placeholder="10"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">Permanent rate on EVERY future course, strategy package, and product purchase (Default: 10%)</p>
+                  <p className="text-[10px] text-slate-500 mt-1">{ui("Permanent rate on EVERY future course, strategy package, and product purchase (Default: 10%)")}</p>
                 </div>
 
                 {rateStatus && (
@@ -2420,9 +2352,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Save Commission Rates
-                </button>
+                >{ui(" Save Commission Rates ")}</button>
               </form>
             </div>
           </div>
@@ -2435,13 +2365,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex justify-between items-center gap-2">
                 <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
                   <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="truncate">Reset Password for @{selectedUserForPass.username}</span>
+                  <span className="truncate">{ui("Reset Password for @")}{selectedUserForPass.username}</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => setSelectedUserForPass(null)}
                   className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                  aria-label="Close modal"
+                  aria-label={ui("Close modal")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2449,14 +2379,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               <form onSubmit={handlePasswordReset} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">New Password (Min. 6 chars)</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("New Password (Min. 6 chars)")}</label>
                   <input
                     type="password"
                     required
                     minLength={6}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
+                    placeholder={ui("Enter new password")}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
                   />
                 </div>
@@ -2472,9 +2402,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Confirm Password Reset
-                </button>
+                >{ui(" Confirm Password Reset ")}</button>
               </form>
             </div>
           </div>
@@ -2487,13 +2415,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex justify-between items-center gap-2">
                 <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
                   <Plus className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span className="truncate">Add Operational Task</span>
+                  <span className="truncate">{ui("Add Operational Task")}</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => setShowNewOpModal(false)}
                   className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                  aria-label="Close modal"
+                  aria-label={ui("Close modal")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2501,53 +2429,53 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               <form onSubmit={handleAddOpItem} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Task Title *</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("Task Title *")}</label>
                   <input
                     type="text"
                     required
                     value={newOpTitle}
                     onChange={(e) => setNewOpTitle(e.target.value)}
-                    placeholder="e.g. FOMC Pre-Market Briefing Prep"
+                    placeholder={ui("e.g. FOMC Pre-Market Briefing Prep")}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-400"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Type</label>
+                    <label className="block text-xs text-slate-400 mb-1">{ui("Type")}</label>
                     <select
                       value={newOpType}
                       onChange={(e) => setNewOpType(e.target.value as any)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
                     >
-                      <option value="market_brief">Market Brief</option>
-                      <option value="live_stream_prep">Live Stream Prep</option>
-                      <option value="content_review">Content Review</option>
-                      <option value="support_ticket">Support Ticket</option>
+                      <option value="market_brief">{ui("Market Brief")}</option>
+                      <option value="live_stream_prep">{ui("Live Stream Prep")}</option>
+                      <option value="content_review">{ui("Content Review")}</option>
+                      <option value="support_ticket">{ui("Support Ticket")}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Priority</label>
+                    <label className="block text-xs text-slate-400 mb-1">{ui("Priority")}</label>
                     <select
                       value={newOpPriority}
                       onChange={(e) => setNewOpPriority(e.target.value as any)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
                     >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
+                      <option value="low">{ui("Low")}</option>
+                      <option value="medium">{ui("Medium")}</option>
+                      <option value="high">{ui("High")}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Notes & Instructions</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("Notes & Instructions")}</label>
                   <textarea
                     rows={3}
                     value={newOpNotes}
                     onChange={(e) => setNewOpNotes(e.target.value)}
-                    placeholder="Additional details for operational staff..."
+                    placeholder={ui("Additional details for operational staff...")}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-400"
                   />
                 </div>
@@ -2555,9 +2483,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Create Task
-                </button>
+                >{ui(" Create Task ")}</button>
               </form>
             </div>
           </div>
@@ -2570,13 +2496,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex justify-between items-center gap-2">
                 <h4 className="text-sm font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
                   <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="truncate">Mentorship Notes: {selectedStudentForNote.fullName}</span>
+                  <span className="truncate">{ui("Mentorship Notes: ")}{selectedStudentForNote.fullName}</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => setSelectedStudentForNote(null)}
                   className="min-w-[36px] min-h-[36px] w-9 h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                  aria-label="Close modal"
+                  aria-label={ui("Close modal")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2584,26 +2510,26 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               <form onSubmit={handleSaveStudentNotes} className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Student Status</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("Student Status")}</label>
                   <select
                     value={studentStatusDraft}
                     onChange={(e) => setStudentStatusDraft(e.target.value as any)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
                   >
-                    <option value="active_training">Active Training</option>
-                    <option value="mentorship_pending">Mentorship Pending</option>
-                    <option value="graduated">Graduated</option>
-                    <option value="paused">Paused</option>
+                    <option value="active_training">{ui("Active Training")}</option>
+                    <option value="mentorship_pending">{ui("Mentorship Pending")}</option>
+                    <option value="graduated">{ui("Graduated")}</option>
+                    <option value="paused">{ui("Paused")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Coach Notes & Lesson Feedback</label>
+                  <label className="block text-xs text-slate-400 mb-1">{ui("Coach Notes & Lesson Feedback")}</label>
                   <textarea
                     rows={4}
                     value={studentNoteDraft}
                     onChange={(e) => setStudentNoteDraft(e.target.value)}
-                    placeholder="Enter observations on student's trade setups, risk management, and order flow execution..."
+                    placeholder={ui("Enter observations on student's trade setups, risk management, and order flow execution...")}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400"
                   />
                 </div>
@@ -2611,9 +2537,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 <button
                   type="submit"
                   className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-                >
-                  Save Coaching Feedback
-                </button>
+                >{ui(" Save Coaching Feedback ")}</button>
               </form>
             </div>
           </div>
@@ -2626,7 +2550,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                   <ShieldCheck className="w-5 h-5" />
-                  <span>Subscription Activated Successfully!</span>
+                  <span>{ui("Subscription Activated Successfully!")}</span>
                 </div>
                 <button
                   type="button"
@@ -2643,21 +2567,21 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
               <div className="p-3.5 bg-black/60 border border-slate-800 rounded-xl space-y-2 text-xs font-mono">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Username:</span>
+                  <span className="text-slate-500">{ui("Username:")}</span>
                   <span className="text-amber-400 font-bold">{verificationResult.credentials?.username}</span>
                 </div>
                 {verificationResult.credentials?.temporaryPassword && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Password:</span>
+                    <span className="text-slate-500">{ui("Password:")}</span>
                     <span className="text-emerald-300 font-bold">{verificationResult.credentials.temporaryPassword}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Plan:</span>
+                  <span className="text-slate-500">{ui("Plan:")}</span>
                   <span className="text-white">{verificationResult.credentials?.subscriptionPlan}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Expires:</span>
+                  <span className="text-slate-500">{ui("Expires:")}</span>
                   <span className="text-slate-300">
                     {new Date(verificationResult.credentials?.subscriptionExpiresAt).toLocaleDateString()}
                   </span>
@@ -2671,20 +2595,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     const creds = verificationResult.credentials;
                     const message = `Hello! Your SM Trading Pro subscription has been verified and activated on the platform:\n\n🌐 Platform: ${window.location.origin}\n👤 Username: ${creds.username}\n🔑 Password: ${creds.temporaryPassword || '(Your existing password)'}\n📦 Package: ${creds.subscriptionPlan}\n⏳ Expiration Date: ${new Date(creds.subscriptionExpiresAt).toLocaleDateString()}\n\nWelcome to SM Trading Pro! Please login with your credentials above.`;
                     navigator.clipboard.writeText(message);
-                    alert('Client onboarding message copied to clipboard! Paste directly into Telegram support chat.');
+                    alert(ui('Client onboarding message copied to clipboard! Paste directly into Telegram support chat.'));
                   }}
                   className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs transition-all cursor-pointer shadow-md shadow-emerald-500/20"
-                >
-                  Copy Telegram Client Message
-                </button>
+                >{ui(" Copy Telegram Client Message ")}</button>
 
                 <button
                   type="button"
                   onClick={() => setVerificationResult(null)}
                   className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                >
-                  Dismiss
-                </button>
+                >{ui(" Dismiss ")}</button>
               </div>
             </div>
           </div>

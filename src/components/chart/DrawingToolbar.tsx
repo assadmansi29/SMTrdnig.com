@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../../hooks/useInterfaceText';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -81,6 +82,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   allVisible = true,
   onToggleAllVisibility,
 }) => {
+  const ui = useInterfaceText();
   const { t } = useTranslation();
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [flyoutPos, setFlyoutPos] = useState<{ top: number; left: number } | null>(null);
@@ -177,7 +179,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {/* 1. Cursor / Select Mode */}
         <button
           id="btn-chart-tool-cursor"
-          title="Cursor / Select Drawing (Esc)"
+          title={ui("Cursor / Select Drawing (Esc)")}
           onClick={() => {
             onSelectTool(null);
             setOpenCategory(null);
@@ -206,7 +208,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             <div key={cat.id} className="relative">
               <button
                 id={`btn-chart-cat-${cat.id}`}
-                title={cat.label}
+                title={ui(cat.label)}
                 onClick={(e) => handleCategoryToggle(cat.id, e)}
                 className={`w-7 h-7 rounded-md flex items-center justify-center transition-all my-0.5 relative ${
                   isCatActive
@@ -229,7 +231,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {onToggleMagnet && (
           <button
             id="btn-chart-magnet-toggle"
-            title={isMagnetActive ? 'Magnet Mode: ON (Snapping to Candle OHLC)' : 'Magnet Mode: OFF (Free positioning)'}
+            title={isMagnetActive ? ui("Magnet Mode: ON (Snapping to Candle OHLC)") : ui("Magnet Mode: OFF (Free positioning)")}
             onClick={onToggleMagnet}
             className={`w-7 h-7 rounded-md flex items-center justify-center transition-all my-0.5 relative ${
               isMagnetActive
@@ -248,7 +250,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         <div className="relative">
           <button
             id="btn-chart-color-picker"
-            title="Line Color & Thickness"
+            title={ui("Line Color & Thickness")}
             onClick={handleColorToggle}
             className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 relative my-0.5"
           >
@@ -264,7 +266,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {selectedDrawingId && onOpenProperties && (
           <button
             id="btn-chart-properties-selected"
-            title="Drawing Properties / Settings (Double Click Drawing)"
+            title={ui("Drawing Properties / Settings (Double Click Drawing)")}
             onClick={onOpenProperties}
             className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 my-0.5"
           >
@@ -276,7 +278,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {selectedDrawingId && (
           <button
             id="btn-chart-delete-selected"
-            title="Delete Selected Drawing (Delete)"
+            title={ui("Delete Selected Drawing (Delete)")}
             onClick={onDeleteSelected}
             className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 my-0.5 animate-pulse"
           >
@@ -290,7 +292,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {onToggleObjectTree && (
           <button
             id="btn-chart-object-tree-toggle"
-            title={`Object Tree / Drawings Manager (${drawingsCount} items)`}
+            title={ui("Object Tree / Drawings Manager ({p0} items)", {p0: drawingsCount})}
             onClick={onToggleObjectTree}
             className={`w-7 h-7 rounded-md flex items-center justify-center transition-all my-0.5 relative ${
               isObjectTreeOpen
@@ -311,7 +313,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {onToggleAllVisibility && (
           <button
             id="btn-chart-toggle-all-visibility"
-            title={allVisible ? 'Hide All Drawings' : 'Show All Drawings'}
+            title={allVisible ? ui("Hide All Drawings") : ui("Show All Drawings")}
             onClick={onToggleAllVisibility}
             className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 my-0.5"
           >
@@ -323,7 +325,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {onToggleAllLock && (
           <button
             id="btn-chart-toggle-all-lock"
-            title={allLocked ? 'Unlock All Drawings' : 'Lock All Drawings'}
+            title={allLocked ? ui("Unlock All Drawings") : ui("Lock All Drawings")}
             onClick={onToggleAllLock}
             className={`w-7 h-7 rounded-md flex items-center justify-center transition-all my-0.5 ${
               allLocked ? 'text-amber-400 bg-amber-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
@@ -337,7 +339,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {onUndo && (
           <button
             id="btn-chart-undo"
-            title="Undo (Ctrl+Z)"
+            title={ui("Undo (Ctrl+Z)")}
             onClick={onUndo}
             disabled={!canUndo}
             className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 disabled:opacity-30 disabled:hover:bg-transparent my-0.5"
@@ -349,7 +351,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {onRedo && (
           <button
             id="btn-chart-redo"
-            title="Redo (Ctrl+Y)"
+            title={ui("Redo (Ctrl+Y)")}
             onClick={onRedo}
             disabled={!canRedo}
             className="w-7 h-7 rounded-md flex items-center justify-center transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 disabled:opacity-30 disabled:hover:bg-transparent my-0.5"
@@ -363,9 +365,9 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {/* 10. Clear All Drawings */}
         <button
           id="btn-chart-clear-all"
-          title="Clear All Drawings on this Chart"
+          title={ui("Clear All Drawings on this Chart")}
           onClick={() => {
-            if (window.confirm('Clear all drawings on this timeframe and symbol?')) {
+            if (window.confirm(ui('Clear all drawings on this timeframe and symbol?'))) {
               onClearAll();
             }
           }}
@@ -383,7 +385,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           className="fixed bg-[#0d1322] border border-slate-700/90 rounded-xl shadow-2xl p-1.5 w-60 z-50 animate-in fade-in zoom-in-95 duration-100 select-none"
         >
           <div className="text-[10px] font-semibold tracking-wider text-slate-400 px-2 py-1 uppercase border-b border-slate-800/80 mb-1">
-            {categories.find((c) => c.id === openCategory)?.label}
+            {ui(categories.find((c) => c.id === openCategory)?.label || '')}
           </div>
           <div className="flex flex-col gap-0.5 max-h-72 overflow-y-auto">
             {getToolsByCategory(openCategory).map((tool) => {
@@ -418,7 +420,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
                         ? t('reactionZoneStrong')
                         : isReactionWeak
                         ? t('reactionZoneWeak')
-                        : tool.name}
+                        : ui(tool.name)}
                     </span>
                   </span>
                   <span className="text-[9px] text-slate-500 font-mono shrink-0 ml-1">
@@ -426,7 +428,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
                       ? t('reactionZoneRed')
                       : isReactionWeak
                       ? t('reactionZoneGreen')
-                      : `${tool.requiredAnchors} pt${tool.requiredAnchors > 1 ? 's' : ''}`}
+                      : ui("Anchors: {p0}", {p0: tool.requiredAnchors})}
                   </span>
                 </button>
               );
@@ -443,15 +445,13 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           style={{ top: `${colorPickerPos.top}px`, left: `${colorPickerPos.left}px` }}
           className="fixed bg-[#0d1322] border border-slate-700/90 rounded-xl shadow-2xl p-2.5 w-48 z-50 animate-in fade-in zoom-in-95 duration-100 select-none"
         >
-          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            Color Palette
-          </div>
+          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">{ui(" Color Palette ")}</div>
           <div className="grid grid-cols-6 gap-1.5 mb-3">
             {COLOR_PALETTE.map((c) => (
               <button
                 key={c.hex}
                 id={`btn-color-${c.hex.replace('#', '')}`}
-                title={c.name}
+                title={ui(c.name)}
                 onClick={() => onColorChange(c.hex)}
                 className={`w-6 h-6 rounded-full transition-transform ${
                   currentColor === c.hex
@@ -463,9 +463,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             ))}
           </div>
 
-          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-            Line Width
-          </div>
+          <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{ui(" Line Width ")}</div>
           <div className="flex gap-1">
             {LINE_WIDTHS.map((w) => (
               <button

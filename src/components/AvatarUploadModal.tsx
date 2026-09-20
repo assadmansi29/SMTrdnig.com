@@ -1,3 +1,4 @@
+import { useInterfaceText } from '../hooks/useInterfaceText';
 import React, { useState, useRef } from 'react';
 import { 
   Upload, 
@@ -93,6 +94,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const ui = useInterfaceText();
   const { user, uploadAvatar, removeAvatar } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -231,7 +233,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
   };
 
   const handleRemoveAvatar = async () => {
-    if (!confirm('Are you sure you want to remove your custom profile picture and reset to default?')) {
+    if (!confirm(ui('Are you sure you want to remove your custom profile picture and reset to default?'))) {
       return;
     }
 
@@ -268,12 +270,8 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               <Camera className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm sm:text-base font-bold text-white leading-tight truncate">
-                Update Profile Picture
-              </h2>
-              <p className="text-xs text-slate-400 truncate">
-                Upload from Gallery or Files (JPG, PNG, WEBP)
-              </p>
+              <h2 className="text-sm sm:text-base font-bold text-white leading-tight truncate">{ui(" Update Profile Picture ")}</h2>
+              <p className="text-xs text-slate-400 truncate">{ui(" Upload from Gallery or Files (JPG, PNG, WEBP) ")}</p>
             </div>
           </div>
 
@@ -282,7 +280,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
             onClick={handleClose}
             disabled={isLoading}
             className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
-            aria-label="Close modal"
+            aria-label={ui("Close modal")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -295,7 +293,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
           {errorMessage && (
             <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <div className="flex-1 font-medium">{errorMessage}</div>
+              <div className="flex-1 font-medium">{ui(errorMessage)}</div>
             </div>
           )}
 
@@ -316,7 +314,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                   {previewUrl ? (
                     <img
                       src={previewUrl}
-                      alt="New Avatar Preview"
+                      alt={ui("New Avatar Preview")}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -331,12 +329,12 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                 {previewUrl && (
                   <span className="absolute -bottom-2 -right-2 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 shadow-md">
                     <Sparkles className="w-3 h-3" />
-                    <span>New Preview</span>
+                    <span>{ui("New Preview")}</span>
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400 font-mono">
-                {previewUrl ? 'Ready to apply' : `@${user.username}`}
+                {previewUrl ? ui("Ready to apply") : `@${user.username}`}
               </p>
             </div>
 
@@ -344,13 +342,13 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
             <div className="text-xs text-slate-400 space-y-1.5 max-w-[220px]">
               <div className="flex items-center gap-1.5 text-amber-300 font-bold">
                 <Info className="w-3.5 h-3.5" />
-                <span>Upload Guidelines</span>
+                <span>{ui("Upload Guidelines")}</span>
               </div>
               <ul className="list-disc list-inside text-[11px] text-slate-400 space-y-1">
-                <li>JPG, JPEG, PNG, or WEBP</li>
-                <li>Max file size: 5.0 MB</li>
-                <li>Auto-cropped to square avatar</li>
-                <li>Instant cross-device sync</li>
+                <li>{ui("JPG, JPEG, PNG, or WEBP")}</li>
+                <li>{ui("Max file size: 5.0 MB")}</li>
+                <li>{ui("Auto-cropped to square avatar")}</li>
+                <li>{ui("Instant cross-device sync")}</li>
               </ul>
             </div>
           </div>
@@ -381,12 +379,8 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               </div>
 
               <div>
-                <span className="text-sm font-bold text-white">
-                  Tap to browse Gallery Photos or Files
-                </span>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  or drag & drop your photo directly here
-                </p>
+                <span className="text-sm font-bold text-white">{ui(" Tap to browse Gallery Photos or Files ")}</span>
+                <p className="text-xs text-slate-400 mt-0.5">{ui(" or drag & drop your photo directly here ")}</p>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
@@ -399,7 +393,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                   className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-semibold flex items-center gap-1.5 transition-colors"
                 >
                   <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Choose Photo</span>
+                  <span>{ui("Choose Photo")}</span>
                 </button>
               </div>
             </div>
@@ -411,7 +405,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
                 <span className="flex items-center gap-1.5 text-amber-400">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Uploading profile photo...</span>
+                  <span>{ui("Uploading profile photo...")}</span>
                 </span>
                 <span className="font-mono">{uploadProgress}%</span>
               </div>
@@ -436,7 +430,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Remove Custom Photo</span>
+                <span>{ui("Remove Custom Photo")}</span>
               </button>
             )}
           </div>
@@ -447,9 +441,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               onClick={handleClose}
               disabled={isLoading}
               className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-xl transition-all cursor-pointer disabled:opacity-50"
-            >
-              Cancel
-            </button>
+            >{ui(" Cancel ")}</button>
 
             <button
               type="button"
@@ -460,12 +452,12 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               {isLoading ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Saving...</span>
+                  <span>{ui("Saving...")}</span>
                 </>
               ) : (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  <span>Apply Profile Picture</span>
+                  <span>{ui("Apply Profile Picture")}</span>
                 </>
               )}
             </button>

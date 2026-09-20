@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useTranslation } from '../../context/LanguageContext';
+import { marketStatusText } from '../../locales/marketStatusText';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, Globe, X, ChevronDown, AlertTriangle, ShieldCheck } from 'lucide-react';
 import {
   BenchmarkMarketId,
   getUserTimeZone,
+  getMarketScheduleStatus,
 } from '../../utils/marketSchedule';
 import { useMarketStatus } from '../../context/MarketStatusContext';
 
@@ -35,21 +38,28 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
   align = 'left',
   id,
 }) => {
+  const { language } = useTranslation();
+  const ui = (value: string, params?: Record<string, string | number>) => {
+    const text = marketStatusText(value, language);
+    return text.replace(/\{(\w+)\}/g, (match, name) => String(params?.[name] ?? match));
+  };
   const {
     activeMarketId,
     setActiveMarketId,
-    status,
+    status: sharedStatus,
     worldSessions,
   } = useMarketStatus();
 
   const [showDetails, setShowDetails] = useState<boolean>(false);
+  // Each chart owns its asset status; other mounted charts cannot overwrite it.
+  const status = useMemo(() => symbol ? getMarketScheduleStatus(symbol) : sharedStatus, [symbol, sharedStatus]);
 
   // Sync symbol to shared market status when symbol prop is provided
   useEffect(() => {
-    if (symbol && symbol !== activeMarketId) {
+    if (symbol) {
       setActiveMarketId(symbol);
     }
-  }, [symbol, activeMarketId, setActiveMarketId]);
+  }, [symbol, setActiveMarketId]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -134,64 +144,52 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
       if (status.status === 'MARKET WILL CLOSE SOON') {
         return (
           <>
-            <span className={`tracking-tight font-bold sm:hidden`}>
-              CLOSES {status.minutesRemaining}m
+            <span className={`tracking-tight font-bold sm:hidden`}>{ui(" CLOSES ")}{status.minutesRemaining}m
             </span>
-            <span className={`tracking-wide font-bold hidden sm:inline ${styles.titleText}`}>
-              CLOSES IN {status.minutesRemaining} MIN
-            </span>
+            <span className={`tracking-wide font-bold hidden sm:inline ${styles.titleText}`}>{ui(" CLOSES IN ")}{status.minutesRemaining}{ui(" MIN ")}</span>
           </>
         );
       }
       if (status.status === 'MARKET WILL OPEN SOON') {
         return (
           <>
-            <span className={`tracking-tight font-bold sm:hidden`}>
-              OPENS {status.minutesRemaining}m
+            <span className={`tracking-tight font-bold sm:hidden`}>{ui(" OPENS ")}{status.minutesRemaining}m
             </span>
-            <span className={`tracking-wide font-bold hidden sm:inline ${styles.titleText}`}>
-              MARKET WILL OPEN IN {status.minutesRemaining} MIN
-            </span>
+            <span className={`tracking-wide font-bold hidden sm:inline ${styles.titleText}`}>{ui(" MARKET WILL OPEN IN ")}{status.minutesRemaining}{ui(" MIN ")}</span>
           </>
         );
       }
       if (status.status === 'MARKET OPEN') {
         return (
-          <span className={`tracking-wide font-bold ${styles.titleText}`}>
-            MARKET OPEN
-          </span>
+          <span className={`tracking-wide font-bold ${styles.titleText}`}>{ui(" MARKET OPEN ")}</span>
         );
       }
       return (
-        <span className={`tracking-wide font-bold ${styles.titleText}`}>
-          MARKET CLOSED
-        </span>
+        <span className={`tracking-wide font-bold ${styles.titleText}`}>{ui(" MARKET CLOSED ")}</span>
       );
     }
 
     return (
       <div className="flex items-center gap-1.5 leading-none">
         <span className={`tracking-wider ${styles.titleText}`}>
-          {status.status}
+          {ui(status.status)}
         </span>
 
         {status.status === 'MARKET WILL CLOSE SOON' && (
           <span className="text-amber-300 font-extrabold bg-amber-500/20 px-1.5 py-0.5 rounded text-[10px] border border-amber-500/30">
-            {status.minutesRemaining} min
-          </span>
+            {status.minutesRemaining}{ui(" min ")}</span>
         )}
 
         {status.status === 'MARKET WILL OPEN SOON' && (
           <span className="text-cyan-300 font-extrabold bg-cyan-500/20 px-1.5 py-0.5 rounded text-[10px] border border-cyan-500/30">
-            {status.minutesRemaining} min
-          </span>
+            {status.minutesRemaining}{ui(" min ")}</span>
         )}
 
         {(status.status === 'MARKET OPEN' || status.status === 'MARKET CLOSED') && (
           <>
             <span className="text-slate-600 select-none">·</span>
             <span className={`${styles.detailText} text-[10px] whitespace-nowrap`}>
-              {status.countdownText}
+              {ui(status.countdownText)}
             </span>
           </>
         )}
@@ -206,7 +204,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
         id={id || 'market-status-indicator-button'}
         type="button"
         onClick={() => setShowDetails(!showDetails)}
-        title={`Live Market Status: ${status.status} — Click for Real-Time Session Schedule & Global Clocks`}
+        title={ui("Live Market Status: {p0} — Click for Real-Time Session Schedule & Global Clocks", {p0: ui(status.status)})}
         className={`group relative flex items-center ${
           compact ? 'gap-1.5 px-2.5 py-0.5 text-[9.5px] sm:gap-2 sm:px-3 sm:py-1 sm:text-[10.5px]' : 'gap-2.5 px-3.5 py-1.5 text-[11px]'
         } rounded-full border font-mono transition-all duration-200 cursor-pointer select-none backdrop-blur-md shrink-0 whitespace-nowrap active:scale-[0.98] hover:scale-[1.01] ${styles.badgeBg} ${styles.badgeBorder}`}
@@ -246,13 +244,9 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                   <Clock className="w-5 h-5 text-amber-400" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold text-white tracking-tight truncate flex items-center gap-1.5">
-                    Real-Time Market Status
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-base font-bold text-white tracking-tight truncate flex items-center gap-1.5">{ui(" Real-Time Market Status ")}<ShieldCheck className="w-4 h-4 text-emerald-400" />
                   </h3>
-                  <p className="text-xs text-slate-400 font-mono truncate">
-                    Institutional Multi-Session Schedule Engine
-                  </p>
+                  <p className="text-xs text-slate-400 font-mono truncate">{ui(" Institutional Multi-Session Schedule Engine ")}</p>
                 </div>
               </div>
 
@@ -260,7 +254,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                 type="button"
                 onClick={() => setShowDetails(false)}
                 className="min-w-[42px] min-h-[42px] w-11 h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-650 border border-slate-700/80 hover:border-slate-600 text-slate-200 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
-                aria-label="Close market status"
+                aria-label={ui("Close market status")}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -271,19 +265,19 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`w-2.5 h-2.5 rounded-full ${styles.dot} ${styles.dotAnimation}`} />
-                  <span className={`text-xs ${styles.titleText}`}>{status.status}</span>
+                  <span className={`text-xs ${styles.titleText}`}>{ui(status.status)}</span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400">{status.localTimeFormatted}</span>
+                <span className="text-[10px] font-mono text-slate-400">{ui(status.localTimeFormatted)}</span>
               </div>
 
               <p className="text-[11px] text-slate-300 leading-snug">
-                {status.nextEventDescription}
+                {ui(status.nextEventDescription)}
               </p>
 
               {status.isHoliday && (
                 <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30">
                   <AlertTriangle className="w-3 h-3 text-amber-400" />
-                  <span>US Market Holiday: {status.holidayName || 'Observed Holiday'}</span>
+                  <span>{ui("US Market Holiday: ")}{status.holidayName ? ui(status.holidayName) : ui("Observed Holiday")}</span>
                 </div>
               )}
             </div>
@@ -292,10 +286,8 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
             <div className="mb-2">
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1">
-                  <Globe className="w-3 h-3 text-cyan-400" />
-                  Global World Sessions (Live)
-                </span>
-                <span className="text-[9px] text-slate-500">Auto-sync 1s</span>
+                  <Globe className="w-3 h-3 text-cyan-400" />{ui(" Global World Sessions (Live) ")}</span>
+                <span className="text-[9px] text-slate-500">{ui("Auto-sync 1s")}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -311,7 +303,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-[11px] text-slate-200 flex items-center gap-1">
                         <span>{session.flag}</span>
-                        <span>{session.name}</span>
+                        <span>{ui(session.name)}</span>
                       </span>
                       <span
                         className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
@@ -320,14 +312,13 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                             : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
                         }`}
                       >
-                        {session.statusText}
+                        {ui(session.statusText)}
                       </span>
                     </div>
                     <div className="text-[10px] font-mono text-slate-400 mt-1 flex items-center justify-between">
-                      <span>{session.countdownText}</span>
+                      <span>{ui(session.countdownText)}</span>
                     </div>
-                    <div className="text-[9px] font-mono text-slate-500 mt-0.5">
-                      Time: {session.localTime}
+                    <div className="text-[9px] font-mono text-slate-500 mt-0.5">{ui(" Time: ")}{session.localTime}
                     </div>
                   </div>
                 ))}
@@ -336,9 +327,7 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
 
             {/* Market Benchmark Schedule (Display-Only) */}
             <div className="mb-2">
-              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Active Benchmark Schedule:
-              </div>
+              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">{ui(" Active Benchmark Schedule: ")}</div>
               <div className="grid grid-cols-3 gap-1.5">
                 {BENCHMARK_OPTIONS.map((item) => {
                   const isSelected = activeMarketId === item.id;
@@ -351,8 +340,8 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
                           : 'bg-[#0E1524] text-slate-300 border border-slate-800'
                       }`}
                     >
-                      <div className="text-[10px] font-mono truncate">{item.label}</div>
-                      <div className="text-[8px] text-slate-400 truncate">{item.sub}</div>
+                      <div className="text-[10px] font-mono truncate">{ui(item.label)}</div>
+                      <div className="text-[8px] text-slate-400 truncate">{ui(item.sub)}</div>
                     </div>
                   );
                 })}
@@ -362,25 +351,25 @@ export const MarketStatusIndicator: React.FC<MarketStatusIndicatorProps> = ({
             {/* Active Schedule Details */}
             <div className="pt-2 border-t border-[#1A2338] space-y-1.5 text-[10px] text-slate-400 font-mono">
               <div className="flex justify-between">
-                <span>Your Local Timezone:</span>
+                <span>{ui("Your Local Timezone:")}</span>
                 <span className="text-amber-300 font-bold">{getUserTimeZone()}</span>
               </div>
               <div className="flex justify-between">
-                <span>Exchange / Market:</span>
-                <span className="text-slate-200">{status.metadata.exchangeName}</span>
+                <span>{ui("Exchange / Market:")}</span>
+                <span className="text-slate-200">{ui(status.metadata.exchangeName)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Session Timezone:</span>
-                <span className="text-slate-200">{status.metadata.timeZoneLabel}</span>
+                <span>{ui("Session Timezone:")}</span>
+                <span className="text-slate-200">{ui(status.metadata.timeZoneLabel)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Trading Hours:</span>
-                <span className="text-slate-200">{status.metadata.regularHoursSummary}</span>
+                <span>{ui("Trading Hours:")}</span>
+                <span className="text-slate-200">{ui(status.metadata.regularHoursSummary)}</span>
               </div>
               {status.metadata.dailyBreakSummary && (
                 <div className="flex justify-between text-amber-300/90">
-                  <span>Break Schedule:</span>
-                  <span>{status.metadata.dailyBreakSummary}</span>
+                  <span>{ui("Break Schedule:")}</span>
+                  <span>{ui(status.metadata.dailyBreakSummary)}</span>
                 </div>
               )}
             </div>

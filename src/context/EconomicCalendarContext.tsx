@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { EconomicEvent } from '../types';
 
 interface EconomicCalendarContextType {
@@ -29,7 +29,10 @@ export const EconomicCalendarProvider: React.FC<{ children: ReactNode }> = ({ ch
   const [serverTimeUtc, setServerTimeUtc] = useState<string | null>(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number>(Date.now());
 
+  const inFlight = useRef(false);
   const fetchCalendar = useCallback(async (forceRefresh = false) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       if (forceRefresh) {
         setIsRefreshing(true);
@@ -37,10 +40,10 @@ export const EconomicCalendarProvider: React.FC<{ children: ReactNode }> = ({ ch
       setError(null);
 
       // Fetch authentic real-time economic calendar from server
-      const url = `/api/economic-calendar?limit=250&daysPast=3&daysAhead=14${forceRefresh ? '&refresh=true' : ''}`;
+      const url = `/api/economic-calendar?limit=500&daysPast=3&daysAhead=14${forceRefresh ? '&refresh=true' : ''}`;
       const res = await fetch(url, {
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(20000)
       });
 
       if (!res.ok) {
@@ -52,7 +55,7 @@ export const EconomicCalendarProvider: React.FC<{ children: ReactNode }> = ({ ch
         setEvents(data.events);
         setServerTimeUtc(data.serverTimeUtc || new Date().toISOString());
         setLastRefreshedAt(Date.now());
-        setError(null);
+        setError(data.warning || null);
       } else {
         throw new Error(data.error || 'Failed to parse economic calendar feed');
       }
@@ -60,18 +63,19 @@ export const EconomicCalendarProvider: React.FC<{ children: ReactNode }> = ({ ch
       console.warn('[EconomicCalendarContext] Fetch notice:', err.message);
       setError(err.message || 'Unable to update economic calendar');
     } finally {
+      inFlight.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, []);
 
-  // Initial fetch and automated background refresh every 60 seconds
+  // Initial fetch and automated background refresh every 30 seconds
   useEffect(() => {
     fetchCalendar(false);
 
     const interval = setInterval(() => {
       fetchCalendar(false);
-    }, 60000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [fetchCalendar]);
