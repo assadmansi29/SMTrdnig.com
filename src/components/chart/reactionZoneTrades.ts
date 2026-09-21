@@ -1,9 +1,12 @@
+import type {WeeklyReactionResults} from '../../../server/services/reactionWeeklyResults';
 import type {ReactionTrade} from '../../../server/services/reactionTradeEngine';
 import type {LineEvaluationResult} from './reactionZoneSignalCalculator';
 import {observeServerTime,synchronizeServerClock} from '../../services/serverClock';
 import {resolveRealtimeTvSymbol} from '../../../server/services/marketProviders';
 export type {ReactionTrade};
 let trades:ReactionTrade[]=[];
+let weeklyResults:WeeklyReactionResults|null=null;
+export const getWeeklyReactionResults=()=>weeklyResults;
 let evaluations:Record<string,LineEvaluationResult|null>={};
 let epoch='', sequence=-1;
 const listeners=new Set<()=>void>();
@@ -19,7 +22,7 @@ export function receiveReactionSnapshot(state:any) {
   if(!state||typeof state.epoch!=='string'||!Number.isInteger(state.sequence)||!Array.isArray(state.trades)||!state.evaluations)return;
   observeServerTime(state.serverTime);
   if(state.epoch===epoch&&state.sequence<=sequence)return;
-  epoch=state.epoch;sequence=state.sequence;trades=state.trades;evaluations=state.evaluations;
+  epoch=state.epoch;sequence=state.sequence;trades=state.trades;evaluations=state.evaluations;weeklyResults=state.weeklyResults??null;
   listeners.forEach(fn=>fn());
 }
 let subscribers=0, stream:EventSource|null=null, timer:ReturnType<typeof setInterval>|null=null;
@@ -28,7 +31,7 @@ export function connectReactionAuthority(isAdmin=false) {
   if(++subscribers===1) {
     resync();timer=setInterval(resync,30000);
     document.addEventListener('visibilitychange',resync);
-    const connection=new EventSource('/api/reactions/stream'+(isAdmin?'?admin=1':''));
+    const connection=new EventSource('/api/reactions/stream');
     stream=connection;
     connection.onmessage=e=>{if(stream!==connection)return;try{receiveReactionSnapshot(JSON.parse(e.data));}catch{}};
     connection.onopen=()=>{if(stream===connection)resync();};
@@ -37,8 +40,8 @@ export function connectReactionAuthority(isAdmin=false) {
     if(--subscribers===0) {
       stream?.close();stream=null;if(timer)clearInterval(timer);timer=null;
       document.removeEventListener('visibilitychange',resync);
-      // Never retain an administrator's trade details after logout/role changes.
-      trades=[];evaluations={};epoch='';sequence=-1;
+      // Clear the shared view when its final subscriber disconnects.
+      trades=[];weeklyResults=null;evaluations={};epoch='';sequence=-1;
       listeners.forEach(fn=>fn());
     }
   };

@@ -157,10 +157,10 @@ export interface StopLossInfo {
 export function calculateStopLossForReactionZone(
   linePrice: number,
   direction: 'sell' | 'buy',
-  targetPoints: number = 25,
+  targetPoints: number = 30,
   symbol = ''
 ): StopLossInfo {
-  const points = Math.min(35, Math.max(25, Number.isFinite(targetPoints) ? targetPoints : 25));
+  const points = Math.min(35, Math.max(30, Number.isFinite(targetPoints) ? targetPoints : 30));
   const unit = reactionPointUnit(symbol);
   const slDistance = points * unit.size;
   const decimals = unit.decimals;
@@ -255,7 +255,7 @@ function createConfirmationSignal(
   entryPrice = candle.close
 ): ReactionZoneSignal {
   const direction = bias === 'bearish' ? 'sell' : 'buy';
-  const stopLoss = calculateStopLossForReactionZone(entryPrice, direction, 25, symbol);
+  const stopLoss = calculateStopLossForReactionZone(entryPrice, direction, 30, symbol);
   const isSell = direction === 'sell';
   const time = parseCandleTimestamp(candle.time);
 

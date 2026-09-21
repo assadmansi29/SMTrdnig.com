@@ -1,3 +1,4 @@
+import {WeeklyTradeResults} from './chart/WeeklyTradeResults';
 import {serverNow} from '../services/serverClock';
 import { useInterfaceText } from '../hooks/useInterfaceText';
 import {ReactionTradePanel} from './chart/ReactionTradePanel';
@@ -343,7 +344,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   const ui = useInterfaceText();
   console.log('[FLOW: Step 4 - TradingViewWidget received symbol prop]:', { symbol, interval, activeStrategy });
   const { user, token: authToken } = useAuth();
-  const isOwnerOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.email === 'am29multibrand@gmail.com';
+  const isOwnerOrAdmin = user?.role === 'super_admin' || user?.role === 'admin';
   const isOwnerOrAdminRef = useRef<boolean>(isOwnerOrAdmin);
   isOwnerOrAdminRef.current = isOwnerOrAdmin;
 
@@ -351,14 +352,10 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   activeStrategyRef.current = activeStrategy;
 
   // View-Only enforcement for strategy views:
-  // ONLY admin/owner can create, edit, move, delete, or save drawings inside these 3 strategy views.
+  // Only Admin and Super Admin can create, edit, move, delete, or save chart objects.
   // Regular visitors/users are strictly VIEW-ONLY.
-  const effectiveDrawingTools = Boolean(
-    isOwnerOrAdmin
-      ? enableDrawingTools || Boolean(activeStrategy)
-      : enableDrawingTools && !activeStrategy
-  );
-  const effectiveHideSideToolbar = hideSideToolbar !== undefined ? hideSideToolbar : !effectiveDrawingTools;
+  const effectiveDrawingTools = isOwnerOrAdmin && (enableDrawingTools || Boolean(activeStrategy));
+  const effectiveHideSideToolbar = !effectiveDrawingTools || (hideSideToolbar ?? false);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
@@ -437,6 +434,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, []);
 
   const handleUpdateSmcSettings = useCallback((newSettings: SmcLuxAlgoSettings) => {
+    if (!isOwnerOrAdminRef.current) return;
     setSmcSettings(newSettings);
     smcSettingsRef.current = newSettings;
     smcPrimitiveRef.current?.setSettings(newSettings);
@@ -665,6 +663,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // Dedicated Tool Selection Handler
   const handleSelectTool = useCallback((toolId: string | null) => {
+    if (!isOwnerOrAdminRef.current) return;
     if (drawingCreationRef.current) {
       drawingManagerRef.current?.removeDrawing(drawingCreationRef.current.drawing.id);
       drawingCreationRef.current = null;
@@ -813,6 +812,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [isOwnerOrAdmin, syncDrawingsList]);
 
   const handleUndo = useCallback(async () => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager || undoStackRef.current.length === 0) return;
     try {
@@ -840,6 +840,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [syncDrawingsList]);
 
   const handleRedo = useCallback(async () => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager || redoStackRef.current.length === 0) return;
     try {
@@ -1504,6 +1505,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 6. Delete Selected Drawing (In-Memory Canvas Modification Only - Persisted ONLY on "Save Strategy")
   const handleDeleteSelected = useCallback(() => {
+    if (!isOwnerOrAdminRef.current) return;
     if (!selectedDrawingId) return;
     const manager = drawingManagerRef.current;
     if (manager) {
@@ -1517,6 +1519,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 7. Clear All Drawings (MANUAL ONLY with Explicit User Confirmation)
   const handleClearAll = useCallback(async () => {
+    if (!isOwnerOrAdminRef.current) return;
     const currentStrat = activeStrategyRef.current || 'default';
     const viewKey = getStrategyStorageKey(symbol, currentStrat);
     if (drawingViewRef.current?.key !== viewKey || !isDrawingsLoadedRef.current) return;
@@ -1577,6 +1580,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
   // 7.1 Object Tree & Drawing Manager Actions (In-Memory Canvas Operations)
   const handleToggleDrawingVisibility = useCallback((id: string) => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager) return;
     const d = manager.getDrawing(id);
@@ -1588,6 +1592,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [syncDrawingsList]);
 
   const handleToggleDrawingLock = useCallback((id: string) => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager) return;
     const d = manager.getDrawing(id);
@@ -1599,6 +1604,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [syncDrawingsList]);
 
   const handleToggleAllVisibility = useCallback(() => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager) return;
     const all = manager.getAllDrawings() || [];
@@ -1614,6 +1620,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [syncDrawingsList]);
 
   const handleToggleAllLock = useCallback(() => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager) return;
     const all = manager.getAllDrawings() || [];
@@ -1629,6 +1636,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   }, [syncDrawingsList]);
 
   const handleDeleteIndividualDrawing = useCallback((id: string) => {
+    if (!isOwnerOrAdminRef.current) return;
     const manager = drawingManagerRef.current;
     if (!manager) return;
     pushUndoSnapshot();
@@ -3283,7 +3291,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
       )}
 
       {/* 3.1 TradingView-style Object Tree Panel */}
-      {enableDrawingTools && (
+      {effectiveDrawingTools && (
         <ObjectTreePanel
           isOpen={isObjectTreeOpen}
           onClose={() => setIsObjectTreeOpen(false)}
@@ -3368,6 +3376,7 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         {/* LuxAlgo Smart Money Concepts (SMC) Indicator Overlay - visible strictly and exclusively for SMC Strategy */}
         {activeStrategy === 'smc' && smcSettings.enabled && (
           <SmcLuxAlgoOverlay
+            canEdit={isOwnerOrAdmin}
             settings={smcSettings}
             onUpdateSettings={handleUpdateSmcSettings}
             analysis={smcAnalysis}
@@ -3395,17 +3404,19 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
         )}
       </div>
 
+      <WeeklyTradeResults strategy={activeStrategy || 'default'} />
+
       {/* 5. Chart Footer Attribution */}
       <div className="h-5 bg-[#070A10] border-t border-[#131B2E] px-3 flex items-center justify-between text-[9px] shrink-0 text-slate-500 select-none">
         <span className="font-mono">{ui(" Lightweight Charts Engine • ")}{symbol} ({formatIntervalDisplay(interval)})
         </span>
         <span>
-          {enableDrawingTools ? ui("Drawing Toolbar Active") : ui("Read-Only Mode")}
+          {effectiveDrawingTools ? ui("Drawing Toolbar Active") : ui("Read-Only Mode")}
         </span>
       </div>
 
       {/* 6. TradingView-style Drawing Properties Dialog */}
-      {enableDrawingTools && isPropertiesOpen && propertiesDrawing && (
+      {effectiveDrawingTools && isPropertiesOpen && propertiesDrawing && (
         <DrawingPropertiesDialog
           drawing={propertiesDrawing}
           chartApi={chartApiRef.current}

@@ -1,7 +1,7 @@
-import { Router, Response, Request } from 'express';
+import { Router, Response, Request, NextFunction } from 'express';
 import { getPool, Database } from '../db';
 import { ChartAnalysisDb } from '../db/chartAnalysisDb';
-import { authenticateToken, requireRole, requirePermission, AuthRequest } from '../auth';
+import { authenticateToken, requirePermission, AuthRequest } from '../auth';
 
 const router = Router();
 
@@ -77,7 +77,10 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 // Admin middleware chain
 const requireAdminContent = [
   authenticateToken,
-  requireRole(['super_admin', 'admin']),
+  (req:AuthRequest,res:Response,next:NextFunction)=>{
+    if(!['admin','super_admin'].includes(req.user?.role||'')){res.status(403).json({error:'Admin or Super Admin required'});return;}
+    next();
+  },
   requirePermission('canManageContent'),
 ];
 

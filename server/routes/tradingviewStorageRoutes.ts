@@ -1,7 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../db';
+import {authenticateToken, type AuthRequest} from '../auth';
 
 const router = Router();
+// Public chart reads never grant permission to save/delete chart objects.
+router.use((req:AuthRequest,res,next)=>{
+  if(['GET','HEAD','OPTIONS'].includes(req.method)){next();return;}
+  authenticateToken(req,res,()=>{
+    if(!['admin','super_admin'].includes(req.user?.role||'')){res.status(403).json({error:'Admin or Super Admin required'});return;}
+    next();
+  });
+});
 
 // Helper to get active PostgreSQL pool
 function getDbPool() {

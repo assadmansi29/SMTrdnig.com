@@ -5,6 +5,7 @@ import { SmcLuxAlgoSettingsModal } from './SmcLuxAlgoSettingsModal';
 import { Eye, EyeOff, Settings, Activity, TrendingUp, TrendingDown, Layers } from 'lucide-react';
 
 interface SmcLuxAlgoOverlayProps {
+  canEdit?: boolean;
   settings: SmcLuxAlgoSettings;
   onUpdateSettings: (newSettings: SmcLuxAlgoSettings) => void;
   analysis: SmcAnalysisResult | null;
@@ -16,6 +17,7 @@ export const SmcLuxAlgoOverlay: React.FC<SmcLuxAlgoOverlayProps> = ({
   onUpdateSettings,
   analysis,
   className = '',
+  canEdit = false,
 }) => {
   const ui = useInterfaceText();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -92,7 +94,7 @@ export const SmcLuxAlgoOverlay: React.FC<SmcLuxAlgoOverlayProps> = ({
           )}
 
           {/* Controls: Eye & Settings */}
-          <div className="flex items-center gap-0.5 pl-1 border-l border-slate-800">
+          {canEdit && <div className="flex items-center gap-0.5 pl-1 border-l border-slate-800">
             <button
               type="button"
               onClick={() => onUpdateSettings({ ...settings, enabled: !settings.enabled })}
@@ -114,7 +116,7 @@ export const SmcLuxAlgoOverlay: React.FC<SmcLuxAlgoOverlayProps> = ({
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* Expanded Institutional Context Info (Optional dropdown on click) */}
@@ -147,12 +149,12 @@ export const SmcLuxAlgoOverlay: React.FC<SmcLuxAlgoOverlayProps> = ({
       </div>
 
       {/* Settings Modal */}
-      <SmcLuxAlgoSettingsModal
+      {canEdit && <SmcLuxAlgoSettingsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         settings={settings}
         onUpdateSettings={onUpdateSettings}
-      />
+      />}
     </>
   );
 };

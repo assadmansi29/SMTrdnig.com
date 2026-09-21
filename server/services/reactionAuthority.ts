@@ -5,7 +5,7 @@ import {
   hasPendingReactionZoneSetup, suspendReactionZoneSignals, resetReactionZoneSignalState,
   type CandleData, type LineEvaluationResult,
 } from '../../src/components/chart/reactionZoneSignalCalculator';
-import {openReactionTrade, updateReactionTradePrice, getReactionTrades, clearReactionTrade} from './reactionTradeEngine';
+import {openReactionTrade, updateReactionTradePrice, getReactionTrades, getWeeklyReactionResults, clearReactionTrade} from './reactionTradeEngine';
 
 export interface PublishedReactionZone {
   id:string; symbol:string; strategy:string; price:number; zoneType:'strong'|'weak';
@@ -90,8 +90,9 @@ export class ReactionAuthority {
     }
     this.publish();
   }
+  refreshWeeklyResults() {this.publish();}
   snapshot() {
-    return {epoch:this.epoch,sequence:this.sequence,serverTime:this.now(),evaluations:this.evaluations,trades:getReactionTrades(),events:[...this.signalEvents.values()].slice(-100)};
+    return {epoch:this.epoch,sequence:this.sequence,serverTime:this.now(),evaluations:this.evaluations,trades:getReactionTrades(),weeklyResults:getWeeklyReactionResults(this.now()),events:[...this.signalEvents.values()].slice(-100)};
   }
   subscribe(listener:(snapshot:ReturnType<ReactionAuthority['snapshot']>)=>void) {
     this.events.on('state',listener);return()=>{this.events.off('state',listener);};
@@ -99,7 +100,7 @@ export class ReactionAuthority {
   clear(id:string) {clearReactionTrade(id);this.publish();}
   private publish() {
     const snapshot=this.snapshot();
-    const content=JSON.stringify([snapshot.evaluations,snapshot.trades,snapshot.events]);
+    const content=JSON.stringify([snapshot.evaluations,snapshot.trades,snapshot.events,snapshot.weeklyResults]);
     if(content===this.lastPublished)return;
     this.lastPublished=content;this.sequence++;
     this.events.emit('state',{...snapshot,sequence:this.sequence});

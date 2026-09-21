@@ -1,6 +1,5 @@
 import {useTranslation} from '../../context/LanguageContext';
 import React,{useEffect,useLayoutEffect,useState,useSyncExternalStore,useId} from 'react';
-import {useAuth} from '../../context/AuthContext';
 import {ChevronUp} from 'lucide-react';
 import {serverNow} from '../../services/serverClock';
 
@@ -8,16 +7,14 @@ import {getReactionTrades,subscribeReactionTrades,connectReactionAuthority,clear
 
 /** One shared server-state subscription, independent of the displayed chart/view. */
 export function ReactionTradeMonitor() {
-  const {user,token}=useAuth();
-  const isAdmin=user?.role==='admin'||user?.role==='super_admin';
-  useLayoutEffect(()=>connectReactionAuthority(isAdmin),[isAdmin,user?.id,token]);
+  useLayoutEffect(()=>connectReactionAuthority(),[]);
   return null;
 }
 
 export function ReactionTradePanel({symbol,strategy,isAdmin}:{symbol:string;strategy:string;isAdmin:boolean}) {
   const {t:text,dir}=useTranslation();
   const all=useSyncExternalStore(subscribeReactionTrades,getReactionTrades,getReactionTrades);
-  const trades=isAdmin?all.filter(t=>t.symbol===canonicalReactionSymbol(symbol)&&t.strategy===strategy):[];
+  const trades=all.filter(t=>t.symbol===canonicalReactionSymbol(symbol)&&t.strategy===strategy);
   const [now,setNow]=useState(serverNow());
   useEffect(()=>{if(!trades.length)return;const timer=setInterval(()=>setNow(serverNow()),1000);return()=>clearInterval(timer);},[trades.length]);
   if(!trades.length)return null;

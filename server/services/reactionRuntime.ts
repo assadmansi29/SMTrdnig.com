@@ -1,3 +1,4 @@
+import {reactionWeekStart} from './reactionWeeklyResults';
 import {getPool} from '../db';
 import {marketStreamManager, resolveRealtimeTvSymbol} from './marketStreamService';
 import {fetchMarketCandlesDirect} from '../routes/marketRoutes';
@@ -58,6 +59,11 @@ export function startReactionRuntime() {
   if(started)return;
   initializeReactionTradePersistence(resolve(process.env.REACTION_STATE_FILE||'.runtime/reaction-trades.json'));
   started=true;
+  const scheduleWeekReset=()=>{
+    const now=Date.now(),nextMonday=reactionWeekStart(now)+7*86400000;
+    setTimeout(()=>{reactionAuthority.refreshWeeklyResults();scheduleWeekReset();},Math.max(1,nextMonday-now)).unref();
+  };
+  scheduleWeekReset();
   marketStreamManager.onFiveMinuteBar((symbol,bar,time)=>reactionAuthority.observe(symbol,bar,time));
   drawingEvents.on('saved',()=>void reload());
   void reload();

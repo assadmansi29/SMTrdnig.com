@@ -19,11 +19,11 @@ for(const [symbol,level] of [['OANDA:XAUUSD',2345.2],['OANDA:EURUSD',1.1],['OAND
  check(`${symbol} ${side}: small reaction, separate retest, 60s validation, one entry`,()=>{
   const f=fixture(side,symbol,level);assert.equal(f.setup().activeSignal?.type,'test2');assert.equal(entries(f.tick(62,side*2)).length,0);
   const r=f.tick(63,side*2);assert.equal(r.activeSignal?.direction,side>0?'bullish':'bearish');assert.equal(r.activeSignal?.validation,'test2-60s');assert.equal(r.activeSignal?.entryAt,(start+63)*1000);
-  assert.ok(Math.abs(Math.abs(r.activeSignal!.entryPrice!-r.activeSignal!.slPrice!)/f.unit-25)<1e-6);assert.equal(entries(f.tick(80,side*3)).length,1);
+  assert.ok(Math.abs(Math.abs(r.activeSignal!.entryPrice!-r.activeSignal!.slPrice!)/f.unit-30)<1e-6);assert.equal(entries(f.tick(80,side*3)).length,1);
  });
  check(`${symbol} ${side}: ten-point boundary and existing SL units`,()=>{
   const u=reactionPointUnit(symbol).size;assert.ok(isWithinReactionEntryDistance(level+side*10*u,level,symbol));assert.ok(!isWithinReactionEntryDistance(level+side*10.01*u,level,symbol));
-  for(const [input,expected] of [[20,25],[30,30],[40,35]])assert.equal(calculateStopLossForReactionZone(level,side>0?'buy':'sell',input,symbol).slPoints,expected);
+  for(const [input,expected] of [[20,30],[25,30],[30,30],[35,35],[40,35]])assert.equal(calculateStopLossForReactionZone(level,side>0?'buy':'sell',input,symbol).slPoints,expected);
   const f=fixture(side,symbol,level);f.setup();assert.ok(f.tick(63,side*10).activeSignal?.entryPrice);
  });
 }
