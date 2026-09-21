@@ -13,17 +13,18 @@ let reloadAgain=false;
 const pinned=new Set<string>();
 const seeded=new Set<string>();
 const seeding=new Set<string>();
-async function seed(symbol:string) {
-  if(seeded.has(symbol)||seeding.has(symbol))return;
-  seeding.add(symbol);
+async function seed(symbol:string,interval:string) {
+  const key=JSON.stringify([symbol,interval]);
+  if(seeded.has(key)||seeding.has(key))return;
+  seeding.add(key);
   try {
-    const candles=await fetchMarketCandlesDirect(symbol,'5',500);
+    const candles=await fetchMarketCandlesDirect(symbol,interval,500);
     if(candles.length<2)return;
-    reactionAuthority.seed(symbol,candles);
-    marketStreamManager.updateLiveCandleInCache(symbol,'5',candles.at(-1)!);
-    seeded.add(symbol);
+    reactionAuthority.seed(symbol,candles,interval);
+    marketStreamManager.updateLiveCandleInCache(symbol,interval,candles.at(-1)!);
+    seeded.add(key);
   } catch {console.warn('[Reaction authority] Waiting for market history:',symbol);}
-  finally {seeding.delete(symbol);}
+  finally {seeding.delete(key);}
 }
 async function reload() {
   if(loading){reloadAgain=true;return;}
@@ -50,7 +51,7 @@ async function reload() {
     reactionAuthority.setZones(zones);
     for(const symbol of new Set([...zones.map(z=>z.symbol),...getReactionTrades().map(t=>t.symbol)])) {
       if(!pinned.has(symbol)) {pinned.add(symbol);marketStreamManager.subscribeSymbol(symbol,symbol);}
-      void seed(symbol);
+      for(const interval of ['1','5'])void seed(symbol,interval);
     }
   } catch {console.warn('[Reaction authority] Published zones unavailable; retaining current state.');}
   finally {loading=false;if(reloadAgain){reloadAgain=false;void reload();}}
@@ -64,9 +65,9 @@ export function startReactionRuntime() {
     setTimeout(()=>{reactionAuthority.refreshWeeklyResults();scheduleWeekReset();},Math.max(1,nextMonday-now)).unref();
   };
   scheduleWeekReset();
-  marketStreamManager.onFiveMinuteBar((symbol,bar,time)=>reactionAuthority.observe(symbol,bar,time));
+  marketStreamManager.onReactionBar((symbol,bar,time,interval)=>reactionAuthority.observe(symbol,bar,time,interval));
   drawingEvents.on('saved',()=>void reload());
   void reload();
   // Recovery/configuration refresh only; live events never wait on this timer.
-  setInterval(()=>{void reload();for(const symbol of pinned)void seed(symbol);},30000).unref();
+  setInterval(()=>{void reload();for(const symbol of pinned)for(const interval of ['1','5'])void seed(symbol,interval);},30000).unref();
 }

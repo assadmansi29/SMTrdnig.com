@@ -1,11 +1,23 @@
 import { Router } from 'express';
-import { tv } from 'tradingview-api-adapter';
-import { analyzeBook, analyzeCandles, LiquidityReport } from '../../src/utils/liquidityAnalysis';
+import {fetchMarketCandlesDirect} from './marketRoutes';
+import {marketStreamManager} from '../services/marketStreamService';
+import {createLiquidityCandleReader} from '../services/liquidityCandleReader';
+import {liquiditySymbol,liquidityInterval} from '../../src/utils/liquiditySymbols';
+import { analyzeBook, LiquidityReport } from '../../src/utils/liquidityAnalysis';
 
 const router = Router();
-const instruments: Record<string,string> = {XAUUSD:'OANDA:XAUUSD',NASDAQ:'OANDA:NAS100USD',US30:'OANDA:US30USD',WTI:'OANDA:WTICOUSD',BTCUSDT:'BINANCE:BTCUSDT'};
-// Reader-only client/cache: no interaction with chart subscriptions or storage.
-const client=tv();
+const readCandles=createLiquidityCandleReader({history:fetchMarketCandlesDirect,
+  liveBars:(symbol,interval,bars)=>marketStreamManager.mergeCurrentBars(symbol,interval,bars),
+  quote:symbol=>marketStreamManager.getLastKnownTick(symbol)});
+// One reader lease per OANDA instrument, released after the reader stops polling.
+// Existing chart subscriptions keep their own independent reference counts.
+const leases=new Map<string,ReturnType<typeof setTimeout>>();
+function keepReaderFeed(symbol:string) {
+  const old=leases.get(symbol);
+  if(old)clearTimeout(old);else marketStreamManager.subscribeSymbol(symbol,symbol);
+  const timer=setTimeout(()=>{leases.delete(symbol);marketStreamManager.unsubscribeSymbol(symbol);},60000);
+  timer.unref();leases.set(symbol,timer);
+}
 const cache=new Map<string,{data:LiquidityReport;expires:number}>();
 const pending=new Map<string,Promise<LiquidityReport>>();
 async function json(path:string) {
@@ -13,34 +25,32 @@ async function json(path:string) {
   if(!res.ok) throw new Error(`Binance market data unavailable (${res.status})`);
   return res.json();
 }
-async function read(symbol:string):Promise<LiquidityReport> {
-  if(symbol==='BTCUSDT') {
+async function read(symbol:string,interval:string):Promise<LiquidityReport> {
+  if(symbol==='BINANCE:BTCUSDT') {
     const [depth,trades]=await Promise.all([json('depth?symbol=BTCUSDT&limit=100'),json('aggTrades?symbol=BTCUSDT&limit=500')]);
     const data=analyzeBook(depth,trades);
-    return {...data,symbol,source:'Binance spot · public depth + aggregate trades',kind:'book',observedAt:Date.now(),profile:[],
+    return {...data,symbol:'BTCUSDT',source:'Binance spot · public depth + aggregate trades',kind:'book',observedAt:Date.now(),profile:[],
       pressure:data.buyVolume>data.sellVolume?'Buyer-initiated traded volume leads':'Seller-initiated traded volume leads',
       sweep:'Not inferred from depth snapshots',absorption:'Not confirmed — requires synchronized depth and trade history',
       notes:['Real displayed liquidity on Binance only; 100 levels per side, sampled every 5 seconds.','Sizes are aggregated BTC at each price, not individual or institutional orders. Orders can cancel.','Imbalance uses quote notional in the returned depth; trade pressure uses the latest 500 aggregate trades.']};
   }
-  let timer:ReturnType<typeof setTimeout> | undefined;
-  try {
-    const rows=await Promise.race([client.symbol(instruments[symbol]).candles({timeframe:'5',count:288}),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('OANDA candle request timed out')),12000);})]);
-    const data=analyzeCandles(rows.map(c=>({time:Number(c.time),open:Number(c.open),high:Number(c.high),low:Number(c.low),close:Number(c.close),volume:Number(c.volume)})));
-    return {...data,symbol,kind:'estimated',source:'OANDA candles via existing TradingView adapter',observedAt:Date.now(),imbalance:null,
-      absorption:'Unavailable from OHLC candles',notes:['Estimated price-interaction levels, not real resting orders or institutional liquidity.','5-minute candles; prior 20 closed bars define nearby levels. A range sweep is a price-pattern candidate only.',data.hasVolume?'Activity profile allocates provider volume to each candle’s typical price; not exchange volume-at-price.':'No provider volume: profile shows candle counts at typical prices, not traded volume.','Snapshots refresh every 30 seconds; the candle timestamp shows whether the market/feed is current.']};
-  } finally {if(timer)clearTimeout(timer);}
+  keepReaderFeed(symbol);
+  return readCandles(symbol,interval);
 }
 router.get('/',async(req,res)=>{
-  const symbol=String(req.query.symbol||'BTCUSDT').toUpperCase();
-  if(!instruments[symbol]){res.status(400).json({error:'Unsupported liquidity instrument'});return;}
+  let symbol:string,interval:string;
+  try {symbol=liquiditySymbol(String(req.query.symbol||'BTCUSDT'));interval=liquidityInterval(String(req.query.interval||'5')).interval;}
+  catch(error){res.status(400).json({error:error instanceof Error?error.message:'Unsupported liquidity instrument'});return;}
+  const key=JSON.stringify([symbol,symbol==='BINANCE:BTCUSDT'?'book':interval]);
   res.setHeader('Cache-Control','no-store');
-  const old=cache.get(symbol);
+  const old=cache.get(key);
   if(old && old.expires>Date.now()){res.json(old.data);return;}
   try {
-    let work=pending.get(symbol);
-    if(!work){work=read(symbol);pending.set(symbol,work);work.finally(()=>pending.delete(symbol)).catch(()=>{});}
+    let work=pending.get(key);
+    if(!work){work=read(symbol,interval);pending.set(key,work);work.finally(()=>pending.delete(key)).catch(()=>{});}
     const data=await work;
-    cache.set(symbol,{data,expires:Date.now()+(symbol==='BTCUSDT'?5000:30000)});
+    cache.set(key,{data,expires:Date.now()+5000});
+    if(cache.size>64)cache.delete(cache.keys().next().value!);
     res.json(data);
   }catch(error){res.status(503).json({error:error instanceof Error?error.message:'Liquidity data unavailable'});}
 });

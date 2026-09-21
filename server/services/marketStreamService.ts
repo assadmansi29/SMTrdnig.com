@@ -61,6 +61,10 @@ interface SymbolSubscription {
 class MarketStreamManager {
   private recentBars=new Map<string,BarUpdate['bar'][]>();
   private tickListeners=new Set<(symbol:string,bar:BarUpdate['bar'],time:number)=>void>();
+  private reactionListeners=new Set<(symbol:string,bar:BarUpdate['bar'],time:number,interval:string)=>void>();
+  public onReactionBar(fn:(symbol:string,bar:BarUpdate['bar'],time:number,interval:string)=>void) {
+    this.reactionListeners.add(fn);return()=>{this.reactionListeners.delete(fn);};
+  }
   public onFiveMinuteBar(fn:(symbol:string,bar:BarUpdate['bar'],time:number)=>void) {
     this.tickListeners.add(fn);return()=>{this.tickListeners.delete(fn);};
   }
@@ -416,6 +420,7 @@ class MarketStreamManager {
         : {time,open:tick.price,high:tick.price,low:tick.price,close:tick.price,volume:0};
       sub.activeBars.set(interval,bar);
       this.broadcastBar(sub.tvSymbol,interval,bar,now);
+      if(interval==='1'||interval==='5')for(const fn of this.reactionListeners)fn(sub.tvSymbol,bar,now,interval);
       if(interval==='5')for(const fn of this.tickListeners)fn(sub.tvSymbol,bar,now);
     }
 

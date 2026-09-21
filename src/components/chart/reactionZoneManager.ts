@@ -677,7 +677,7 @@ export class ReactionZoneDrawing extends HorizontalLine {
 
   updateSignals(): void {
     const context=this.marketContext;
-    this.signalEvaluation=context.interval==='5' ? getReactionEvaluation(context.symbol,context.strategy,this.id) : null;
+    this.signalEvaluation=['1','5'].includes(context.interval) ? getReactionEvaluation(context.symbol,context.strategy,this.id,context.interval) : null;
   }
 
   override attached(params: Parameters<HorizontalLine['attached']>[0]): void {

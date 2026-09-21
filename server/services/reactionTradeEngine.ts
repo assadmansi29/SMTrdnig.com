@@ -47,7 +47,9 @@ export function openReactionTrade(signal:ReactionZoneSignal, symbol:string,strat
   if(completedTrades.has(id) || consumed.includes(id) || trades.some(t=>t.symbol===symbol&&t.strategy===strategy&&t.zoneId===zoneId))return;
   const unit=reactionPointUnit(symbol), side=signal.direction==='bullish'?1:-1;
   const entry=signal.entryPrice, openedAt=signal.entryAt||Date.now();
-  trades=[...trades,{id,zoneId,symbol,strategy,direction:side===1?'buy':'sell',entry,current:entry,stop:entry-side*30*unit.size,tp1:entry+side*35*unit.size,tp2:entry+side*70*unit.size,tp1Hit:false,tp2Hit:false,openedAt,updatedAt:openedAt,unit:unit.size,unitLabel:unit.label,decimals:unit.decimals}];
+  const stop=signal.validation==='test-candle-close'?signal.slPrice:entry-side*30*unit.size;
+  if(!Number.isFinite(stop)||side*(entry-stop!)<=0)return;
+  trades=[...trades,{id,zoneId,symbol,strategy,direction:side===1?'buy':'sell',entry,current:entry,stop:stop!,tp1:entry+side*35*unit.size,tp2:entry+side*70*unit.size,tp1Hit:false,tp2Hit:false,openedAt,updatedAt:openedAt,unit:unit.size,unitLabel:unit.label,decimals:unit.decimals}];
   consumed=[...consumed,id].slice(-500);
   publish(true);
 }

@@ -15,8 +15,8 @@ export const getReactionTrades=()=>trades;
 export function canonicalReactionSymbol(symbol:string) {
   try{return resolveRealtimeTvSymbol(symbol);}catch{return symbol;}
 }
-export function getReactionEvaluation(symbol:string,strategy:string,id:string) {
-  return evaluations[JSON.stringify([canonicalReactionSymbol(symbol),strategy,id])]||null;
+export function getReactionEvaluation(symbol:string,strategy:string,id:string,interval='5') {
+  return evaluations[JSON.stringify(interval==='5'?[canonicalReactionSymbol(symbol),strategy,id]:[canonicalReactionSymbol(symbol),strategy,id,interval])]||null;
 }
 export function receiveReactionSnapshot(state:any) {
   if(!state||typeof state.epoch!=='string'||!Number.isInteger(state.sequence)||!Array.isArray(state.trades)||!state.evaluations)return;

@@ -10,7 +10,7 @@ import {openReactionTrade, updateReactionTradePrice, getReactionTrades, getWeekl
 export interface PublishedReactionZone {
   id:string; symbol:string; strategy:string; price:number; zoneType:'strong'|'weak';
 }
-export const reactionKey=(symbol:string,strategy:string,id:string)=>JSON.stringify([symbol,strategy,id]);
+export const reactionKey=(symbol:string,strategy:string,id:string,interval='5')=>JSON.stringify(interval==='5'?[symbol,strategy,id]:[symbol,strategy,id,interval]);
 
 /** One instance per market server, independent of browser/chart lifetimes. */
 export class ReactionAuthority {
@@ -31,56 +31,59 @@ export class ReactionAuthority {
     for(const old of this.zones) {
       const key=reactionKey(old.symbol,old.strategy,old.id), replacement=next.get(key);
       if(!replacement || replacement.price!==old.price) {
-        resetReactionZoneSignalState(key); delete this.evaluations[key];
+        for(const interval of ['1','5']) {const scoped=reactionKey(old.symbol,old.strategy,old.id,interval);resetReactionZoneSignalState(scoped);delete this.evaluations[scoped];}
       }
     }
     this.zones=zones;
     this.publish();
   }
-  seed(symbol:string,candles:CandleData[]) {
-    if(this.candles.has(symbol)||candles.length<2)return;
+  seed(symbol:string,candles:CandleData[],interval='5') {
+    if(!['1','5'].includes(interval))return;
+    const feed=JSON.stringify([symbol,interval]),seconds=Number(interval)*60;
+    if(this.candles.has(feed)||candles.length<2)return;
     const ordered=[...new Map(candles.map(c=>[parseCandleTimestamp(c.time),{...c,time:parseCandleTimestamp(c.time)}])).values()]
-      .filter(c=>c.time>0&&c.time%300===0&&c.time*1000<=this.now())
+      .filter(c=>c.time>0&&c.time%seconds===0&&c.time*1000<=this.now())
       .sort((a,b)=>Number(a.time)-Number(b.time));
-    this.candles.set(symbol,ordered.slice(-500));
+    this.candles.set(feed,ordered.slice(-500));
     // Initialize from history without emitting historical trades.
     for(const z of this.zones.filter(z=>z.symbol===symbol))
-      evaluateReactionZoneSignals(z.price,ordered,z.zoneType,reactionKey(z.symbol,z.strategy,z.id),'5',symbol,this.now(),false,false);
+      evaluateReactionZoneSignals(z.price,ordered,z.zoneType,reactionKey(z.symbol,z.strategy,z.id,interval),interval,symbol,this.now(),false,false);
   }
-  observe(symbol:string,bar:CandleData,observedAt:number) {
-    const now=this.now(),time=parseCandleTimestamp(bar.time),last=this.lastObservation.get(symbol);
+  observe(symbol:string,bar:CandleData,observedAt:number,interval='5') {
+    if(!['1','5'].includes(interval))return;
+    const feed=JSON.stringify([symbol,interval]),seconds=Number(interval)*60;
+    const now=this.now(),time=parseCandleTimestamp(bar.time),last=this.lastObservation.get(feed);
     if(!Number.isFinite(observedAt)||observedAt>now+1000||now-observedAt>15000||(last!==undefined&&observedAt<=last)
-      ||time%300!==0||observedAt<time*1000||observedAt>=time*1000+300000
+      ||time%seconds!==0||observedAt<time*1000||observedAt>=(time+seconds)*1000
       ||![bar.open,bar.high,bar.low,bar.close].every(p=>Number.isFinite(p)&&p>0)
       ||bar.high<Math.max(bar.open,bar.close)||bar.low>Math.min(bar.open,bar.close))return;
-    const candles=this.candles.get(symbol);
+    const candles=this.candles.get(feed);
     if(!candles?.length||time<parseCandleTimestamp(candles.at(-1)!.time))return;
     const previous=candles.at(-1)!;
     if(time===parseCandleTimestamp(previous.time)&&(bar.open!==previous.open||bar.high<previous.high||bar.low>previous.low))return;
-    this.lastObservation.set(symbol,observedAt);
+    this.lastObservation.set(feed,observedAt);
     if(time===parseCandleTimestamp(candles.at(-1)!.time))candles[candles.length-1]={...bar,time};
     else candles.push({...bar,time});
     if(candles.length>500)candles.shift();
     updateReactionTradePrice(symbol,bar.close,observedAt);
     const zones=this.zones.filter(z=>z.symbol===symbol),unit=reactionPointUnit(symbol).size;
     const distance=(z:PublishedReactionZone)=>Math.abs(z.price-bar.close)/unit;
-    const keyOf=(z:PublishedReactionZone)=>reactionKey(symbol,z.strategy,z.id);
-    // One live setup per instrument, including across strategies. Keep its identity
-    // while inside the entry area so adjacent levels cannot alternate every tick.
-    const current=zones.find(z=>keyOf(z)===this.active.get(symbol));
-    const closest=[...zones].sort((a,b)=>distance(a)-distance(b)
-      ||Number(b.zoneType==='strong')-Number(a.zoneType==='strong')||keyOf(a).localeCompare(keyOf(b)))[0];
-    const selected=current&&distance(current)<=10+1e-8&&(hasPendingReactionZoneSetup(keyOf(current))||current===closest)
-      ?current:closest&&distance(closest)<=4+1e-8?closest:undefined;
-    this.active.set(symbol,selected?keyOf(selected):'');
+    const keyOf=(z:PublishedReactionZone)=>reactionKey(symbol,z.strategy,z.id,interval);
+    // Keep the touched level through its following candle; a valid wick break
+    // naturally moves away. The evaluator cancels any penetration or late close.
+    const current=zones.find(z=>keyOf(z)===this.active.get(feed));
+    const closest=[...zones].filter(z=>bar.low<=z.price&&bar.high>=z.price)
+      .sort((a,b)=>distance(a)-distance(b)||Number(b.zoneType==='strong')-Number(a.zoneType==='strong')||keyOf(a).localeCompare(keyOf(b)))[0];
+    const selected=current&&hasPendingReactionZoneSetup(keyOf(current))?current:closest;
+    this.active.set(feed,selected?keyOf(selected):'');
     for(const z of zones) {
       const key=keyOf(z),strategy=z.strategy;
       // Initialize newly published levels without replaying history as signals.
-      evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,'5',symbol,observedAt,false,false);
+      evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,interval,symbol,observedAt,false,false);
       if(z!==selected) {
         suspendReactionZoneSignals(key,candles,observedAt);delete this.evaluations[key];continue;
       }
-      const result=evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,'5',symbol,observedAt,true,true);
+      const result=evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,interval,symbol,observedAt,true,true);
       for(const signal of result.signals)if(!this.signalEvents.has(signal.id)) {
         this.signalEvents.set(signal.id,{id:signal.id,createdAt:observedAt,symbol,strategy,zoneId:z.id,signal});
       }

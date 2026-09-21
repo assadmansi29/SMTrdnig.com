@@ -1,3 +1,4 @@
+import {publishLiquidityChartContext} from '../services/liquidityChartContext';
 import {WeeklyTradeResults} from './chart/WeeklyTradeResults';
 import {serverNow} from '../services/serverClock';
 import { useInterfaceText } from '../hooks/useInterfaceText';
@@ -342,6 +343,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
   onSelectStrategy,
 }) => {
   const ui = useInterfaceText();
+  const liquidityContextOwner=useRef<object>({});
+  useEffect(()=>publishLiquidityChartContext(liquidityContextOwner.current,{symbol,interval}),[symbol,interval]);
   console.log('[FLOW: Step 4 - TradingViewWidget received symbol prop]:', { symbol, interval, activeStrategy });
   const { user, token: authToken } = useAuth();
   const isOwnerOrAdmin = user?.role === 'super_admin' || user?.role === 'admin';

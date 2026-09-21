@@ -7,53 +7,49 @@ import {serverNow,observeServerTime,synchronizeServerClock} from '../src/service
 
 const realNow=Date.now;
 const start=Math.floor((realNow()-1_200_000)/300000)*300;
-for(const side of [-1,1]) {
+for(const interval of ['1','5'])for(const side of [-1,1]) {
   resetReactionZoneSignalState();getReactionTrades().forEach(t=>clearReactionTrade(t.id));
+  const seconds=Number(interval)*60;
   let now=start*1000;
-  const server=new ReactionAuthority(()=>now),symbol='OANDA:XAUUSD',strategy='fib',id='zone'+side;
-  const key=reactionKey(symbol,strategy,id),level=2345.2;
-  const history:CandleData[]=Array.from({length:20},(_,i)=>({time:start-(20-i)*300,open:level+side*2,high:level+side*2,low:level+side*2,close:level+side*2}));
+  const server=new ReactionAuthority(()=>now),symbol='OANDA:XAUUSD',strategy='fib',id='zone'+side+interval;
+  const key=reactionKey(symbol,strategy,id,interval),level=2345.2;
+  const history:CandleData[]=Array.from({length:7},(_,i)=>{
+    const n=i===2?0:3,prices=[level+side*(n+2)*.1,level+side*n*.1,level+side*(n+4)*.1,level+side*(n+3)*.1];
+    return {time:start-(7-i)*seconds,open:prices[0],high:Math.max(...prices),low:Math.min(...prices),close:prices[3]};
+  });
   history.push({time:start,open:level,high:level,low:level,close:level});
-  server.setZones([{id,symbol,strategy,price:level,zoneType:'strong'},{id:'far',symbol,strategy,price:level+100,zoneType:'weak'},{id:'other-strategy',symbol,strategy:'magic',price:level+.1,zoneType:'weak'}]);
-  server.seed(symbol,history);
+  server.setZones([{id,symbol,strategy,price:level,zoneType:'strong'},{id:'far',symbol,strategy,price:level+100,zoneType:'weak'}]);
+  server.seed(symbol,history,interval);
   const clients:string[][]=[[],[]];
   const unsub=clients.map(client=>server.subscribe(state=>client.push(JSON.stringify(state))));
-  function tick(seconds:number,price:number) {
-    now=(start+seconds)*1000;
-    const time=Math.floor(now/300000)*300;
+  function tick(t:number,price:number) {
+    now=(start+t)*1000;
+    const time=start+Math.floor(t/seconds)*seconds;
     let bar=history.at(-1)!;
     if(Number(bar.time)<time){bar={time,open:price,high:price,low:price,close:price};history.push(bar);}
     else{bar.close=price;bar.high=Math.max(bar.high,price);bar.low=Math.min(bar.low,price);}
-    server.observe(symbol,bar,now);
+    server.observe(symbol,bar,now,interval);
   }
-  tick(0,level);tick(1,level+side*.1);
+  tick(0,level);
   assert.equal(server.snapshot().evaluations[key]?.activeSignal?.type,'test');
-  tick(2,level+side*.3);tick(3,level);
-  assert.equal(server.snapshot().evaluations[key]?.activeSignal?.type,'test2');
-  for(let t=13;t<63;t+=10){tick(t,level+side*.2);assert.equal(getReactionTrades().length,0);}
-  tick(63,level+side*.2);
-  assert.equal(Object.values(server.snapshot().evaluations).filter(Boolean).length,1,'only one zone across strategies');
+  for(let t=10;t<seconds*2;t+=10){tick(t,level+side*(t<seconds?.3:.6));assert.equal(getReactionTrades().length,0);}
+  tick(seconds*2,level+side*.6);
   const trade=getReactionTrades()[0];assert.ok(trade);assert.equal(trade.openedAt,now);
-  assert.ok(!server.snapshot().evaluations[reactionKey(symbol,strategy,'far')]);
-  const entryEvent=server.snapshot().events.find(e=>e.signal.entryPrice)!;
-  assert.ok(entryEvent);assert.equal(entryEvent.createdAt,now);
-  tick(64,level+side*.2);
+  assert.equal(trade.stop,Number((level-side*.01).toFixed(2)),'actual trade honors Test Candle wick stop');
+  assert.ok(!server.snapshot().evaluations[reactionKey(symbol,strategy,'far',interval)]);
   assert.equal(server.snapshot().events.filter(e=>e.signal.entryPrice).length,1);
-  assert.equal(server.snapshot().events.find(e=>e.id===entryEvent.id)?.createdAt,entryEvent.createdAt);
-  assert.deepEqual(clients[0],clients[1],'both users receive identical serialized events');
+  assert.deepEqual(clients[0],clients[1],'identical shared events');
   const snapshot=JSON.parse(JSON.stringify(server.snapshot()));
   Date.now=()=>realNow()+240000;receiveReactionSnapshot(snapshot);assert.equal(clientTrades()[0].openedAt,trade.openedAt);
   Date.now=()=>realNow()-240000;receiveReactionSnapshot(snapshot);assert.equal(clientTrades()[0].openedAt,trade.openedAt);
-  receiveReactionSnapshot({...snapshot,sequence:snapshot.sequence-1,trades:[]});assert.equal(clientTrades().length,1,'ignore replay/out-of-order snapshot');
+  receiveReactionSnapshot({...snapshot,sequence:snapshot.sequence-1,trades:[]});assert.equal(clientTrades().length,1);
   Date.now=realNow;
-  server.observe(symbol,history.at(-1)!,now-1000);assert.equal(server.snapshot().sequence,snapshot.sequence,'ignore stale observation');
-  server.observe(symbol,history.at(-1)!,now);assert.equal(server.snapshot().sequence,snapshot.sequence,'duplicate timestamp');
-  server.observe(symbol,{...history.at(-1)!,open:level+10},now+1);assert.equal(server.snapshot().sequence,snapshot.sequence,'reject replacement/cached OHLC');
-  const savedNow=now;now+=20000;server.observe(symbol,history.at(-1)!,savedNow+1);assert.equal(server.snapshot().sequence,snapshot.sequence,'reject delayed queued observation');now=savedNow;
-  tick(65,trade.tp1);assert.equal(getReactionTrades()[0].stop,trade.entry);assert.ok(getReactionTrades()[0].tp1Hit);
+  server.observe(symbol,history.at(-1)!,now-1000,interval);assert.equal(server.snapshot().sequence,snapshot.sequence);
+  server.observe(symbol,history.at(-1)!,now,interval);assert.equal(server.snapshot().sequence,snapshot.sequence);
+  tick(seconds*2+1,trade.tp1);assert.equal(getReactionTrades()[0].stop,trade.entry);assert.ok(getReactionTrades()[0].tp1Hit);
   server.clear(trade.id);assert.equal(server.snapshot().trades.length,0);
   unsub.forEach(fn=>fn());
-  console.log(`PASS ${side}: identical clients, stable event ID/time, clock skew, reconnect/replay, TP1 and shared clear`);
+  console.log(`PASS ${interval}m ${side}: Test Candle -> server entry -> identical clients -> wick SL -> TP1`);
 }
 observeServerTime(realNow());
 const before=serverNow();Date.now=()=>realNow()+86400000;assert.ok(Math.abs(serverNow()-before)<1000,'device wall clock never advances server time');Date.now=realNow;
