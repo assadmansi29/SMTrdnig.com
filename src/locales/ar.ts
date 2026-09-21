@@ -14,6 +14,8 @@ export const ar: Record<TranslationKey, string> = {
   reactionPips: "بيب",
   reactionBuyActive: "شراء نشط",
   reactionSellActive: "بيع نشط",
+  reactionExpandTrade: "توسيع تفاصيل الصفقة",
+  reactionCollapseTrade: "طي تفاصيل الصفقة",
   reactionActiveTrades: "صفقات مناطق التفاعل النشطة",
   reactionEntry: "الدخول",
   reactionCurrent: "الحالي",

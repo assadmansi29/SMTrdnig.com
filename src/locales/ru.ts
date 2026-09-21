@@ -14,6 +14,8 @@ export const ru: Record<TranslationKey, string> = {
   reactionPips: "Пипсы",
   reactionBuyActive: "АКТИВНАЯ ПОКУПКА",
   reactionSellActive: "АКТИВНАЯ ПРОДАЖА",
+  reactionExpandTrade: "Развернуть детали сделки",
+  reactionCollapseTrade: "Свернуть детали сделки",
   reactionActiveTrades: "Активные сделки зон реакции",
   reactionEntry: "Вход",
   reactionCurrent: "Текущая цена",

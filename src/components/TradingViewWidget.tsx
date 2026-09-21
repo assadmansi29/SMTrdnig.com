@@ -1869,6 +1869,8 @@ export const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({
 
     // Prioritized pointer/mouse down capture handler
     const handlePointerDownCapture = (e: MouseEvent | TouchEvent) => {
+      // Trade-card disclosure controls must not select, move, or create drawings below them.
+      if (e.target instanceof Element && e.target.closest('[data-reaction-trade-panel]')) return;
       const currentManager = drawingManagerRef.current;
       const currentChart = chartApiRef.current;
       const currentContainer = chartContainerRef.current;

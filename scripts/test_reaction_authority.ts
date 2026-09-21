@@ -12,9 +12,9 @@ for(const side of [-1,1]) {
   let now=start*1000;
   const server=new ReactionAuthority(()=>now),symbol='OANDA:XAUUSD',strategy='fib',id='zone'+side;
   const key=reactionKey(symbol,strategy,id),level=2345.2;
-  const history:CandleData[]=Array.from({length:20},(_,i)=>({time:start-(20-i)*300,open:level+side*.2,high:level+.3,low:level-.3,close:level+side*.2}));
+  const history:CandleData[]=Array.from({length:20},(_,i)=>({time:start-(20-i)*300,open:level+side*2,high:level+side*2,low:level+side*2,close:level+side*2}));
   history.push({time:start,open:level,high:level,low:level,close:level});
-  server.setZones([{id,symbol,strategy,price:level,zoneType:'strong'},{id:'far',symbol,strategy,price:level+100,zoneType:'weak'}]);
+  server.setZones([{id,symbol,strategy,price:level,zoneType:'strong'},{id:'far',symbol,strategy,price:level+100,zoneType:'weak'},{id:'other-strategy',symbol,strategy:'magic',price:level+.1,zoneType:'weak'}]);
   server.seed(symbol,history);
   const clients:string[][]=[[],[]];
   const unsub=clients.map(client=>server.subscribe(state=>client.push(JSON.stringify(state))));
@@ -28,14 +28,16 @@ for(const side of [-1,1]) {
   }
   tick(0,level);tick(1,level+side*.1);
   assert.equal(server.snapshot().evaluations[key]?.activeSignal?.type,'test');
-  tick(300,level+side*1.2);
-  for(let t=310;t<360;t+=10){tick(t,level+side*2);assert.equal(getReactionTrades().length,0);}
-  tick(360,level+side*2);
+  tick(2,level+side*.3);tick(3,level);
+  assert.equal(server.snapshot().evaluations[key]?.activeSignal?.type,'test2');
+  for(let t=13;t<63;t+=10){tick(t,level+side*.2);assert.equal(getReactionTrades().length,0);}
+  tick(63,level+side*.2);
+  assert.equal(Object.values(server.snapshot().evaluations).filter(Boolean).length,1,'only one zone across strategies');
   const trade=getReactionTrades()[0];assert.ok(trade);assert.equal(trade.openedAt,now);
   assert.ok(!server.snapshot().evaluations[reactionKey(symbol,strategy,'far')]);
   const entryEvent=server.snapshot().events.find(e=>e.signal.entryPrice)!;
   assert.ok(entryEvent);assert.equal(entryEvent.createdAt,now);
-  tick(361,level+side*2);
+  tick(64,level+side*.2);
   assert.equal(server.snapshot().events.filter(e=>e.signal.entryPrice).length,1);
   assert.equal(server.snapshot().events.find(e=>e.id===entryEvent.id)?.createdAt,entryEvent.createdAt);
   assert.deepEqual(clients[0],clients[1],'both users receive identical serialized events');
@@ -45,7 +47,10 @@ for(const side of [-1,1]) {
   receiveReactionSnapshot({...snapshot,sequence:snapshot.sequence-1,trades:[]});assert.equal(clientTrades().length,1,'ignore replay/out-of-order snapshot');
   Date.now=realNow;
   server.observe(symbol,history.at(-1)!,now-1000);assert.equal(server.snapshot().sequence,snapshot.sequence,'ignore stale observation');
-  tick(370,trade.tp1);assert.equal(getReactionTrades()[0].stop,trade.entry);assert.ok(getReactionTrades()[0].tp1Hit);
+  server.observe(symbol,history.at(-1)!,now);assert.equal(server.snapshot().sequence,snapshot.sequence,'duplicate timestamp');
+  server.observe(symbol,{...history.at(-1)!,open:level+10},now+1);assert.equal(server.snapshot().sequence,snapshot.sequence,'reject replacement/cached OHLC');
+  const savedNow=now;now+=20000;server.observe(symbol,history.at(-1)!,savedNow+1);assert.equal(server.snapshot().sequence,snapshot.sequence,'reject delayed queued observation');now=savedNow;
+  tick(65,trade.tp1);assert.equal(getReactionTrades()[0].stop,trade.entry);assert.ok(getReactionTrades()[0].tp1Hit);
   server.clear(trade.id);assert.equal(server.snapshot().trades.length,0);
   unsub.forEach(fn=>fn());
   console.log(`PASS ${side}: identical clients, stable event ID/time, clock skew, reconnect/replay, TP1 and shared clear`);

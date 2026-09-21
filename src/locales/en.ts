@@ -12,6 +12,8 @@ export const en = {
   reactionPips: "Pips",
   reactionBuyActive: "BUY ACTIVE",
   reactionSellActive: "SELL ACTIVE",
+  reactionExpandTrade: "Expand trade details",
+  reactionCollapseTrade: "Collapse trade details",
   reactionActiveTrades: "Active Reaction Zone trades",
   reactionEntry: "Entry",
   reactionCurrent: "Current",

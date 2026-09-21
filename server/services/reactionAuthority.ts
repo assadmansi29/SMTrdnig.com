@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 import {
-  evaluateReactionZoneSignals, calculateAverageCandleRange, computeZoneTolerances,
+  evaluateReactionZoneSignals, reactionPointUnit, parseCandleTimestamp,
   hasPendingReactionZoneSetup, suspendReactionZoneSignals, resetReactionZoneSignalState,
   type CandleData, type LineEvaluationResult,
 } from '../../src/components/chart/reactionZoneSignalCalculator';
@@ -39,8 +39,8 @@ export class ReactionAuthority {
   }
   seed(symbol:string,candles:CandleData[]) {
     if(this.candles.has(symbol)||candles.length<2)return;
-    const ordered=[...new Map(candles.map(c=>[Number(c.time),c])).values()]
-      .filter(c=>Number.isFinite(Number(c.time))&&Number(c.time)*1000<=this.now())
+    const ordered=[...new Map(candles.map(c=>[parseCandleTimestamp(c.time),{...c,time:parseCandleTimestamp(c.time)}])).values()]
+      .filter(c=>c.time>0&&c.time%300===0&&c.time*1000<=this.now())
       .sort((a,b)=>Number(a.time)-Number(b.time));
     this.candles.set(symbol,ordered.slice(-500));
     // Initialize from history without emitting historical trades.
@@ -48,39 +48,45 @@ export class ReactionAuthority {
       evaluateReactionZoneSignals(z.price,ordered,z.zoneType,reactionKey(z.symbol,z.strategy,z.id),'5',symbol,this.now(),false,false);
   }
   observe(symbol:string,bar:CandleData,observedAt:number) {
-    if(!Number.isFinite(observedAt)||observedAt>this.now()+1000||observedAt<(this.lastObservation.get(symbol)||0))return;
+    const now=this.now(),time=parseCandleTimestamp(bar.time),last=this.lastObservation.get(symbol);
+    if(!Number.isFinite(observedAt)||observedAt>now+1000||now-observedAt>15000||(last!==undefined&&observedAt<=last)
+      ||time%300!==0||observedAt<time*1000||observedAt>=time*1000+300000
+      ||![bar.open,bar.high,bar.low,bar.close].every(p=>Number.isFinite(p)&&p>0)
+      ||bar.high<Math.max(bar.open,bar.close)||bar.low>Math.min(bar.open,bar.close))return;
     const candles=this.candles.get(symbol);
-    if(!candles?.length||Number(bar.time)<Number(candles.at(-1)!.time))return;
+    if(!candles?.length||time<parseCandleTimestamp(candles.at(-1)!.time))return;
+    const previous=candles.at(-1)!;
+    if(time===parseCandleTimestamp(previous.time)&&(bar.open!==previous.open||bar.high<previous.high||bar.low>previous.low))return;
     this.lastObservation.set(symbol,observedAt);
-    if(Number(bar.time)===Number(candles.at(-1)!.time))candles[candles.length-1]={...bar};
-    else candles.push({...bar});
+    if(time===parseCandleTimestamp(candles.at(-1)!.time))candles[candles.length-1]={...bar,time};
+    else candles.push({...bar,time});
     if(candles.length>500)candles.shift();
     updateReactionTradePrice(symbol,bar.close,observedAt);
-    const groups=new Map<string,PublishedReactionZone[]>();
-    for(const z of this.zones.filter(z=>z.symbol===symbol)) {
-      const group=groups.get(z.strategy)||[];group.push(z);groups.set(z.strategy,group);
-    }
-    const range=calculateAverageCandleRange(candles,20);
-    for(const [strategy,zones] of groups) {
-      const groupKey=JSON.stringify([symbol,strategy]);
-      const closest=[...zones].sort((a,b)=>Math.abs(a.price-bar.close)-Math.abs(b.price-bar.close))[0];
-      const threshold=Math.max(computeZoneTolerances(closest.price,range).touchTolerance*3,range);
-      const selected=Math.abs(closest.price-bar.close)<=threshold*(this.active.get(groupKey)===closest.id?1.2:1)?closest.id:'';
-      this.active.set(groupKey,selected);
-      for(const z of zones) {
-        const key=reactionKey(symbol,strategy,z.id), active=z.id===selected;
-        if(!active&&!hasPendingReactionZoneSetup(key)) {
-          suspendReactionZoneSignals(key,candles);delete this.evaluations[key];continue;
-        }
-        const result=evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,'5',symbol,observedAt,true,active);
-        for(const signal of result.signals)if(!this.signalEvents.has(signal.id)) {
-          this.signalEvents.set(signal.id,{id:signal.id,createdAt:observedAt,symbol,strategy,zoneId:z.id,signal});
-        }
-        if(result.activeSignal)openReactionTrade(result.activeSignal,symbol,strategy,z.id);
-        const signal=result.activeSignal;
-        if(active)this.evaluations[key]={...result,activeSignal:signal?.entryPrice&&!getReactionTrades().some(t=>t.symbol===symbol&&t.strategy===strategy&&t.zoneId===z.id)?null:signal};
-        else delete this.evaluations[key];
+    const zones=this.zones.filter(z=>z.symbol===symbol),unit=reactionPointUnit(symbol).size;
+    const distance=(z:PublishedReactionZone)=>Math.abs(z.price-bar.close)/unit;
+    const keyOf=(z:PublishedReactionZone)=>reactionKey(symbol,z.strategy,z.id);
+    // One live setup per instrument, including across strategies. Keep its identity
+    // while inside the entry area so adjacent levels cannot alternate every tick.
+    const current=zones.find(z=>keyOf(z)===this.active.get(symbol));
+    const closest=[...zones].sort((a,b)=>distance(a)-distance(b)
+      ||Number(b.zoneType==='strong')-Number(a.zoneType==='strong')||keyOf(a).localeCompare(keyOf(b)))[0];
+    const selected=current&&distance(current)<=10+1e-8&&(hasPendingReactionZoneSetup(keyOf(current))||current===closest)
+      ?current:closest&&distance(closest)<=4+1e-8?closest:undefined;
+    this.active.set(symbol,selected?keyOf(selected):'');
+    for(const z of zones) {
+      const key=keyOf(z),strategy=z.strategy;
+      // Initialize newly published levels without replaying history as signals.
+      evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,'5',symbol,observedAt,false,false);
+      if(z!==selected) {
+        suspendReactionZoneSignals(key,candles,observedAt);delete this.evaluations[key];continue;
       }
+      const result=evaluateReactionZoneSignals(z.price,candles,z.zoneType,key,'5',symbol,observedAt,true,true);
+      for(const signal of result.signals)if(!this.signalEvents.has(signal.id)) {
+        this.signalEvents.set(signal.id,{id:signal.id,createdAt:observedAt,symbol,strategy,zoneId:z.id,signal});
+      }
+      if(result.activeSignal)openReactionTrade(result.activeSignal,symbol,strategy,z.id);
+      const signal=result.activeSignal;
+      this.evaluations[key]={...result,activeSignal:signal?.entryPrice&&!getReactionTrades().some(t=>t.symbol===symbol&&t.strategy===strategy&&t.zoneId===z.id)?null:signal};
     }
     this.publish();
   }

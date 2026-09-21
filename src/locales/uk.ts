@@ -14,6 +14,8 @@ export const uk: Record<TranslationKey, string> = {
   reactionPips: "Піпси",
   reactionBuyActive: "АКТИВНА КУПІВЛЯ",
   reactionSellActive: "АКТИВНИЙ ПРОДАЖ",
+  reactionExpandTrade: "Розгорнути деталі угоди",
+  reactionCollapseTrade: "Згорнути деталі угоди",
   reactionActiveTrades: "Активні угоди зон реакції",
   reactionEntry: "Вхід",
   reactionCurrent: "Поточна ціна",
