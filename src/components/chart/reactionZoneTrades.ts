@@ -24,18 +24,22 @@ export function receiveReactionSnapshot(state:any) {
 }
 let subscribers=0, stream:EventSource|null=null, timer:ReturnType<typeof setInterval>|null=null;
 const resync=()=>{void synchronizeServerClock();};
-export function connectReactionAuthority() {
+export function connectReactionAuthority(isAdmin=false) {
   if(++subscribers===1) {
     resync();timer=setInterval(resync,30000);
     document.addEventListener('visibilitychange',resync);
-    stream=new EventSource('/api/reactions/stream');
-    stream.onmessage=e=>{try{receiveReactionSnapshot(JSON.parse(e.data));}catch{}};
-    stream.onopen=resync;
+    const connection=new EventSource('/api/reactions/stream'+(isAdmin?'?admin=1':''));
+    stream=connection;
+    connection.onmessage=e=>{if(stream!==connection)return;try{receiveReactionSnapshot(JSON.parse(e.data));}catch{}};
+    connection.onopen=()=>{if(stream===connection)resync();};
   }
   return()=>{
     if(--subscribers===0) {
       stream?.close();stream=null;if(timer)clearInterval(timer);timer=null;
       document.removeEventListener('visibilitychange',resync);
+      // Never retain an administrator's trade details after logout/role changes.
+      trades=[];evaluations={};epoch='';sequence=-1;
+      listeners.forEach(fn=>fn());
     }
   };
 }

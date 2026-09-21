@@ -1,19 +1,22 @@
 import {useTranslation} from '../../context/LanguageContext';
-import React,{useEffect,useState,useSyncExternalStore} from 'react';
+import React,{useEffect,useLayoutEffect,useState,useSyncExternalStore} from 'react';
+import {useAuth} from '../../context/AuthContext';
 import {serverNow} from '../../services/serverClock';
 
 import {getReactionTrades,subscribeReactionTrades,connectReactionAuthority,clearReactionTrade,reactionTradePoints,canonicalReactionSymbol} from './reactionZoneTrades';
 
 /** One shared server-state subscription, independent of the displayed chart/view. */
 export function ReactionTradeMonitor() {
-  useEffect(connectReactionAuthority,[]);
+  const {user,token}=useAuth();
+  const isAdmin=user?.role==='admin'||user?.role==='super_admin';
+  useLayoutEffect(()=>connectReactionAuthority(isAdmin),[isAdmin,user?.id,token]);
   return null;
 }
 
 export function ReactionTradePanel({symbol,strategy,isAdmin}:{symbol:string;strategy:string;isAdmin:boolean}) {
   const {t:text,dir}=useTranslation();
   const all=useSyncExternalStore(subscribeReactionTrades,getReactionTrades,getReactionTrades);
-  const trades=all.filter(t=>t.symbol===canonicalReactionSymbol(symbol)&&t.strategy===strategy);
+  const trades=isAdmin?all.filter(t=>t.symbol===canonicalReactionSymbol(symbol)&&t.strategy===strategy):[];
   const [now,setNow]=useState(serverNow());
   useEffect(()=>{if(!trades.length)return;const timer=setInterval(()=>setNow(serverNow()),1000);return()=>clearInterval(timer);},[trades.length]);
   if(!trades.length)return null;
