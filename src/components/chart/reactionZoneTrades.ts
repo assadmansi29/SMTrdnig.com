@@ -51,4 +51,4 @@ export async function clearReactionTrade(id:string) {
   const response=await fetch('/api/reactions/clear',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({id})});
   if(!response.ok)console.warn('[Reaction trade] Clear rejected by server:',response.status);
 }
-export function reactionTradePoints(t:ReactionTrade) {return (t.direction==='buy'?t.current-t.entry:t.entry-t.current)/t.unit;}
+export {reactionTradePoints} from '../../utils/reactionTradePoints';

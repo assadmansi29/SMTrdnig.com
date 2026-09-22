@@ -33,7 +33,7 @@ export function WeeklyTradeResults({strategy}:{strategy:string}) {
               <dt className="text-slate-500">{t('reactionEntry')}</dt><dd className="text-end font-mono">{record.entry.toFixed(record.decimals)}</dd>
               <dt className="text-slate-500">{t('weeklyExit')}</dt><dd className="text-end font-mono">{record.exitPrice.toFixed(record.decimals)}</dd>
               <dt className="text-slate-500">{t('weeklyClosedBy')}</dt><dd className="text-end">{t(record.reason==='stop_loss'?'reactionStopLoss':'weeklyBreakevenStop')}</dd>
-              <dt className="text-slate-500">{t('weeklyTpReached')}</dt><dd className="text-end">{record.highestTp?`${t(record.highestTp==='TP2'?'reactionTp2':'reactionTp1')} ✓`:'—'}</dd>
+              <dt className="text-slate-500">{t('weeklyTpReached')}</dt><dd className="text-end">{record.highestTp?`${t(record.highestTp==='TP3'?'reactionTp3':record.highestTp==='TP2'?'reactionTp2':'reactionTp1')} ✓`:'—'}</dd>
               <dt className="text-slate-500">{t('weeklyClosedAt')}</dt><dd className="text-end"><time dateTime={new Date(record.closedAt).toISOString()}>{new Date(record.closedAt).toLocaleString(language)}</time></dd>
             </dl>
           </li>)}

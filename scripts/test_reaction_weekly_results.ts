@@ -28,13 +28,13 @@ if(process.argv[2]==='--restore') {
   updateReactionTradePrice('OANDA:XAUUSD',2307,monday+2000);
   assert.equal(getWeeklyReactionResults(monday+2000).strategies.length,0,'TP1/TP2 do not close a trade');
   updateReactionTradePrice('OANDA:XAUUSD',2300,monday+3000);
-  let group=getWeeklyReactionResults(monday+3000).strategies[0];assert.equal(group.trades,1);assert.equal(group.breakeven,1);assert.equal(group.records[0].highestTp,'TP2');assert.equal(group.points,0);
+  let group=getWeeklyReactionResults(monday+3000).strategies[0];assert.equal(group.trades,1);assert.equal(group.wins,1);assert.equal(group.records[0].highestTp,'TP2');assert.equal(group.points,70);
   updateReactionTradePrice('OANDA:XAUUSD',2290,monday+4000);assert.equal(getWeeklyReactionResults(monday+4000).strategies[0].trades,1);
   openReactionTrade(signal('clear',2300,monday+5000),'OANDA:XAUUSD','fib','clear');clearReactionTrade(getReactionTrades()[0].id);assert.equal(getWeeklyReactionResults(monday+6000).strategies[0].trades,1,'admin dismissal is not a completed trade');
   const friday=monday+4*day+1000;
   openReactionTrade(signal('loss',1.1,friday,'bearish'),'OANDA:EURUSD','fib','forex');
   updateReactionTradePrice('OANDA:EURUSD',1.1032,friday+1000);
-  group=getWeeklyReactionResults(friday+1000).strategies[0];assert.equal(group.trades,2);assert.equal(group.losses,1);assert.equal(group.points,-32);assert.equal(group.records[0].unitLabel,'Pips');assert.equal(group.records[0].exitPrice,1.1032,'first official closing quote, not invented fill');
+  group=getWeeklyReactionResults(friday+1000).strategies[0];assert.equal(group.trades,2);assert.equal(group.losses,1);assert.equal(group.points,40);assert.equal(group.records[0].unitLabel,'Pips');assert.equal(group.records[0].exitPrice,1.103,'original Stop Loss points');
   const saturday=monday+5*day;
   openReactionTrade(signal('weekend',60000,saturday),'BINANCE:BTCUSDT','fib','btc');updateReactionTradePrice('BINANCE:BTCUSDT',59970,saturday+1000);
   assert.equal(getWeeklyReactionResults(saturday+2000).strategies[0].trades,2,'weekend completion excluded');

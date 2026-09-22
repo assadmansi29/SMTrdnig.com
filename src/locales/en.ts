@@ -14,7 +14,7 @@ export const en = {
   weeklyClosedBy: "Closed by",
   weeklyTpReached: "TP reached",
   weeklyClosedAt: "Closed",
-  weeklyMethod: "Only completed signals count. Results use the closing server price; TP milestones do not assume partial profits.",
+  weeklyMethod: "Only completed signals count. Reached TP points are retained; a break-even exit adds no loss. Before any TP, losses use the original stop distance.",
   weeklyBreakevenStop: "Break-even stop",
   reactionTest1: "TEST 1",
   reactionTest2: "TEST 2",

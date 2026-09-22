@@ -7,6 +7,7 @@ export interface ReactionTrade {
   id:string; zoneId:string; symbol:string; strategy:string; direction:'buy'|'sell';
   entry:number; current:number; stop:number; tp1:number; tp2:number;
   tp1Hit:boolean; tp2Hit:boolean; openedAt:number; updatedAt:number;
+  tp3?:number; tp3Hit?:boolean;
   unit:number; unitLabel:string; decimals:number;
 }
 let trades:ReactionTrade[]=[];
@@ -66,12 +67,13 @@ export function updateReactionTradePrice(symbol:string,price:number,timeMs:numbe
       changed=true;persist=true;return [];
     }
     const tp1Hit=t.tp1Hit||side*(price-t.tp1)>=-rounding,tp2Hit=t.tp2Hit||side*(price-t.tp2)>=-rounding;
+    const tp3Hit=t.tp3Hit||Number.isFinite(t.tp3)&&side*(price-t.tp3!)>=-rounding;
     const stop=tp1Hit?t.entry:t.stop;
-    persist ||= tp1Hit!==t.tp1Hit||tp2Hit!==t.tp2Hit||stop!==t.stop;
-    changed ||= price!==t.current||timeMs!==t.updatedAt;
-    return [{...t,current:price,updatedAt:timeMs,tp1Hit,tp2Hit,stop}];
+    persist ||= tp1Hit!==t.tp1Hit||tp2Hit!==t.tp2Hit||!!tp3Hit!==!!t.tp3Hit||stop!==t.stop;
+    changed ||= persist||price!==t.current||timeMs!==t.updatedAt;
+    return [{...t,current:price,updatedAt:timeMs,tp1Hit,tp2Hit,tp3Hit,stop}];
   });
   if(changed)publish(persist);
 }
 export function clearReactionTrade(id:string) {trades=trades.filter(t=>t.id!==id);publish(true);}
-export function reactionTradePoints(t:ReactionTrade) {return (t.direction==='buy'?t.current-t.entry:t.entry-t.current)/t.unit;}
+export {reactionTradePoints} from '../../src/utils/reactionTradePoints';

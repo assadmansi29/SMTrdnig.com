@@ -16,7 +16,7 @@ export const ar: Record<TranslationKey, string> = {
   weeklyClosedBy: "سبب الإغلاق",
   weeklyTpReached: "الهدف المحقق",
   weeklyClosedAt: "وقت الإغلاق",
-  weeklyMethod: "تُحتسب الإشارات المكتملة فقط. تعتمد النتائج على سعر الخادم عند الإغلاق؛ لا تفترض الأهداف أرباحاً جزئية.",
+  weeklyMethod: "تُحتسب الإشارات المكتملة فقط. تُحفظ نقاط الأهداف المحققة، ولا يضيف الخروج عند التعادل أي خسارة. قبل تحقيق أي هدف، تُحسب الخسارة حسب مسافة وقف الخسارة الأصلي.",
   weeklyBreakevenStop: "وقف عند التعادل",
   reactionTest1: "اختبار 1",
   reactionTest2: "اختبار 2",
